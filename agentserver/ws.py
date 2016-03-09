@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import json
+from time import time
 import tornado.websocket
 from db import dal, UserAuthToken, AgentAuthToken
 from agentinfo import AgentInfo
@@ -36,12 +37,17 @@ class AgentWSHandler(tornado.websocket.WebSocketHandler):
         """
         We will parse AQL in this method and pass the results on to agent_info.
         """
-        print('AgentWSHandler: message: %s, connections: %s' % (message, AgentWSHandler.Connections))
+        # print('AgentWSHandler: message: %s, connections: %s' % (message, AgentWSHandler.Connections))
+        # print('AgentWSHandler: connections: %s' % (AgentWSHandler.Connections))
         # ip = remote_ip(self.request)
         if self in AgentWSHandler.Connections:
-            agent_info = AgentWSHandler.Connections[self]
-            self.write_message(json.dumps({'AQL':'UPDATED AT time=123432123421.1234'}))
-        # self.write_message(json.dumps({'AQL': 'Agent not recognized'}))
+            try:
+                agent_info = AgentWSHandler.Connections[self]
+                agent_info.instanceinfo.update(json.loads(message))
+                response = {'AQL':'UPDATED AT time=%s' % time()}
+                self.write_message(json.dumps(response))
+            except Exception as e:
+                print('EXCEPTION: %s' % e)
  
     def on_close(self):
         print("AgentWSHandler.on_close")
