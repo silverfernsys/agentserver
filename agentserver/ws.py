@@ -26,10 +26,9 @@ class AgentWSHandler(tornado.websocket.WebSocketHandler):
         uuid = self.request.headers.get('authorization')
         try:
             token = dal.Session().query(AgentAuthToken).filter(AgentAuthToken.uuid == uuid).one()
-            print('token: %s, uuid: %s' % (token, uuid))
+            # print('token: %s, uuid: %s' % (token, uuid))
             agent = token.agent
-            # AgentWSHandler.Connections[remote_ip(self.request)] = AgentInfo()
-            AgentWSHandler.Connections[self] = AgentInfo()
+            AgentWSHandler.Connections[self] = AgentInfo(remote_ip(self.request))
         except Exception as e:
             self.close()
       

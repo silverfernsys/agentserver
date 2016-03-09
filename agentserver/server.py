@@ -29,9 +29,6 @@ class Server():
             (r'/agent/', AgentWSHandler),
         ])
 
-        # process_updater = ProcessUpdater(**kwargs)
-        # event_server = EventServer(threaded=True)
-
         self.max_wait_seconds_before_shutdown = config['max_wait_seconds_before_shutdown']
         port = config['port']
         server = tornado.httpserver.HTTPServer(application)
@@ -59,36 +56,3 @@ class Server():
                 io_loop.stop()
                 self.logger.info('Shutdown')
         stop_loop()
-
-
-# SERVER_VERSION = '0.0.1'
-
-# class Server(object):
-#     def shutdown(self, sig, frame):
-#         self.run_loop = False
-
-#     def __init__(self, config_data):
-#         self.run_loop = True
-#         self.start_time = time.time()
-#         setproctitle('supervisoragent')
-#         signal.signal(signal.SIGTERM, self.shutdown)
-#         signal.signal(signal.SIGINT, self.shutdown)
-#         self.config_data = config_data
-
-#     def run(self):
-#         self.run_loop = True
-#         processmonitor = ProcessMonitor(sample_interval=self.config_data['sample_interval'],
-#             push_interval=self.config_data['push_interval'],
-#             token=self.config_data['token'], url=self.config_data['url'])
-#         statusserver = StatusServer(self.config_data['port'], self)
-#         while self.run_loop:
-#             time.sleep(0.1)
-
-#     def data(self):
-#         ret_data = self.config_data.copy()
-#         ret_data['start_time'] = self.start_time
-#         ret_data['server_version'] = SERVER_VERSION
-#         return ret_data
-        
-#         # We're going to shutdown here
-#         statusserver.shutdown()
