@@ -3,7 +3,6 @@ import argparse
 import logging
 import signal
 import time
-import ConfigParser
 from setproctitle import setproctitle
 from server import Server
 # from utils import resolveConfig
@@ -23,17 +22,11 @@ def main():
     args = parser.parse_args()
 
     try:
-        config_parser = ConfigParser.ConfigParser()
-        config_file_path = args.config or '/etc/agentserver/agentserver.conf'
-        config_parser.read(config_file_path)
-
-        config.resolveConfig(config_parser, args)
+        config.resolveArgs(args)
         logging.basicConfig(filename=config.data['log_file'], format='%(asctime)s::%(levelname)s::%(name)s::%(message)s', level=logging.DEBUG)
-        
         server = Server(config.data)
     except Exception as e:
-        print('Error loading configuration file at %s.' % config_file_path)
-        print('DETAILS: %s' % e)
+        print('AgentServer Exception. DETAILS: %s' % e)
 
 
 if __name__ == "__main__":
