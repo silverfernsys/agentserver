@@ -34,7 +34,6 @@ class InstanceInfo(object):
         raise StopIteration()
 
     def update(self, data):
-        # print('update: %s' % data)
         for d in data:
             info = self.get(d['group'], d['name'])
             if info:
@@ -45,7 +44,6 @@ class InstanceInfo(object):
                     d['state'], d['statename'], d['start'])
                 info.update(d)
                 self.add(info)
-        # self.flush_timeseries()
 
     def data(self):
         data = []
@@ -74,15 +72,16 @@ class InstanceInfo(object):
                 # Defines all the fields in this time series.
                 fields = ['cpu', 'mem', 'time']
                 # Defines all the tags for the series.
-                tags = ['group', 'name']
+                tags = ['processgroup', 'processname']
                 # Defines the number of data points to store prior to writing on the wire.
                 bulk_size = 5
                 # autocommit must be set to True when using bulk_size
                 autocommit = True
 
+        max_timestamp = 0.0
         for process in self.all():
             if len(process.cpu) == len(process.mem):
-                max_timestamp = process.cpu[len(process.cpu) - 1][0]
+                max_timestamp = max(max_timestamp, process.cpu[len(process.cpu) - 1][0])
                 # Work backwards through the array, breaking as soon as
                 # a timestamp older than self.time is reached.
                 length = len(process.cpu)
@@ -93,28 +92,14 @@ class InstanceInfo(object):
                     if timestamp < self.time:
                         break
                     else:
-                        SupervisorSeriesHelper(group=process.group,
-                            name=process.name, cpu=cpu, mem=mem, time=timestamp)
+                        SupervisorSeriesHelper(processgroup=process.group,
+                            processname=process.name, cpu=cpu, mem=mem, time=timestamp)
             else:
                 print('ERROR with cpu and mem stats')
         self.time = max_timestamp
         SupervisorSeriesHelper.commit()
         print(SupervisorSeriesHelper._json_body_())
 
-        # # The following will create *five* (immutable) data points.
-        # # Since bulk_size is set to 5, upon the fifth construction call, *all* data
-        # # points will be written on the wire via MySeriesHelper.Meta.client.
-        # MySeriesHelper(server_name='us.east-1', some_stat=159, other_stat=10)
-        # MySeriesHelper(server_name='us.east-1', some_stat=158, other_stat=20)
-        # MySeriesHelper(server_name='us.east-1', some_stat=157, other_stat=30)
-        # MySeriesHelper(server_name='us.east-1', some_stat=156, other_stat=40)
-        # MySeriesHelper(server_name='us.east-1', some_stat=155, other_stat=50)
-
-        # # To manually submit data points which are not yet written, call commit:
-        # MySeriesHelper.commit()
-
-        # # To inspect the JSON which will be written, call _json_body_():
-        # MySeriesHelper._json_body_()
 
     def purge(self):
         """

@@ -72,7 +72,7 @@ class AgentWSHandler(tornado.websocket.WebSocketHandler):
 
 
 class UserWSHandler(tornado.websocket.WebSocketHandler):
-    connections = []
+    Connections = []
 
     @tornado.web.addslash
     def open(self):
@@ -80,7 +80,7 @@ class UserWSHandler(tornado.websocket.WebSocketHandler):
             uuid = self.request.headers.get('authorization')
             token = dal.Session().query(UserAuthToken).filter(UserAuthToken.uuid == uuid).one()
             user = token.user
-            UserWSHandler.connections.append(self)
+            UserWSHandler.Connections.append(self)
         except Exception as e:
             print('UserWSHandler: Exception Details: %s' % e)
             self.close()
@@ -95,8 +95,8 @@ class UserWSHandler(tornado.websocket.WebSocketHandler):
         #         self.write_message(json.dumps({'msg':'updated'}))
  
     def on_close(self):
-        if self in UserWSHandler.connections:
-            UserWSHandler.connections.remove(self)
+        if self in UserWSHandler.Connections:
+            UserWSHandler.Connections.remove(self)
 
     def check_origin(self, origin):
         return True

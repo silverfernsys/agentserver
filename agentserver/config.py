@@ -48,6 +48,10 @@ class Config(object):
                 data['flush_data_period'] = args.flush_data_period or config_parser.getint('agentserver', 'flush_data_period')
             except:
                 data['flush_data_period'] = config_parser.getint('agentserver', 'flush_data_period')
+            try:
+                data['push_data_period'] = args.flush_data_period or config_parser.getint('agentserver', 'push_data_period')
+            except:
+                data['push_data_period'] = config_parser.getint('agentserver', 'push_data_period')
         except:
             print('Error loading configuration file at %s.' % config_file_path)
             data = {}
