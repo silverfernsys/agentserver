@@ -1,15 +1,19 @@
+import re
 from datetime import datetime
 
 from sqlalchemy import (Column, Integer, Numeric, String, DateTime, ForeignKey,
                         Boolean, create_engine)
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, backref, sessionmaker
+from sqlalchemy.orm import relationship, backref, sessionmaker, validates
 
 from sqlalchemy.event import listen
+
+from influxdb import InfluxDBClient 
 
 from passlib.apps import custom_app_context as pwd_context
 
 from utils import uuid
+
 
 Base = declarative_base()
 
@@ -19,10 +23,25 @@ class Agent(Base):
 
     id = Column(Integer(), primary_key=True)
     ip = Column(String(), nullable=False, unique=True)
+    retention_policy = Column(String(), nullable=False)
+    timeseries_database_name = Column(String(), nullable=False)
     created_on = Column(DateTime(), default=datetime.now)
+
+    @classmethod
+    def supervisor_database_name(self, ip):
+        return 'supervisor_%s' % ip.replace('.', '_')
+
+    @validates('retention_policy')
+    def validate_retention_policy(self, key, policy):
+        regex = re.compile('\d+[mhdw]$|^INF$')
+        result = regex.match(policy)
+        assert result != None
+        return policy
 
     def __repr__(self):
         return "Agent(ip='{self.ip}', " \
+            "retention_policy='{self.retention_policy}', " \
+            "timeseries_database_name='{self.timeseries_database_name}', " \
             "created_on='{self.created_on}'".format(self=self)
 
 
@@ -174,6 +193,35 @@ class DataAccessLayer:
 
 
 dal = DataAccessLayer()
+
+class TimeseriesAccessLayer(object):
+    def __init__(self):
+        self.connections = {}
+
+    def connect(self, uri, dbname):
+        (username, password, host, port) = self._parseTimeseriesURI(uri)
+        client = InfluxDBClient(host, port, username, password, dbname)
+        self.connections[dbname] = client
+
+    def connection(self, dbname):
+        if dbname in self.connections:
+            return self.connections[dbname]
+        else:
+            return None
+
+    def _parseTimeseriesURI(self, uri):
+        split_uri = uri.split('://')
+        if split_uri[0] == 'influxdb':
+            up_hp = split_uri[1].split('@')
+            username = up_hp[0].split(':')[0]
+            password = up_hp[0].split(':')[1]
+            host = up_hp[1].split(':')[0]
+            port = up_hp[1].split(':')[1]
+            return (username, password, host, port)
+        else:
+            return (None, None, None, None)
+
+tal = TimeseriesAccessLayer()
 
 
 def prep_db(session):

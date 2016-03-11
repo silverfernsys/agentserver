@@ -6,7 +6,7 @@ import time
 import ConfigParser
 from setproctitle import setproctitle
 from admin import Admin
-from utils import resolveConfig
+from config import config
 
 def main():
     setproctitle('agentserveradmin')
@@ -87,42 +87,38 @@ def main():
 
     args = parser.parse_args()
 
-    try:
-        config = ConfigParser.ConfigParser()
-        config_file_path = args.config or '/etc/agentserver/agentserver.conf'
-        config.read(config_file_path)
-        config_data = resolveConfig(config, args)
-        logging.basicConfig(filename=config_data['log_file'], format='%(asctime)s::%(levelname)s::%(name)s::%(message)s', level=logging.DEBUG)
-        
-        admin = Admin(config_data)
+    # try:
+    config.resolveArgs(args)
+    logging.basicConfig(filename=config.data['log_file'], format='%(asctime)s::%(levelname)s::%(name)s::%(message)s', level=logging.DEBUG)
+    
+    admin = Admin()
 
-        if args.subparser_name == 'create_user':
-            admin.create_user()
-        elif args.subparser_name == 'delete_user':
-            admin.delete_user()
-        elif args.subparser_name == 'list_users':
-            admin.list_users()
-        elif args.subparser_name == 'create_user_auth_token':
-            admin.create_user_auth_token()
-        elif args.subparser_name == 'delete_user_auth_token':
-            admin.delete_user_auth_token()
-        elif args.subparser_name == 'list_user_auth_tokens':
-            admin.list_user_auth_tokens()
-        elif args.subparser_name == 'create_agent':
-            admin.create_agent()
-        elif args.subparser_name == 'delete_agent':
-            admin.delete_agent()
-        elif args.subparser_name == 'list_agents':
-            admin.list_agents()
-        elif args.subparser_name == 'create_agent_auth_token':
-            admin.create_agent_auth_token()
-        elif args.subparser_name == 'delete_agent_auth_token':
-            admin.delete_agent_auth_token()
-        elif args.subparser_name == 'list_agent_auth_tokens':
-            admin.list_agent_auth_tokens()
-    except Exception as e:
-        print('Error loading configuration file at %s.' % config_file_path)
-        print('DETAILS: %s' % e)
+    if args.subparser_name == 'create_user':
+        admin.create_user()
+    elif args.subparser_name == 'delete_user':
+        admin.delete_user()
+    elif args.subparser_name == 'list_users':
+        admin.list_users()
+    elif args.subparser_name == 'create_user_auth_token':
+        admin.create_user_auth_token()
+    elif args.subparser_name == 'delete_user_auth_token':
+        admin.delete_user_auth_token()
+    elif args.subparser_name == 'list_user_auth_tokens':
+        admin.list_user_auth_tokens()
+    elif args.subparser_name == 'create_agent':
+        admin.create_agent()
+    elif args.subparser_name == 'delete_agent':
+        admin.delete_agent()
+    elif args.subparser_name == 'list_agents':
+        admin.list_agents()
+    elif args.subparser_name == 'create_agent_auth_token':
+        admin.create_agent_auth_token()
+    elif args.subparser_name == 'delete_agent_auth_token':
+        admin.delete_agent_auth_token()
+    elif args.subparser_name == 'list_agent_auth_tokens':
+        admin.list_agent_auth_tokens()
+    # except Exception as e:
+        # print('DETAILS: %s' % e)
 
     # Reserver this for the pro-license
     # 'create_team'

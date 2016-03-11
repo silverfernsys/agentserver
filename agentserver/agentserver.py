@@ -4,9 +4,8 @@ import logging
 import signal
 import time
 from setproctitle import setproctitle
-from server import Server
-# from utils import resolveConfig
 from config import config
+from server import Server
 
 def main():
     setproctitle('agentserver')
@@ -24,7 +23,7 @@ def main():
     try:
         config.resolveArgs(args)
         logging.basicConfig(filename=config.data['log_file'], format='%(asctime)s::%(levelname)s::%(name)s::%(message)s', level=logging.DEBUG)
-        server = Server(config.data)
+        server = Server()
     except Exception as e:
         print('AgentServer Exception. DETAILS: %s' % e)
 

@@ -1,15 +1,14 @@
 #! /usr/bin/env python
-from db import dal, prep_db, User, Agent, UserAuthToken, AgentAuthToken
-from utils import resolveConfig
+from db import dal, tal, prep_db, User, Agent, UserAuthToken, AgentAuthToken
 from datetime import datetime
+from config import config
 import getpass
 
 
 class Admin(object):
-    def __init__(self, config_data):
+    def __init__(self):
         print('Connecting to database...')
-        dal.connect(conn_string=config_data['database'])
-        # prep_db(dal.Session())
+        dal.connect(conn_string=config.data['database'])
 
     def create_user(self):
         session = dal.Session()
@@ -137,12 +136,46 @@ class Admin(object):
         self.auth_admin(session)
 
         input_ip = raw_input('Enter agent ip address: ')
+        while True:
+            print('1) 3 days')
+            print('2) 1 week')
+            print('3) 3 weeks')
+            print('4) 5 weeks')
+            print('5) Infinite')
+            input_retention_policy = int(raw_input('Select a retention policy:'))
+            try:
+                if (input_retention_policy - 1) in range(5):
+                    break
+                else:
+                    pass
+            except:
+                pass
+        if input_retention_policy == 1:
+            retention_policy = '3d'
+        elif input_retention_policy == 2:
+            retention_policy = '1w'
+        elif input_retention_policy == 3:
+            retention_policy = '3w'
+        elif input_retention_policy == 4:
+            retention_policy = '5w'
+        elif input_retention_policy == 5:
+            retention_policy = 'INF'
 
-        agent = Agent(ip=input_ip)
+        dbname = Agent.supervisor_database_name(input_ip)
+        agent = Agent(ip=input_ip,
+            retention_policy=retention_policy,
+            timeseries_database_name=dbname)
         session.add(agent)
         session.commit()
 
-        print('Successfully created agent %s' % agent.ip)
+        # Now create timeseries database.
+        tal.connect(config.data['timeseries'], dbname)
+        conn = tal.connection(dbname)
+        conn.create_database(dbname)
+
+        policy_name = 'policy_{rt}'.format(rt=retention_policy)
+        conn.create_retention_policy(policy_name, retention_policy, 3, default=True)
+        print('Successfully created agent {ip}'.format(ip=agent.ip))
 
     def delete_agent(self):
         session = dal.Session()
@@ -153,6 +186,13 @@ class Admin(object):
 
         try:
             input_agent = session.query(Agent).filter(Agent.ip == input_ip).one()
+            # Delete timeseries database.
+            try:
+                tal.connect(config.data['timeseries'], input_agent.timeseries_database_name)
+                conn = tal.connection(input_agent.timeseries_database_name)
+                conn.drop_database(input_agent.timeseries_database_name)
+            except Exception as e:
+                print('Exception dropping timeseries database: %s' % e)
             session.delete(input_agent)
             session.commit()
             print('Successfully deleted agent %s' % input_ip)
@@ -160,9 +200,10 @@ class Admin(object):
             print('Agent does not exist.')
 
     def list_agents(self):
-        print("%sCreated" % ("IP Address".ljust(30)))
+        print("%s%s%sCreated" % ("IP Address".ljust(30), "Retention Policy".ljust(30), "Timeseries".ljust(30)))
         for agent in dal.Session().query(Agent):
-            line = "%s%s" % (agent.ip.ljust(30), agent.created_on.strftime('%d-%m-%Y %H:%M:%S'))
+            line = "%s%s%s%s" % (agent.ip.ljust(30), agent.retention_policy.ljust(30),
+                agent.timeseries_database_name.ljust(30), agent.created_on.strftime('%d-%m-%Y %H:%M:%S'))
             print(str(line))
 
     def create_agent_auth_token(self):

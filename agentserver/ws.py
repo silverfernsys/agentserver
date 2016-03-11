@@ -28,8 +28,9 @@ class AgentWSHandler(tornado.websocket.WebSocketHandler):
             token = dal.Session().query(AgentAuthToken).filter(AgentAuthToken.uuid == uuid).one()
             # print('token: %s, uuid: %s' % (token, uuid))
             agent = token.agent
-            AgentWSHandler.Connections[self] = AgentInfo(remote_ip(self.request))
+            AgentWSHandler.Connections[self] = AgentInfo(remote_ip(self.request), agent.timeseries_database_name)
         except Exception as e:
+            print('WSAgentHandler.open EXCEPTION: %s' % e)
             self.close()
       
     def on_message(self, message):
@@ -59,6 +60,15 @@ class AgentWSHandler(tornado.websocket.WebSocketHandler):
         'Origin' is the base url hit by the request. Eg 10.0.0.10:8081
         """
         return True
+
+    @classmethod
+    def Flush(self):
+        """
+        This method calls flush() on all connections in
+        AgentWSHandler.Connections
+        """
+        for conn in AgentWSHandler.Connections:
+            AgentWSHandler.Connections[conn].flush()
 
 
 class UserWSHandler(tornado.websocket.WebSocketHandler):
