@@ -31,8 +31,38 @@ class Agent(Base):
     def supervisor_database_name(self, ip):
         return 'supervisor_%s' % ip.replace('.', '_')
 
+    @validates('ip')
+    def validate_ip(self, key, ipadddress):
+        """
+        Validates an IPv4 or IPv6 IP address
+        """
+        regex = re.compile('^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$|' \
+            '(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}| ' \
+                '([0-9a-fA-F]{1,4}:){1,7}:|' \
+                '([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|' \
+                '([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|' \
+                '([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|' \
+                '([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|' \
+                '([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|' \
+                '[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|' \
+                ':((:[0-9a-fA-F]{1,4}){1,7}|:)|' \
+                'fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|' \
+                '::(ffff(:0{1,4}){0,1}:){0,1}' \
+                '((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}' \
+                '(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|' \
+                '([0-9a-fA-F]{1,4}:){1,4}:' \
+                '((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}' \
+                '(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])' \
+                ')')
+        result = regex.match(ipadddress)
+        assert result != None
+        return ipadddress
+
     @validates('retention_policy')
     def validate_retention_policy(self, key, policy):
+        """
+        Validates an InfluxDB retention policy
+        """
         regex = re.compile('\d+[mhdw]$|^INF$')
         result = regex.match(policy)
         assert result != None
