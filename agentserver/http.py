@@ -3,7 +3,7 @@ import json
 from socket import gethostname
 import tornado.httpserver
 from db import dal, User, UserAuthToken, Agent
-from ws import AgentWSHandler
+# from ws import AgentWSHandler
 
 SERVER_VERSION = '0.0.1a'
 
@@ -14,9 +14,14 @@ class HTTPVersionHandler(tornado.web.RequestHandler):
         self.set_header('Content-Type', 'application/json')
         self.write(json.dumps(data))
 
-# timestamp_str = self.get_query_argument('timestamp', -1.0, True)
-# if timestamp_str != None:
-#     timestamp = float(timestamp_str)
+
+class HTTPCommandHandler(tornado.web.RequestHandler):
+    @tornado.web.addslash
+    def post(self):
+        print('self.request: %s' % dir(self.request))
+        self.set_header('Content-Type', 'application/json')
+        self.write(json.dumps({'status': 'success'}))
+
 
 class HTTPStatusHandler(tornado.web.RequestHandler):
     @tornado.web.addslash
@@ -25,11 +30,11 @@ class HTTPStatusHandler(tornado.web.RequestHandler):
             auth_token = self.request.headers.get('authorization')
             token = dal.Session().query(UserAuthToken).filter(UserAuthToken.uuid == auth_token).one()
             data = []
-            for agent in dal.Session().query(Agent):
-                if agent.ip in AgentWSHandler.IPs():
-                    data.append({'agent': agent.ip, 'status': 'online'})
-                else:
-                    data.append({'agent': agent.ip, 'status': 'offline'})
+            # for agent in dal.Session().query(Agent):
+            #     if agent.ip in AgentWSHandler.IPs():
+            #         data.append({'agent': agent.ip, 'status': 'online'})
+            #     else:
+            #         data.append({'agent': agent.ip, 'status': 'offline'})
         except Exception as e:
             print('Error: %s' % e)
             try:

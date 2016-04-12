@@ -224,14 +224,116 @@ class DataAccessLayer:
 
 dal = DataAccessLayer()
 
+from itertools import takewhile, islice, tee
+
+class SupervisorSeries(object):
+    series_name = 'supervisor'
+    # Defines all the fields in this time series.
+    fields = ['cpu', 'mem', 'time']
+    # Defines all the tags for the series.
+    tags = ['processgroup', 'processname']
+
+    @classmethod
+    def Aggregate(cls, resultset, processes, starttime, timedelta, func):
+        """
+        Aggregates resultset using processes, timedelta, and func.
+        resultset: generator for influxdb query
+        processes: list of (processgroup, processname) tuples for filtering
+        starttime: the start time over which to accumulate results
+        timedelta: the time period over which to apply func
+        func: function that reduces results: Max, Min, Sum
+        returns: a list of dictionaries with keys 'processgroup', 'processname', and 'supervisorseries'
+        """
+        def aggregate_helper(iterator, currenttime, timedelta, func, acc):
+            it_0, it_1 = tee(iterator)
+            try:
+                it_0.next()
+
+                def less_than_time(item):
+                    return item.time < (currenttime + timedelta)
+
+                subset = list(takewhile(less_than_time, it_1))
+                islice(it_0, 0, len(subset) - 1) # Already popped off one result in it_0.next() call above.
+                mapreduce = reduce(func, map(SupervisorSeries, arr))
+                if func == SupervisorSeries.Sum:
+                    mapreduce = SupervisorSeries.Div(mapreduce, len(subset))
+                acc.append(mapreduce)
+            except StopIteration as e:
+                print('StopIteration: {0}'.format(str(e)))
+                return acc
+
+        results = []
+        for process in processes:
+            filtered_resultset = resultset.get_points(tags={'groupname': process[0], 'processname': process[1]})
+            aggregate = aggregate_helper(filtered_resultset, starttime, timedelta, func, [])
+            results.append({ 'processgroup': process[0], 'processname': process[1], 'series': aggregate })
+        return results
+
+
+        # def helper(iterator, timedelta, func, currenttime, acc):
+        #     it_0, it_1 = tee(iterator)
+        #     try:
+        #         it_1.next()
+        #         def less_than_time(item):
+        #             return item.time < (currenttime + timedelta)
+
+        #         # Expect a relatively small subset to be returned.
+        #         subset = list(takewhile(less_than_time, it_0))
+        #         islice(it_1, 0, len(subset) - 1) # Because we've already popped off one result in it_1.next() call above.
+        #         result = reduce(func, subset)
+        #         acc.append(result)
+
+        #         return helper(it_1, timedelta, func, currentime + timedelta, acc)
+        #     except StopIteration as e:
+        #         print('e: %s' % e)
+        #         return acc
+
+    @classmethod
+    def Max(cls, s1, s2):
+        data = {'cpu': max(s1.cpu, s2.cpu), 'mem': max(s1.mem, s2.mem),
+        'time': max(s1.time, s2.time), 'processgroup': s1.processgroup,
+        'processname': s1.processname}
+        return SupervisorSeries(data)
+
+    @classmethod
+    def Min(cls, s1, s2):
+        data = {'cpu': min(s1.cpu, s2.cpu), 'mem': min(s1.mem, s2.mem),
+        'time': min(s1.time, s2.time), 'processgroup': s1.processgroup,
+        'processname': s1.processname}
+        return SupervisorSeries(data)
+
+    @classmethod
+    def Sum(cls, s1, s2):
+        data = {'cpu': s1.cpu + s2.cpu, 'mem': s1.mem + s2.mem,
+        'time': s1.time + s2.time, 'processgroup': s1.processgroup,
+        'processname': s1.processname}
+        return SupervisorSeries(data)
+
+    @classmethod
+    def Div(cls, s1, div=1.0):
+        data = {'cpu': s1.cpu / float(div), 'mem': s1.mem / float(div),
+        'time': s1.time / float(div), 'processgroup': s1.processgroup,
+        'processname': s1.processname }
+        return SupervisorSeries(data)
+
+    def __init__(self, data):
+        self.cpu = data['cpu']
+        self.mem = data['mem']
+        self.time = data['time']
+
+        self.processgroup = data['processgroup']
+        self.processname = data['processname']
+
+
 class TimeseriesAccessLayer(object):
     def __init__(self):
         self.connections = {}
 
     def connect(self, uri, dbname):
         (username, password, host, port) = self._parseTimeseriesURI(uri)
-        client = InfluxDBClient(host, port, username, password, dbname)
-        self.connections[dbname] = client
+        if dbname not in self.connections:
+            client = InfluxDBClient(host, port, username, password, dbname)
+            self.connections[dbname] = client
 
     def connection(self, dbname):
         if dbname in self.connections:

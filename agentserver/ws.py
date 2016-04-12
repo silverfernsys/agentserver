@@ -2,57 +2,106 @@
 import json
 from time import time
 import tornado.websocket
-from db import dal, UserAuthToken, AgentAuthToken
-from agentinfo import AgentInfo
+from db import dal, tal, UserAuthToken, AgentAuthToken
+from agents.supervisoragent import SupervisorAgent
 
+SNAPSHOT_UPDATE = 'snapshot_update'
+STATE_UPDATE = 'state_update'
 
 def remote_ip(request):
     return request.headers.get("X-Real-IP") or request.remote_ip
 
 
-class AgentWSHandler(tornado.websocket.WebSocketHandler):
+class SupervisorAgentHandler(tornado.websocket.WebSocketHandler):
     Connections = {}
+    IPConnections = {}
 
     @classmethod
-    def IPs(self):
-        return set(remote_ip(c) for c in AgentWSHandler.Connections.keys())
+    def IPs(cls):
+        return set(remote_ip(c) for c in SupervisorAgentHandler.Connections.keys())
 
     @tornado.web.addslash
     def open(self):
         """
         Protocol:
         """
-        print("AgentWSHandler.open")
+        print("SupervisorAgentHandler.open")
         uuid = self.request.headers.get('authorization')
         try:
             token = dal.Session().query(AgentAuthToken).filter(AgentAuthToken.uuid == uuid).one()
-            # print('token: %s, uuid: %s' % (token, uuid))
             agent = token.agent
-            AgentWSHandler.Connections[self] = AgentInfo(remote_ip(self.request), agent.timeseries_database_name)
+            if not (agent.ip in SupervisorAgentHandler.IPConnections):
+                supervisor_agent = SupervisorAgent(agent.ip, agent.timeseries_database_name, self)
+                SupervisorAgentHandler.IPConnections[agent.ip] = supervisor_agent
+                SupervisorAgentHandler.Connections[self] = supervisor_agent
         except Exception as e:
-            print('WSAgentHandler.open EXCEPTION: %s' % e)
+            print('SupervisorAgentHandler.open EXCEPTION: %s' % e)
             self.close()
       
     def on_message(self, message):
         """
         We will parse AQL in this method and pass the results on to agent_info.
         """
-        # print('AgentWSHandler: message: %s, connections: %s' % (message, AgentWSHandler.Connections))
-        # print('AgentWSHandler: connections: %s' % (AgentWSHandler.Connections))
-        # ip = remote_ip(self.request)
-        if self in AgentWSHandler.Connections:
+        if self in SupervisorAgentHandler.Connections:
+            agent = SupervisorAgentHandler.Connections[self]
             try:
-                agent_info = AgentWSHandler.Connections[self]
-                agent_info.instanceinfo.update(json.loads(message))
-                response = {'AQL':'UPDATED AT time=%s' % time()}
-                self.write_message(json.dumps(response))
+                if message is not None:
+                    # print('Message is Not None!!!: MESSAGE %s' % message)
+                    data = json.loads(message)
+                    # print('data: %s' % data)
+                    if STATE_UPDATE in data:
+                        # print('STATE_UPDATE data: %s' % data)
+                        print('STATE_UPDATE in data!!!!')
+                        agent.state_update(data[STATE_UPDATE])
+                        response = {'AQL':'UPDATED AT time=%s' % time()}
+                        self.write_message(json.dumps(response))
+                    elif SNAPSHOT_UPDATE in data:
+                        agent.snapshot_update(data[SNAPSHOT_UPDATE])
+                        response = {'AQL':'UPDATED AT time=%s' % time()}
+                        self.write_message(json.dumps(response))
+                else:
+                    print('MESSAGE IS NONE!! :(')
             except Exception as e:
-                print('EXCEPTION: %s' % e)
+                print('SupervisorAgentHandler.on_message EXCEPTION: %s' % e)
+ 
+    def on_close(self):
+        print("SupervisorAgentHandler.on_close")        
+        supervisor_agent = SupervisorAgentHandler.Connections[self]
+        supervisor_agent.conn = None
+        agent_ip = supervisor_agent.agent_ip
+        SupervisorAgentHandler.IPConnections.pop(agent_ip, None)
+        SupervisorAgentHandler.Connections.pop(self, None)
+
+    def check_origin(self, origin):
+        """
+        'Origin' is the base url hit by the request. Eg 10.0.0.10:8081
+        """
+        return True
+
+
+class RabbitMQAgentHandler(tornado.websocket.WebSocketHandler):
+    Connections = {}
+    IPConnections = {}
+
+    @classmethod
+    def IPs(self):
+        return set(remote_ip(c) for c in RabbitMQAgentHandler.Connections.keys())
+
+    @tornado.web.addslash
+    def open(self):
+        """
+        Protocol:
+        """
+        pass
+      
+    def on_message(self, message):
+        """
+        We will parse AQL in this method and pass the results on to agent_info.
+        """
+        print(message)
  
     def on_close(self):
         print("AgentWSHandler.on_close")
-        # ip = remote_ip(self.request)
-        # if ip in AgentWSHandler.Connections:
         AgentWSHandler.Connections.pop(self, None)
 
     def check_origin(self, origin):
@@ -61,42 +110,144 @@ class AgentWSHandler(tornado.websocket.WebSocketHandler):
         """
         return True
 
+
+class PostgreSQLAgentHandler(tornado.websocket.WebSocketHandler):
+    Connections = {}
+    IPConnections = {}
+
     @classmethod
-    def Flush(self):
+    def IPs(self):
+        return set(remote_ip(c) for c in PostgreSQLAgentHandler.Connections.keys())
+
+    @tornado.web.addslash
+    def open(self):
         """
-        This method calls flush() on all connections in
-        AgentWSHandler.Connections
+        Protocol:
         """
-        for conn in AgentWSHandler.Connections:
-            AgentWSHandler.Connections[conn].flush()
+        pass
+      
+    def on_message(self, message):
+        """
+        We will parse AQL in this method and pass the results on to agent_info.
+        """
+        print(message)
+ 
+    def on_close(self):
+        print("AgentWSHandler.on_close")
+        AgentWSHandler.Connections.pop(self, None)
+
+    def check_origin(self, origin):
+        """
+        'Origin' is the base url hit by the request. Eg 10.0.0.10:8081
+        """
+        return True
 
 
-class UserWSHandler(tornado.websocket.WebSocketHandler):
+class SupervisorStatusHandler(tornado.websocket.WebSocketHandler):
     Connections = []
 
     @tornado.web.addslash
     def open(self):
+        print('SupervisorStatusHandler.open()')
         try:
             uuid = self.request.headers.get('authorization')
             token = dal.Session().query(UserAuthToken).filter(UserAuthToken.uuid == uuid).one()
             user = token.user
-            UserWSHandler.Connections.append(self)
+            SupervisorStatusHandler.Connections.append(self)
         except Exception as e:
-            print('UserWSHandler: Exception Details: %s' % e)
+            print('SupervisorStatusHandler: Exception Details: %s' % e)
             self.close()
       
     def on_message(self, message):
-        print('UserWSHandler: %s' % message)
-        # auth_token = self.request.headers.get('authorization')
-        # token = Token.tokens().get(token=auth_token)
-        # if token and token.user:
-        #     data = json.loads(message)
-        #     if data['msg'] == 'update':
-        #         self.write_message(json.dumps({'msg':'updated'}))
+        """
+        This function ignores messages from clients.
+        """
+        pass
  
     def on_close(self):
-        if self in UserWSHandler.Connections:
-            UserWSHandler.Connections.remove(self)
+        if self in SupervisorStatusHandler.Connections:
+            SupervisorStatusHandler.Connections.remove(self)
+
+    def check_origin(self, origin):
+        return True
+
+class SupervisorCommandHandler(tornado.websocket.WebSocketHandler):
+    Connections = []
+
+    @tornado.web.addslash
+    def open(self):
+        print('SupervisorCommandHandler.open()')
+        try:
+            uuid = self.request.headers.get('authorization')
+            token = dal.Session().query(UserAuthToken).filter(UserAuthToken.uuid == uuid).one()
+            user = token.user
+            SupervisorCommandHandler.Connections.append(self)
+        except Exception as e:
+            print('SupervisorCommandHandler: Exception Details: %s' % e)
+            self.close()
+      
+    def on_message(self, message):
+        """
+        This function responds to queries from a client.
+        """
+        # print('SupervisorCommandHandler.message: %s' % message)
+        data = json.loads(message)
+        cmd = data['cmd']
+        if cmd == 'list_ips':
+            response_data = {'ips': SupervisorAgentHandler.IPConnections.keys()}
+            self.write_message(json.dumps(response_data))
+        elif cmd == 'list_processes':
+            try:
+                ip = data['ip_address']
+                agent = SupervisorAgentHandler.IPConnections[ip]
+                is_snapshot = data['snapshot']
+                if is_snapshot:
+                    data = agent.snapshot()
+                else:
+                    data = agent.data()
+                self.write_message(json.dumps({'processes': data}))
+            except Exception as e:
+                self.write_message(json.dumps({'error': str(e)}))
+        elif cmd == 'start':
+            try:
+                ip = data['ip']
+                process = data['process']
+                agent = SupervisorAgentHandler.IPConnections[ip]
+                # Send command to remote agent! Magic sauce!
+                command = {'cmd': 'start {0}'.format(process)}
+                agent.conn.write_message(json.dumps(command))
+                self.write_message(json.dumps({'result': 'success'}))
+            except Exception as e:
+                self.write_message(json.dumps({'result': 'error', 'details': str(e)}))
+        elif cmd == 'stop':
+            try:
+                ip = data['ip']
+                process = data['process']
+                agent = SupervisorAgentHandler.IPConnections[ip]
+                # Send command to remote agent! Magic sauce!
+                command = {'cmd': 'stop {0}'.format(process)}
+                agent.conn.write_message(json.dumps(command))
+                self.write_message(json.dumps({'result': 'success'}))
+            except Exception as e:
+                self.write_message(json.dumps({'result': 'error', 'details': str(e)}))
+        elif cmd == 'restart':
+            try:
+                ip = data['ip']
+                process = data['process']
+                agent = SupervisorAgentHandler.IPConnections[ip]
+                # Send command to remote agent! Magic sauce!
+                command = {'cmd': 'restart {0}'.format(process)}
+                agent.conn.write_message(json.dumps(command))
+                self.write_message(json.dumps({'result': 'success'}))
+            except Exception as e:
+                print('EXCEPTION: %s' % str(e))
+                self.write_message(json.dumps({'result': 'error', 'details': str(e)}))
+        else:
+            self.write_message(json.dumps({'error': 'unknown command'}))
+ 
+    def on_close(self):
+        if self in SupervisorCommandHandler.Connections:
+            SupervisorCommandHandler.Connections.remove(self)
 
     def check_origin(self, origin):
         return True
