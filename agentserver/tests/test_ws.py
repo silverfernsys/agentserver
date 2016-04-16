@@ -15,8 +15,6 @@ from tornado.tcpclient import TCPClient
 from tornado.testing import AsyncHTTPTestCase, gen_test
 from tornado.web import Application
 from tornado.websocket import WebSocketProtocol13
-from tornado.gen import TimeoutError
-# from concurrent.futures import TimeoutError
 
 import sys, os
 sys.path.insert(0, os.path.split(os.path.split(os.path.dirname(os.path.abspath(__file__)))[0])[0])
@@ -24,8 +22,6 @@ sys.path.insert(0, os.path.split(os.path.split(os.path.dirname(os.path.abspath(_
 from agentserver.ws import SupervisorAgentHandler, SupervisorStatusHandler, SupervisorCommandHandler
 from agentserver.db import dal, User, UserAuthToken, Agent, AgentAuthToken
 
-# from ws import SupervisorAgentHandler, SupervisorStatusHandler, SupervisorCommandHandler
-# from db import dal, User, UserAuthToken, Agent, AgentAuthToken
 
 class WebSocketTestCase(AsyncHTTPTestCase):
     USER_TOKEN = None
@@ -126,6 +122,8 @@ class WebSocketTestCase(AsyncHTTPTestCase):
         agent_conn = yield websocket_connect('ws://localhost:' + str(self.get_http_port()) + '/supervisor/',
             headers={'authorization':WebSocketTestCase.AGENT_TOKEN})
         
+        agent = SupervisorAgentHandler.IPConnections[WebSocketTestCase.AGENT_IP]
+
         self.assertEqual(len(SupervisorAgentHandler.Connections.keys()), connection_count + 1, "+1 websocket connections.")
 
         status_conn = yield websocket_connect('ws://localhost:' + str(self.get_http_port()) + '/status/supervisor/',
@@ -134,8 +132,11 @@ class WebSocketTestCase(AsyncHTTPTestCase):
         cmd_conn = yield websocket_connect('ws://localhost:' + str(self.get_http_port()) + '/cmd/supervisor/',
             headers={'authorization':WebSocketTestCase.USER_TOKEN})
 
-        # Write a snapshot update:
+        # Write a snapshot update and read the response:
         agent_conn.write_message(snapshot_update_0)
+        response = yield agent_conn.read_message()
+        data = json.loads(response)
+        self.assertIn('AQL', data)
 
         # Write a command to the agent
         cmd_conn.write_message(json.dumps({'cmd': 'restart', 'ip': WebSocketTestCase.AGENT_IP, 'process': 'web'}))
@@ -150,6 +151,12 @@ class WebSocketTestCase(AsyncHTTPTestCase):
         for state_web_update in state_web_updates:
             agent_conn.write_message(state_web_update)
             response = yield agent_conn.read_message()
+            data = json.loads(response)
+            self.assertIn('AQL', data)
+
+        process_info_web = agent.get('web', 'web')
+        self.assertEqual(8, len(process_info_web.cpu), '8 cpu datapoints')
+        self.assertEqual(8, len(process_info_web.mem), '8 mem datapoints')
 
         # Write a command to the agent
         cmd_conn.write_message(json.dumps({'cmd': 'restart', 'ip': WebSocketTestCase.AGENT_IP, 'process': 'celery'}))
@@ -157,7 +164,6 @@ class WebSocketTestCase(AsyncHTTPTestCase):
         # Read the command sent to the agent
         response = yield agent_conn.read_message()
         command = json.loads(response)
-        print('response: %s' % response)
         self.assertIn('cmd', command)
         self.assertEqual(command['cmd'], 'restart celery')
 
@@ -165,13 +171,25 @@ class WebSocketTestCase(AsyncHTTPTestCase):
         for state_celery_update in state_celery_updates:
             agent_conn.write_message(state_celery_update)
             response = yield agent_conn.read_message()
+            data = json.loads(response)
+            self.assertIn('AQL', data)
 
+        # Read updates from status connection:
         for i in range(len(state_web_updates) + len(state_celery_updates)):
             response = yield status_conn.read_message()
             data = json.loads(response)
-            print('response: %s' % response)
-            # self.assertIn('cmd', data)
-            # self.assertEqual(data['cmd'], 'update')
+            self.assertIn('cmd', data)
+            self.assertEqual(data['cmd'], 'update')
+
+        # Write a snapshot update and read the response:
+        agent_conn.write_message(snapshot_update_1)
+        response = yield agent_conn.read_message()
+        data = json.loads(response)
+        self.assertIn('AQL', data)
+        self.assertEqual(16, len(process_info_web.cpu), '16 cpu datapoints')
+        self.assertEqual(16, len(process_info_web.mem), '16 mem datapoints')
+
+        agent_conn.close()
 
 
 class WebSocketClientConnection(simple_httpclient._HTTPConnection):
