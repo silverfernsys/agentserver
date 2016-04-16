@@ -5,6 +5,8 @@ import collections
 import json
 import os
 import tempfile
+import time
+import unittest
 
 from tornado import simple_httpclient, httpclient
 from tornado.concurrent import TracebackFuture
@@ -13,10 +15,17 @@ from tornado.tcpclient import TCPClient
 from tornado.testing import AsyncHTTPTestCase, gen_test
 from tornado.web import Application
 from tornado.websocket import WebSocketProtocol13
+from tornado.gen import TimeoutError
+# from concurrent.futures import TimeoutError
 
-from agentserver.ws import AgentWSHandler, UserWSHandler
+import sys, os
+sys.path.insert(0, os.path.split(os.path.split(os.path.dirname(os.path.abspath(__file__)))[0])[0])
+
+from agentserver.ws import SupervisorAgentHandler, SupervisorStatusHandler, SupervisorCommandHandler
 from agentserver.db import dal, User, UserAuthToken, Agent, AgentAuthToken
 
+# from ws import SupervisorAgentHandler, SupervisorStatusHandler, SupervisorCommandHandler
+# from db import dal, User, UserAuthToken, Agent, AgentAuthToken
 
 class WebSocketTestCase(AsyncHTTPTestCase):
     USER_TOKEN = None
@@ -52,9 +61,9 @@ class WebSocketTestCase(AsyncHTTPTestCase):
         WebSocketTestCase.USER_TOKEN = token_0.uuid
 
         # Generate agents
-        agent_0 = Agent(ip='192.168.10.12')
-        agent_1 = Agent(ip='192.168.10.13')
-        agent_2 = Agent(ip='192.168.10.14')
+        agent_0 = Agent(ip='192.168.10.12', retention_policy='5d', timeseries_database_name='timeseries1')
+        agent_1 = Agent(ip='192.168.10.13', retention_policy='1w', timeseries_database_name='timeseries2')
+        agent_2 = Agent(ip='192.168.10.14', retention_policy='INF', timeseries_database_name='timeseries3')
         # dal.session.bulk_save_objects([agent_0, agent_1, agent_2])
         # dal.session.commit()
 
@@ -67,86 +76,102 @@ class WebSocketTestCase(AsyncHTTPTestCase):
         dal.session.commit()
 
         WebSocketTestCase.AGENT_TOKEN = agent_token_0.uuid
+        WebSocketTestCase.AGENT_IP = agent_0.ip
 
-        dal.session.close()
+        WebSocketTestCase.fixtures_dir =  os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fixtures')
 
     @classmethod
     def tearDownClass(cls):
-        pass
-
-    def setUp(self):
-        super(WebSocketTestCase, self).setUp()
-
-    def tearDown(self):
         dal.session.rollback()
         dal.session.close()
 
     def get_app(self):
         app = Application([
-            (r'/user/', UserWSHandler),
-            (r'/agent/', AgentWSHandler),
+            # Agents
+            (r'/supervisor/', SupervisorAgentHandler),
+            # Commands and Status handlers
+            (r'/cmd/supervisor/', SupervisorCommandHandler),
+            (r'/status/supervisor/', SupervisorStatusHandler),
         ])
         return app
 
     @gen_test
-    def test_user_wshandler_no_authorization(self):
-        ws_url = 'ws://localhost:' + str(self.get_http_port()) + '/user/'
+    def test_supervisoragenthandler_no_authorization(self):
+        connection_count = len(SupervisorAgentHandler.Connections.keys())
+        ws_url = 'ws://localhost:' + str(self.get_http_port()) + '/supervisor/'
         ws_client = yield websocket_connect(ws_url)
         ws_client.write_message(json.dumps({'msg':'update'}))
         response = yield ws_client.read_message()
         self.assertEqual(response, None, "No response from server because authorization not provided.")
-        # self.assertEqual(len(WSHandler.connections), 0, "0 websocket connections.")
+        self.assertEqual(len(SupervisorAgentHandler.Connections.keys()), connection_count, "+0 websocket connections.")
 
     @gen_test
-    def test_user_wshandler_bad_authorization(self):
-        ws_url = 'ws://localhost:' + str(self.get_http_port()) + '/user/'
+    def test_supervisoragenthandler_bad_authorization(self):
+        connection_count = len(SupervisorAgentHandler.Connections.keys())
+        ws_url = 'ws://localhost:' + str(self.get_http_port()) + '/supervisor/'
         ws_client = yield websocket_connect(ws_url, headers={'authorization':'asdf'})
         ws_client.write_message(json.dumps({'msg':'update'}))
         response = yield ws_client.read_message()
         self.assertEqual(response, None, "No response from server because bad authorization provided.")
-        # self.assertEqual(len(WSHandler.connections), 0, "0 websocket connections.")
+        self.assertEqual(len(SupervisorAgentHandler.Connections.keys()), connection_count, "+0 websocket connections.")
 
     @gen_test
-    def test_user_wshandler_authorization(self):
-        ws_url = 'ws://localhost:' + str(self.get_http_port()) + '/user/'
-        ws_client = yield websocket_connect(ws_url, headers={'authorization':WebSocketTestCase.USER_TOKEN})
-        ws_client.write_message(json.dumps({'msg':'update'}))
-        # response = yield ws_client.read_message()
-        # response_data = json.loads(response)
-        # self.assertEqual(response_data['msg'], 'updated', "Update response from server.")
-        self.assertEqual(len(UserWSHandler.connections), 1, "1 websocket connection.")
-        # ws_client.close()
-        # self.assertEqual(len(WSHandler.connections), 0, "0 websocket connections.")
+    def test_supervisoragenthandler_state_update(self):
+        connection_count = len(SupervisorAgentHandler.Connections.keys())
+        state_web_updates = open(os.path.join(WebSocketTestCase.fixtures_dir, 'state_web_update.json')).read().split('\n')
+        state_celery_updates = open(os.path.join(WebSocketTestCase.fixtures_dir, 'state_celery_update.json')).read().split('\n')
+        snapshot_update_0 = open(os.path.join(WebSocketTestCase.fixtures_dir, 'snapshot0.json')).read()
+        snapshot_update_1 = open(os.path.join(WebSocketTestCase.fixtures_dir, 'snapshot0.json')).read()
 
-    @gen_test
-    def test_agent_wshandler_no_authorization(self):
-        ws_url = 'ws://localhost:' + str(self.get_http_port()) + '/agent/'
-        ws_client = yield websocket_connect(ws_url)
-        ws_client.write_message(json.dumps({'msg':'update'}))
-        response = yield ws_client.read_message()
-        self.assertEqual(response, None, "No response from server because authorization not provided.")
-        # self.assertEqual(len(WSHandler.connections), 0, "0 websocket connections.")
+        agent_conn = yield websocket_connect('ws://localhost:' + str(self.get_http_port()) + '/supervisor/',
+            headers={'authorization':WebSocketTestCase.AGENT_TOKEN})
+        
+        self.assertEqual(len(SupervisorAgentHandler.Connections.keys()), connection_count + 1, "+1 websocket connections.")
 
-    @gen_test
-    def test_agent_wshandler_bad_authorization(self):
-        ws_url = 'ws://localhost:' + str(self.get_http_port()) + '/agent/'
-        ws_client = yield websocket_connect(ws_url, headers={'authorization':'asdf'})
-        ws_client.write_message(json.dumps({'msg':'update'}))
-        response = yield ws_client.read_message()
-        self.assertEqual(response, None, "No response from server because bad authorization provided.")
-        # self.assertEqual(len(WSHandler.connections), 0, "0 websocket connections.")
+        status_conn = yield websocket_connect('ws://localhost:' + str(self.get_http_port()) + '/status/supervisor/',
+            headers={'authorization':WebSocketTestCase.USER_TOKEN})
 
-    @gen_test
-    def test_agent_wshandler_authorization(self):
-        ws_url = 'ws://localhost:' + str(self.get_http_port()) + '/agent/'
-        ws_client = yield websocket_connect(ws_url, headers={'authorization':WebSocketTestCase.AGENT_TOKEN})
-        ws_client.write_message(json.dumps({'msg':'update'}))
-        # response = yield ws_client.read_message()
-        # response_data = json.loads(response)
-        # self.assertEqual(response_data['msg'], 'updated', "Update response from server.")
-        self.assertEqual(len(AgentWSHandler.Connections), 1, "1 websocket connection.")
-        # ws_client.close()
-        # self.assertEqual(len(WSHandler.connections), 0, "0 websocket connections.")
+        cmd_conn = yield websocket_connect('ws://localhost:' + str(self.get_http_port()) + '/cmd/supervisor/',
+            headers={'authorization':WebSocketTestCase.USER_TOKEN})
+
+        # Write a snapshot update:
+        agent_conn.write_message(snapshot_update_0)
+
+        # Write a command to the agent
+        cmd_conn.write_message(json.dumps({'cmd': 'restart', 'ip': WebSocketTestCase.AGENT_IP, 'process': 'web'}))
+
+        # Read the command sent to the agent
+        response = yield agent_conn.read_message()
+        command = json.loads(response)
+        self.assertIn('cmd', command)
+        self.assertEqual(command['cmd'], 'restart web')
+
+        # Write state updates of web process restarting:
+        for state_web_update in state_web_updates:
+            agent_conn.write_message(state_web_update)
+            response = yield agent_conn.read_message()
+
+        # Write a command to the agent
+        cmd_conn.write_message(json.dumps({'cmd': 'restart', 'ip': WebSocketTestCase.AGENT_IP, 'process': 'celery'}))
+
+        # Read the command sent to the agent
+        response = yield agent_conn.read_message()
+        command = json.loads(response)
+        print('response: %s' % response)
+        self.assertIn('cmd', command)
+        self.assertEqual(command['cmd'], 'restart celery')
+
+        # Write state updates of celery process restarting:
+        for state_celery_update in state_celery_updates:
+            agent_conn.write_message(state_celery_update)
+            response = yield agent_conn.read_message()
+
+        for i in range(len(state_web_updates) + len(state_celery_updates)):
+            response = yield status_conn.read_message()
+            data = json.loads(response)
+            print('response: %s' % response)
+            # self.assertIn('cmd', data)
+            # self.assertEqual(data['cmd'], 'update')
 
 
 class WebSocketClientConnection(simple_httpclient._HTTPConnection):
@@ -324,3 +349,7 @@ def websocket_connect(url, headers=None, io_loop=None, callback=None, connect_ti
     if callback is not None:
         io_loop.add_future(conn.connect_future, callback)
     return conn.connect_future
+
+
+if __name__ == '__main__':
+    unittest.main()

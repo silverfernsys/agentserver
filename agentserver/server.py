@@ -17,9 +17,6 @@ class Server():
     # Adapted from code found at https://gist.github.com/mywaiting/4643396
     def sig_handler(self, sig, frame):
         self.logger.warning("Caught signal: %s", sig)
-        # Flush AgentWSHandler in order to save
-        # timeseries data to database.
-        # AgentWSHandler.Flush()
         tornado.ioloop.IOLoop.instance().add_callback(self.shutdown)
 
     def __init__(self):
@@ -41,34 +38,6 @@ class Server():
             # (r'/postgresql/', PostgreSQLAgentHandler),
         ])
 
-        # This is where we initialize the TimeseriesAccessLayer connection pool.
-        # for agent in dal.Session().query(Agent):
-        #     dbname = agent.timeseries_database_name
-        #     tal.connect(config.data['timeseries'], dbname)
-
-        # This is where we can test out our query.
-        # connection = tal.connection('supervisor_10_0_0_11')
-        # print('connection: %s' % connection)
-        # query = 'select * from supervisor'
-        # resultset = connection.query(query)
-
-        # points = resultset.get_points(measurement='supervisor', tags={'processgroup': 'agenteventlistener'})
-        # print('points: %s' % list(points))
-
-        # print(len([resultset]))
-        # processes = [('celery', 'celery'), \
-        #     ('web', 'web'), \
-        #     ('agenteventlistener', 'agenteventlistener'), \
-        #     ('supervisoragent', 'supervisoragent')]
-        # d = datetime.now() - timedelta(days=10)
-        # res = SupervisorSeries.Aggregate(resultset, processes, d, 10, SupervisorSeries.Max)
-        # print('res: %s' % res)
-        # print('resultset: %s' % resultset)
-
-        # flush_stats_thread = threading.Thread(target=self.flush, args=())
-        # flush_stats_thread.daemon = True
-        # flush_stats_thread.start()
-
         self.max_wait_seconds_before_shutdown = config.data['max_wait_seconds_before_shutdown']
         port = config.data['port']
         server = tornado.httpserver.HTTPServer(application)
@@ -79,11 +48,6 @@ class Server():
         signal.signal(signal.SIGINT, self.sig_handler)
         tornado.ioloop.IOLoop.instance().start()
         self.logger.info("Exit...")
-
-    # def flush(self):
-    #     while True:
-    #         AgentWSHandler.Flush()
-    #         time.sleep(config.data['flush_data_period']) 
 
     def shutdown(self):
         self.logger.info('Stopping HTTP Server.')

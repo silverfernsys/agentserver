@@ -1,0 +1,4 @@
+{"state_update":{"group": "web", "name": "web", "statename": "STOPPING", "pid": "4878", "start": 1460513172, "state": 40}}
+{"state_update":{"group": "web", "name": "web", "statename": "STOPPED", "pid": null, "start": 1460613204, "state": 0}}
+{"state_update":{"group": "web", "name": "web", "statename": "STARTING", "pid": null, "start": 1460613204, "state": 10}}
+{"state_update":{"group": "web", "name": "web", "statename": "RUNNING", "pid": "19859", "start": 1460613204, "state": 20}}

@@ -1,24 +1,14 @@
 #! /usr/bin/env python
 import unittest
 from decimal import Decimal
-from agentserver.db import prep_db, dal
+from agentserver.db import dal, User, UserAuthToken, Agent, AgentAuthToken
 
 
 class TestApp(unittest.TestCase):
-    # cookie_orders = [(1, u'cookiemon', u'111-111-1111')]
-    # cookie_details = [
-    #     (1, u'cookiemon', u'111-111-1111',
-    #         u'dark chocolate chip', 2, Decimal('1.00')),
-    #     (1, u'cookiemon', u'111-111-1111',
-    #         u'oatmeal raisin', 12, Decimal('3.00'))]
-
     @classmethod
     def setUpClass(cls):
-        # dal.conn_string = 
         dal.connect('sqlite:///:memory:')
         dal.session = dal.Session()
-        prep_db(dal.session)
-        dal.session.close()
 
     def setUp(self):
         dal.session = dal.Session()
@@ -27,77 +17,42 @@ class TestApp(unittest.TestCase):
         dal.session.rollback()
         dal.session.close()
 
-    def test_nothing(self):
-        pass
+    def test_users_and_user_tokens(self):
+        # Generate users
+        user_0 = User(name='Marc Wilson',
+                         email='marcw@silverfern.io',
+                         is_admin=True,
+                         password='asdf')
+        user_1 = User(name='Phil Lake',
+                         email='philip@gmail.com',
+                         is_admin=False,
+                         password='asdf')
+        user_2 = User(name='Colin Ng',
+                         email='colin@ngland.net',
+                         is_admin=True,
+                         password='asdf')
 
-    # def test_orders_by_customer_blank(self):
-    #     results = get_orders_by_customer('')
-    #     self.assertEqual(results, [])
+        # Generate user tokens
+        u_token_0 = UserAuthToken(user=user_0)
+        u_token_1 = UserAuthToken(user=user_1)
+        u_token_2 = UserAuthToken(user=user_2)
+        dal.session.add(u_token_0)
+        dal.session.add(u_token_1)
+        dal.session.add(u_token_2)
+        # dal.session.bulk_save_objects([u_token_0, u_token_1, u_token_2])
+        dal.session.commit()
 
-    # def test_orders_by_customer_blank_shipped(self):
-    #     results = get_orders_by_customer('', True)
-    #     self.assertEqual(results, [])
+    def test_agents_and_agent_tokens(self):
+        # Generate agents
+        agent_0 = Agent(ip='192.168.10.12', retention_policy='5d', timeseries_database_name='timeseries1')
+        agent_1 = Agent(ip='192.168.10.13', retention_policy='1w', timeseries_database_name='timeseries2')
+        agent_2 = Agent(ip='192.168.10.14', retention_policy='INF', timeseries_database_name='timeseries3')
 
-    # def test_orders_by_customer_blank_notshipped(self):
-    #     results = get_orders_by_customer('', False)
-    #     self.assertEqual(results, [])
-
-    # def test_orders_by_customer_blank_details(self):
-    #     results = get_orders_by_customer('', details=True)
-    #     self.assertEqual(results, [])
-
-    # def test_orders_by_customer_blank_shipped_details(self):
-    #     results = get_orders_by_customer('', True, True)
-    #     self.assertEqual(results, [])
-
-    # def test_orders_by_customer_blank_notshipped_details(self):
-    #     results = get_orders_by_customer('', False, True)
-    #     self.assertEqual(results, [])
-
-    # def test_orders_by_customer_bad_cust(self):
-    #     results = get_orders_by_customer('bad name')
-    #     self.assertEqual(results, [])
-
-    # def test_orders_by_customer_bad_cust_shipped(self):
-    #     results = get_orders_by_customer('bad name', True)
-    #     self.assertEqual(results, [])
-
-    # def test_orders_by_customer_bad_cust_notshipped(self):
-    #     results = get_orders_by_customer('bad name', False)
-    #     self.assertEqual(results, [])
-
-    # def test_orders_by_customer_bad_cust_details(self):
-    #     results = get_orders_by_customer('bad name', details=True)
-    #     self.assertEqual(results, [])
-
-    # def test_orders_by_customer_bad_cust_shipped_details(self):
-    #     results = get_orders_by_customer('bad name', True, True)
-    #     self.assertEqual(results, [])
-
-    # def test_orders_by_customer_bad_cust_notshipped_details(self):
-    #     results = get_orders_by_customer('bad name', False, True)
-    #     self.assertEqual(results, [])
-
-    # def test_orders_by_customer(self):
-    #     results = get_orders_by_customer('cookiemon')
-    #     self.assertEqual(results, self.cookie_orders)
-
-    # def test_orders_by_customer_shipped_only(self):
-    #     results = get_orders_by_customer('cookiemon', True)
-    #     self.assertEqual(results, [])
-
-    # def test_orders_by_customer_unshipped_only(self):
-    #     results = get_orders_by_customer('cookiemon', False)
-    #     self.assertEqual(results, self.cookie_orders)
-
-    # def test_orders_by_customer_with_details(self):
-    #     results = get_orders_by_customer('cookiemon', details=True)
-    #     self.assertEqual(results, self.cookie_details)
-
-    # def test_orders_by_customer_shipped_only_with_details(self):
-    #     results = get_orders_by_customer('cookiemon', True, True)
-    #     self.assertEqual(results, [])
-
-    # def test_orders_by_customer_unshipped_only_details(self):
-    #     results = get_orders_by_customer('cookiemon', False, True)
-    #     self.assertEqual(results, self.cookie_details)
+        # Generate agent tokens
+        a_token_0 = AgentAuthToken(agent=agent_0)
+        a_token_1 = AgentAuthToken(agent=agent_1)
+        a_token_2 = AgentAuthToken(agent=agent_2)
+        dal.session.add(a_token_0)
+        dal.session.add(a_token_1)
+        dal.session.add(a_token_2)
+        dal.session.commit()

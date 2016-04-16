@@ -25,18 +25,20 @@ class SupervisorAgentHandler(tornado.websocket.WebSocketHandler):
         """
         Protocol:
         """
-        print("SupervisorAgentHandler.open")
         uuid = self.request.headers.get('authorization')
-        try:
-            token = dal.Session().query(AgentAuthToken).filter(AgentAuthToken.uuid == uuid).one()
-            agent = token.agent
-            if not (agent.ip in SupervisorAgentHandler.IPConnections):
-                supervisor_agent = SupervisorAgent(agent.ip, agent.timeseries_database_name, self)
-                SupervisorAgentHandler.IPConnections[agent.ip] = supervisor_agent
-                SupervisorAgentHandler.Connections[self] = supervisor_agent
-        except Exception as e:
-            print('SupervisorAgentHandler.open EXCEPTION: %s' % e)
+        if uuid is None:
             self.close()
+        else:
+            try:
+                token = dal.Session().query(AgentAuthToken).filter(AgentAuthToken.uuid == uuid).one()
+                agent = token.agent
+                if not (agent.ip in SupervisorAgentHandler.IPConnections):
+                    supervisor_agent = SupervisorAgent(agent.ip, agent.timeseries_database_name, self)
+                    SupervisorAgentHandler.IPConnections[agent.ip] = supervisor_agent
+                    SupervisorAgentHandler.Connections[self] = supervisor_agent
+            except Exception as e:
+                # print('SupervisorAgentHandler.open EXCEPTION: %s' % e)
+                self.close()
       
     def on_message(self, message):
         """
@@ -46,23 +48,23 @@ class SupervisorAgentHandler(tornado.websocket.WebSocketHandler):
             agent = SupervisorAgentHandler.Connections[self]
             try:
                 if message is not None:
-                    # print('Message is Not None!!!: MESSAGE %s' % message)
                     data = json.loads(message)
-                    # print('data: %s' % data)
                     if STATE_UPDATE in data:
-                        # print('STATE_UPDATE data: %s' % data)
-                        print('STATE_UPDATE in data!!!!')
                         agent.state_update(data[STATE_UPDATE])
                         response = {'AQL':'UPDATED AT time=%s' % time()}
                         self.write_message(json.dumps(response))
+                        SupervisorStatusHandler.update_state(data[STATE_UPDATE])
                     elif SNAPSHOT_UPDATE in data:
+                        # print('data[SNAPSHOT_UPDATE] = %s' % data)
                         agent.snapshot_update(data[SNAPSHOT_UPDATE])
                         response = {'AQL':'UPDATED AT time=%s' % time()}
                         self.write_message(json.dumps(response))
                 else:
                     print('MESSAGE IS NONE!! :(')
             except Exception as e:
-                print('SupervisorAgentHandler.on_message EXCEPTION: %s' % e)
+                print('SupervisorAgentHandler.on_message EXCEPTION 1: %s' % e)
+                response = {'AQL':'UPDATED AT time=%s' % time()}
+                self.write_message(json.dumps(response))
  
     def on_close(self):
         print("SupervisorAgentHandler.on_close")        
@@ -168,6 +170,11 @@ class SupervisorStatusHandler(tornado.websocket.WebSocketHandler):
         if self in SupervisorStatusHandler.Connections:
             SupervisorStatusHandler.Connections.remove(self)
 
+    @classmethod
+    def update_state(cls, data):
+        for conn in SupervisorStatusHandler.Connections:
+            conn.write_message(json.dumps({'cmd':'update'}))
+
     def check_origin(self, origin):
         return True
 
@@ -208,39 +215,16 @@ class SupervisorCommandHandler(tornado.websocket.WebSocketHandler):
                 self.write_message(json.dumps({'processes': data}))
             except Exception as e:
                 self.write_message(json.dumps({'error': str(e)}))
-        elif cmd == 'start':
+        elif cmd in ['start', 'stop', 'restart']:
             try:
                 ip = data['ip']
                 process = data['process']
                 agent = SupervisorAgentHandler.IPConnections[ip]
                 # Send command to remote agent! Magic sauce!
-                command = {'cmd': 'start {0}'.format(process)}
+                command = {'cmd': '{0} {1}'.format(cmd, process)}
                 agent.conn.write_message(json.dumps(command))
                 self.write_message(json.dumps({'result': 'success'}))
             except Exception as e:
-                self.write_message(json.dumps({'result': 'error', 'details': str(e)}))
-        elif cmd == 'stop':
-            try:
-                ip = data['ip']
-                process = data['process']
-                agent = SupervisorAgentHandler.IPConnections[ip]
-                # Send command to remote agent! Magic sauce!
-                command = {'cmd': 'stop {0}'.format(process)}
-                agent.conn.write_message(json.dumps(command))
-                self.write_message(json.dumps({'result': 'success'}))
-            except Exception as e:
-                self.write_message(json.dumps({'result': 'error', 'details': str(e)}))
-        elif cmd == 'restart':
-            try:
-                ip = data['ip']
-                process = data['process']
-                agent = SupervisorAgentHandler.IPConnections[ip]
-                # Send command to remote agent! Magic sauce!
-                command = {'cmd': 'restart {0}'.format(process)}
-                agent.conn.write_message(json.dumps(command))
-                self.write_message(json.dumps({'result': 'success'}))
-            except Exception as e:
-                print('EXCEPTION: %s' % str(e))
                 self.write_message(json.dumps({'result': 'error', 'details': str(e)}))
         else:
             self.write_message(json.dumps({'error': 'unknown command'}))

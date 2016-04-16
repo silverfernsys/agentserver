@@ -1,9 +1,7 @@
 #! /usr/bin/env python
 from procinfo import ProcInfo
 from influxdb import InfluxDBClient, SeriesHelper
-from config import config
 from time import time
-from db import tal
 
 
 STATE_MAP = {
@@ -50,8 +48,8 @@ class ProcInfo(object):
         self.mem.extend(data['mem'])
 
     def update_state(self, data):
-        print('update_state: %s, %s' % (self._statename, self._state))
         self.statename = data['statename']
+        self.start = data['start']
 
     def _binary_search_helper(self, array, value, start, end):
         if (start >= end):
@@ -164,7 +162,8 @@ class SupervisorAgent(object):
 
     def state_update(self, data):
         info = self.get(data['group'], data['name'])
-        info.update_state(data)
+        if info != None:
+            info.update_state(data)
 
     def data(self):
         data = []

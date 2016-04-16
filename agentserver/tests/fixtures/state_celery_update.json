@@ -1,0 +1,4 @@
+{"state_update":{"group": "celery", "name": "celery", "statename": "STOPPING", "pid": "8593", "start": 1460513750, "state": 40}}
+{"state_update":{"group": "celery", "name": "celery", "statename": "STOPPED", "pid": null, "start": 1460613280, "state": 0}}
+{"state_update":{"group": "celery", "name": "celery", "statename": "STARTING", "pid": null, "start": 1460613280, "state": 10}}
+{"state_update":{"group": "celery", "name": "celery", "statename": "RUNNING", "pid": "20289", "start": 1460613280, "state": 20}}

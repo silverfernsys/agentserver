@@ -4,8 +4,8 @@ import sys, os
 sys.path.insert(0, os.path.split(os.path.split(os.path.dirname(os.path.abspath(__file__)))[0])[0])
 
 testmodules = [
-    'test_db',
-    'test_http',
+    # 'test_db',
+    # 'test_http',
     'test_ws',
     ]
 
