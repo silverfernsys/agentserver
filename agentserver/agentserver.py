@@ -2,6 +2,7 @@
 import argparse
 import logging
 import signal
+import sys
 import time
 from setproctitle import setproctitle
 from config import config
@@ -23,6 +24,10 @@ def main():
     try:
         config.resolveArgs(args)
         logging.basicConfig(filename=config.log_file, format='%(asctime)s::%(levelname)s::%(name)s::%(message)s', level=logging.DEBUG)
+        if sys.stdout.isatty():
+            logger = logging.getLogger()
+            channel = logging.StreamHandler(sys.stdout)
+            logger.addHandler(channel)
         server = Server()
     except Exception as e:
         print('AgentServer Exception. DETAILS: %s' % e)

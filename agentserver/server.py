@@ -1,15 +1,19 @@
 #!/usr/bin/env python
 import logging
 import signal
+import sys
 import threading
 import time
 import tornado.ioloop
 import tornado.web
 import tornado.httpserver
+from termcolor import colored, cprint
 from config import config
 from db import dal, tal, Agent, SupervisorSeries
 from http import HTTPVersionHandler, HTTPCommandHandler, HTTPStatusHandler, HTTPTokenHandler
 from ws import SupervisorAgentHandler, SupervisorCommandHandler, SupervisorStatusHandler
+
+from pyfiglet import figlet_format
 
 from datetime import datetime, timedelta
 
@@ -20,6 +24,7 @@ class Server():
         tornado.ioloop.IOLoop.instance().add_callback(self.shutdown)
 
     def __init__(self):
+        self.print_splash_page()
     	dal.connect(config.database)
     	self.session = dal.Session()
         self.logger = logging.getLogger('Web Server')
@@ -65,3 +70,12 @@ class Server():
                 io_loop.stop()
                 self.logger.info('Shutdown')
         stop_loop()
+
+    def print_splash_page(self):
+        if sys.stdout.isatty():
+            text = figlet_format('AgentServer', width=120, font='slant').rstrip()
+            cprint(text, 'red', attrs=['blink'])
+            width = reduce(max, map(len, text.split('\n')))
+            title = 'AgentServer v0.1a'
+            centered_title = title.center(width, ' ')
+            cprint(centered_title, 'red')

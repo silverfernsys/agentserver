@@ -1,4 +1,5 @@
-import ConfigParser
+from ConfigParser import SafeConfigParser
+from os.path import dirname, join, expanduser
 
 class Config(object):
     possible_args = [
@@ -12,13 +13,18 @@ class Config(object):
     'push_data_period',
     ]
 
-    def __init__(self):
-        self.loadConfig('/etc/agentserver/agentserver.conf')
+    INSTALL_DIR = dirname(__file__)
 
-    def loadConfig(self, path):
+    def __init__(self):
+        self.loadConfig([
+            join(Config.INSTALL_DIR, 'agentserver.conf'),
+            expanduser('~/agentserver.conf'),
+            '/etc/agentserver/agentserver.conf'])
+
+    def loadConfig(self, paths):
         try:
-            config_parser = ConfigParser.ConfigParser()
-            config_parser.read(path)
+            config_parser = SafeConfigParser()
+            config_parser.read(paths)
             data = {p: config_parser.get('agentserver', p) for p in Config.possible_args}
             self.__dict__.update(data)
         except:

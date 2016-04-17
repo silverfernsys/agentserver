@@ -194,6 +194,7 @@ class SupervisorCommandHandler(tornado.websocket.WebSocketHandler):
             self.close()
       
     def on_message(self, message):
+        print('SupervisorCommandHandler.on_message')
         """
         This function responds to queries from a client.
         """
@@ -216,6 +217,7 @@ class SupervisorCommandHandler(tornado.websocket.WebSocketHandler):
             except Exception as e:
                 self.write_message(json.dumps({'error': str(e)}))
         elif cmd in ['start', 'stop', 'restart']:
+            print('INSIDE START STOP RESTART!!!')
             try:
                 ip = data['ip']
                 process = data['process']
