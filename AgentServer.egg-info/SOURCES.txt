@@ -1,7 +1,0 @@
-README.rst
-AgentServer.egg-info/PKG-INFO
-AgentServer.egg-info/SOURCES.txt
-AgentServer.egg-info/dependency_links.txt
-AgentServer.egg-info/entry_points.txt
-AgentServer.egg-info/requires.txt
-AgentServer.egg-info/top_level.txt
