@@ -8,7 +8,7 @@ import getpass
 class Admin(object):
     def __init__(self):
         print('Connecting to database...')
-        dal.connect(conn_string=config.data['database'])
+        dal.connect(conn_string=config.database)
 
     def create_user(self):
         session = dal.Session()
@@ -169,7 +169,7 @@ class Admin(object):
         session.commit()
 
         # Now create timeseries database.
-        tal.connect(config.data['timeseries'], dbname)
+        tal.connect(config.timeseries, dbname)
         conn = tal.connection(dbname)
         conn.create_database(dbname)
 
@@ -188,7 +188,7 @@ class Admin(object):
             input_agent = session.query(Agent).filter(Agent.ip == input_ip).one()
             # Delete timeseries database.
             try:
-                tal.connect(config.data['timeseries'], input_agent.timeseries_database_name)
+                tal.connect(config.timeseries, input_agent.timeseries_database_name)
                 conn = tal.connection(input_agent.timeseries_database_name)
                 conn.drop_database(input_agent.timeseries_database_name)
             except Exception as e:

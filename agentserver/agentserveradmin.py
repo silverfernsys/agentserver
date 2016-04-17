@@ -89,7 +89,7 @@ def main():
 
     # try:
     config.resolveArgs(args)
-    logging.basicConfig(filename=config.data['log_file'], format='%(asctime)s::%(levelname)s::%(name)s::%(message)s', level=logging.DEBUG)
+    logging.basicConfig(filename=config.log_file, format='%(asctime)s::%(levelname)s::%(name)s::%(message)s', level=logging.DEBUG)
     
     admin = Admin()
 

@@ -1,0 +1,5 @@
+
+		[console_scripts]
+		as=agentserver.agentserver:main
+		asa=agentserver.agentserveradmin:main
+	

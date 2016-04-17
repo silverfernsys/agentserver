@@ -20,7 +20,7 @@ class Server():
         tornado.ioloop.IOLoop.instance().add_callback(self.shutdown)
 
     def __init__(self):
-    	dal.connect(config.data['database'])
+    	dal.connect(config.database)
     	self.session = dal.Session()
         self.logger = logging.getLogger('Web Server')
 
@@ -38,8 +38,8 @@ class Server():
             # (r'/postgresql/', PostgreSQLAgentHandler),
         ])
 
-        self.max_wait_seconds_before_shutdown = config.data['max_wait_seconds_before_shutdown']
-        port = config.data['port']
+        self.max_wait_seconds_before_shutdown = int(config.max_wait_seconds_before_shutdown)
+        port = config.port
         server = tornado.httpserver.HTTPServer(application)
         server.listen(port)
         self.logger.info('Running on port %s' % port)

@@ -8,6 +8,7 @@ import tempfile
 import time
 import unittest
 
+from tornado.concurrent import Future
 from tornado import simple_httpclient, httpclient
 from tornado.concurrent import TracebackFuture
 from tornado.ioloop import IOLoop
@@ -82,12 +83,13 @@ class WebSocketTestCase(AsyncHTTPTestCase):
         dal.session.close()
 
     def get_app(self):
+        self.close_future = Future()
         app = Application([
             # Agents
-            (r'/supervisor/', SupervisorAgentHandler),
+            (r'/supervisor/', SupervisorAgentHandler), #, dict(close_future=self.close_future)),
             # Commands and Status handlers
-            (r'/cmd/supervisor/', SupervisorCommandHandler),
-            (r'/status/supervisor/', SupervisorStatusHandler),
+            (r'/cmd/supervisor/', SupervisorCommandHandler), #dict(close_future=self.close_future)),
+            (r'/status/supervisor/', SupervisorStatusHandler), #dict(close_future=self.close_future)),
         ])
         return app
 
@@ -190,7 +192,7 @@ class WebSocketTestCase(AsyncHTTPTestCase):
         self.assertEqual(16, len(process_info_web.mem), '16 mem datapoints')
 
         agent_conn.close()
-
+        # yield self.close_future
 
 class WebSocketClientConnection(simple_httpclient._HTTPConnection):
     """WebSocket client connection.
