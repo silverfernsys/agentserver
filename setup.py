@@ -25,7 +25,7 @@ setup(
 	],
 	entry_points='''
 		[console_scripts]
-		as=agentserver.agentserver:main
-		asa=agentserver.agentserveradmin:main
+		agentserver=agentserver.agentserver:main
+		agentserveradmin=agentserver.agentserveradmin:main
 	''',
 )

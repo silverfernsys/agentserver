@@ -1,0 +1,12 @@
+[run]
+branch = True
+omit = 
+	__init__.py
+	setup.py
+	agentserver/tests/*
+	agentserver/server.py
+	agentserver/agentserveradmin.py
+	agentserver/agentserver.py
+	agentserver/config.py
+	agentserver/__init__.py
+	agentserver/agents/__init__.py

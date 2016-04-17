@@ -178,54 +178,54 @@ class SupervisorAgent(object):
         for p in self.all():
             p.reset()
 
-    def flush_timeseries(self):
-        print('flush_timeseries')
-        """
-        This will flush timeseries data for this instance.
-        Flushes all data newer than self.time. Otherwise,
-        breaks from loop.
-        """
-        class SupervisorSeriesHelper(SeriesHelper):
-            # Meta class stores time series helper configuration.
-            class Meta:
-                # The client should be an instance of InfluxDBClient.
-                client = tal.connection(self.dbname)
-                # The series name must be a string. Add dependent fields/tags in curly brackets.
-                series_name = 'supervisor'
-                # Defines all the fields in this time series.
-                fields = ['cpu', 'mem', 'time']
-                # Defines all the tags for the series.
-                tags = ['processgroup', 'processname']
-                # Defines the number of data points to store prior to writing on the wire.
-                bulk_size = 5
-                # autocommit must be set to True when using bulk_size
-                autocommit = True
+    # def flush_timeseries(self):
+    #     print('flush_timeseries')
+    #     """
+    #     This will flush timeseries data for this instance.
+    #     Flushes all data newer than self.time. Otherwise,
+    #     breaks from loop.
+    #     """
+    #     class SupervisorSeriesHelper(SeriesHelper):
+    #         # Meta class stores time series helper configuration.
+    #         class Meta:
+    #             # The client should be an instance of InfluxDBClient.
+    #             client = tal.connection(self.dbname)
+    #             # The series name must be a string. Add dependent fields/tags in curly brackets.
+    #             series_name = 'supervisor'
+    #             # Defines all the fields in this time series.
+    #             fields = ['cpu', 'mem', 'time']
+    #             # Defines all the tags for the series.
+    #             tags = ['processgroup', 'processname']
+    #             # Defines the number of data points to store prior to writing on the wire.
+    #             bulk_size = 5
+    #             # autocommit must be set to True when using bulk_size
+    #             autocommit = True
 
-        max_timestamp = 0.0
-        for process in self.all():
-            if len(process.cpu) == len(process.mem):
-                max_timestamp = max(max_timestamp, process.cpu[len(process.cpu) - 1][0])
-                # Work backwards through the array, breaking as soon as
-                # a timestamp older than self.time is reached.
-                length = len(process.cpu)
-                for i in range(len(process.cpu)):
-                    cpu = process.cpu[length - i - 1][1]
-                    mem = process.mem[length - i - 1][1]
-                    timestamp = process.cpu[length - i - 1][0]
-                    if timestamp < self.time:
-                        break
-                    else:
-                        SupervisorSeriesHelper(processgroup=process.group,
-                            processname=process.name, cpu=cpu, mem=mem, time=timestamp)
-            else:
-                print('ERROR with cpu and mem stats')
-        self.time = max_timestamp
-        SupervisorSeriesHelper.commit()
-        print(SupervisorSeriesHelper._json_body_())
+    #     max_timestamp = 0.0
+    #     for process in self.all():
+    #         if len(process.cpu) == len(process.mem):
+    #             max_timestamp = max(max_timestamp, process.cpu[len(process.cpu) - 1][0])
+    #             # Work backwards through the array, breaking as soon as
+    #             # a timestamp older than self.time is reached.
+    #             length = len(process.cpu)
+    #             for i in range(len(process.cpu)):
+    #                 cpu = process.cpu[length - i - 1][1]
+    #                 mem = process.mem[length - i - 1][1]
+    #                 timestamp = process.cpu[length - i - 1][0]
+    #                 if timestamp < self.time:
+    #                     break
+    #                 else:
+    #                     SupervisorSeriesHelper(processgroup=process.group,
+    #                         processname=process.name, cpu=cpu, mem=mem, time=timestamp)
+    #         else:
+    #             print('ERROR with cpu and mem stats')
+    #     self.time = max_timestamp
+    #     SupervisorSeriesHelper.commit()
+    #     print(SupervisorSeriesHelper._json_body_())
 
 
-    def purge(self):
-        """
-        This purges all processes
-        """
-        self.processes = {}
+    # def purge(self):
+    #     """
+    #     This purges all processes
+    #     """
+    #     self.processes = {}

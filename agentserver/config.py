@@ -1,3 +1,4 @@
+import sys
 from ConfigParser import SafeConfigParser
 from os.path import dirname, join, expanduser
 
@@ -28,7 +29,9 @@ class Config(object):
             data = {p: config_parser.get('agentserver', p) for p in Config.possible_args}
             self.__dict__.update(data)
         except:
-            print('Error loading configuration file at %s.' % path)
+            sys.stderr.write('ERROR: Cannot find configuration file.\n')
+            sys.exit(1)
+            print('Error loading configuration file at %s.' % paths)
 
     def resolveArgs(self, args):
         """
