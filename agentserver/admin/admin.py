@@ -1,5 +1,5 @@
 #! /usr/bin/env python
-from db import dal, tal, prep_db, User, Agent, UserAuthToken, AgentAuthToken
+from db import dal, User, Agent, UserAuthToken, AgentAuthToken
 from datetime import datetime
 from config import config
 import getpass
@@ -169,9 +169,9 @@ class Admin(object):
         session.commit()
 
         # Now create timeseries database.
-        tal.connect(config.timeseries, dbname)
-        conn = tal.connection(dbname)
-        conn.create_database(dbname)
+        # tal.connect(config.timeseries, dbname)
+        # conn = tal.connection(dbname)
+        # conn.create_database(dbname)
 
         policy_name = 'policy_{rt}'.format(rt=retention_policy)
         conn.create_retention_policy(policy_name, retention_policy, 3, default=True)
@@ -187,12 +187,12 @@ class Admin(object):
         try:
             input_agent = session.query(Agent).filter(Agent.ip == input_ip).one()
             # Delete timeseries database.
-            try:
-                tal.connect(config.timeseries, input_agent.timeseries_database_name)
-                conn = tal.connection(input_agent.timeseries_database_name)
-                conn.drop_database(input_agent.timeseries_database_name)
-            except Exception as e:
-                print('Exception dropping timeseries database: %s' % e)
+            # try:
+            #     tal.connect(config.timeseries, input_agent.timeseries_database_name)
+            #     conn = tal.connection(input_agent.timeseries_database_name)
+            #     conn.drop_database(input_agent.timeseries_database_name)
+            # except Exception as e:
+            #     print('Exception dropping timeseries database: %s' % e)
             session.delete(input_agent)
             session.commit()
             print('Successfully deleted agent %s' % input_ip)

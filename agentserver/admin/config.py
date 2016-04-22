@@ -2,16 +2,12 @@ import sys
 from ConfigParser import SafeConfigParser
 from os.path import dirname, join, expanduser
 
+
 class Config(object):
     possible_args = [
     'log_level',
     'log_file',
     'database',
-    'timeseries',
-    'port',
-    'max_wait_seconds_before_shutdown',
-    'flush_data_period',
-    'push_data_period',
     ]
 
     INSTALL_DIR = dirname(__file__)
@@ -29,8 +25,6 @@ class Config(object):
             data = {p: config_parser.get('agentserver', p) for p in Config.possible_args}
             self.__dict__.update(data)
         except:
-            sys.stderr.write('ERROR: Cannot find configuration file.\n')
-            sys.exit(1)
             print('Error loading configuration file at %s.' % paths)
 
     def resolveArgs(self, args):
@@ -45,5 +39,11 @@ class Config(object):
         data = {p: getattr(args, p, None) for p in Config.possible_args if hasattr(args, p) and getattr(args, p, None) != None}
 
         self.__dict__.update(data)
+
+    def isResolved(self):
+        for arg in Config.possible_args:
+            if arg not in self.__dict__:
+                return False
+        return True
 
 config = Config()

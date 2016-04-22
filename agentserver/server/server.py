@@ -9,7 +9,7 @@ import tornado.web
 import tornado.httpserver
 from termcolor import colored, cprint
 from config import config
-from db import dal, tal, Agent, SupervisorSeries
+from db import dal, Agent, SupervisorSeries
 from http import HTTPVersionHandler, HTTPCommandHandler, HTTPStatusHandler, HTTPTokenHandler
 from ws import SupervisorAgentHandler, SupervisorCommandHandler, SupervisorStatusHandler
 
@@ -39,8 +39,6 @@ class Server():
             (r'/status/supervisor/', SupervisorStatusHandler),
             # Agents
             (r'/supervisor/', SupervisorAgentHandler),
-            # (r'/rabbitmq/', RabbitMQAgentHandler),
-            # (r'/postgresql/', PostgreSQLAgentHandler),
         ])
 
         self.max_wait_seconds_before_shutdown = int(config.max_wait_seconds_before_shutdown)

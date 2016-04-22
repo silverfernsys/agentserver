@@ -5,8 +5,8 @@ import signal
 import sys
 import time
 from setproctitle import setproctitle
-from config import config
-from server import Server
+from server.config import config
+from server.server import Server
 
 def main():
     setproctitle('agentserver')
@@ -23,12 +23,16 @@ def main():
 
     try:
         config.resolveArgs(args)
-        logging.basicConfig(filename=config.log_file, format='%(asctime)s::%(levelname)s::%(name)s::%(message)s', level=logging.DEBUG)
-        if sys.stdout.isatty():
-            logger = logging.getLogger()
-            channel = logging.StreamHandler(sys.stdout)
-            logger.addHandler(channel)
-        server = Server()
+        if config.isResolved():
+            logging.basicConfig(filename=config.log_file, format='%(asctime)s::%(levelname)s::%(name)s::%(message)s', level=logging.DEBUG)
+            if sys.stdout.isatty():
+                logger = logging.getLogger()
+                channel = logging.StreamHandler(sys.stdout)
+                logger.addHandler(channel)
+            server = Server()
+        else:
+            sys.stderr.write('ERROR: resolving configuration.\n')
+            sys.exit(1)     
     except Exception as e:
         print('AgentServer Exception. DETAILS: %s' % e)
 
