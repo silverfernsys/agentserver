@@ -2,7 +2,7 @@
 import json
 from time import time
 import tornado.websocket
-from db import dal, tal, UserAuthToken, AgentAuthToken
+from db import dal, kal, UserAuthToken, AgentAuthToken
 from agents.supervisoragent import SupervisorAgent
 
 SNAPSHOT_UPDATE = 'snapshot_update'

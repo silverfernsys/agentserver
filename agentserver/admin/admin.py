@@ -2,6 +2,7 @@
 from db import dal, User, Agent, UserAuthToken, AgentAuthToken
 from datetime import datetime
 from config import config
+from utils import haiku
 import getpass
 
 
@@ -45,7 +46,7 @@ class Admin(object):
         session.add(user)
         session.commit()
 
-        print('Successfully created user %s' % user.email)
+        print('Successfully created user {email}.'.format(email=user.email))
 
     def auth_admin(self, session):
         while True:
@@ -54,7 +55,7 @@ class Admin(object):
             if admin_user and admin_user.is_admin:
                 break
             else:
-                print('%s is not an admin email address...' % input_email)
+                print('{email} is not an admin email address...'.format(email=input_email))
         while True:
             password = getpass.getpass('Enter password: ')
             if admin_user.authenticates(password):
@@ -67,24 +68,31 @@ class Admin(object):
         print('Delete user: please authenticate...')
         self.auth_admin(session)
         delete_email = raw_input('Enter email address of user to delete: ')
-
         try:
             delete_user = session.query(User).filter(User.email == delete_email).one()
             session.delete(delete_user)
             session.commit()
-            print('Successfully deleted %s' % delete_email)
+            print('Successfully deleted {email}.'.format(email=delete_email))
         except Exception as e:
-            print('Could not find %s' % delete_email)
+            print('Could not find {email}.'.format(email=delete_email))
 
     def list_users(self):
-        print("%s%s%sCreated" % ("Name".ljust(70), "Email".ljust(30), "Admin".ljust(10)))
+        print("{name}{email}{admin}{created}".format(
+            name="Name".ljust(70),
+            email="Email".ljust(30),
+            admin="Admin".ljust(10),
+            created="Created"))
         for user in dal.Session().query(User):
             if user.is_admin:
                 admin_str = 'Y'
             else:
                 admin_str = 'N'
-            line = "%s%s%s%s" % (user.name.ljust(70), user.email.ljust(30), admin_str.ljust(10), user.created_on.strftime('%d-%m-%Y %H:%M:%S'))
-            print(str(line))
+            line = "{name}{email}{admin}{created}".format(
+                name=user.name.ljust(70),
+                email=user.email.ljust(30),
+                admin=admin_str.ljust(10),
+                created=user.created_on.strftime('%d-%m-%Y %H:%M:%S'))
+            print(line)
 
     def create_user_auth_token(self):
         session = dal.Session()
@@ -98,18 +106,17 @@ class Admin(object):
             try:
                 session.add(user_token)
                 session.commit()
-                print(str('Token %s created for %s' % (user_token.uuid, input_email)))
+                print('Token {token} created for {email}.'.format(token=user_token.uuid, email=input_email))
             except:
-                print('A token already exists for %s. Doing nothing.' % input_email)
+                print('A token already exists for {email}. Doing nothing.'.format(email=input_email))
         except Exception as e:
-            print('User %s does not exist.' % input_email)
-            print('Details: %s' % e)
+            print('User {email} does not exist.'.format(email=input_email))
+            print('Details: {details}'.format(details=str(e)))
 
     def delete_user_auth_token(self):
         session = dal.Session()
         print('Delete token: please authenticate...')
         self.auth_admin(session)
-
         input_email = raw_input('Enter email to delete token for: ')
         try:
             input_user = session.query(User).filter(User.email == input_email).one()
@@ -117,135 +124,118 @@ class Admin(object):
                 user_token = session.query(UserAuthToken).filter(UserAuthToken.user == input_user).one()
                 session.delete(user_token)
                 session.commit()
-                print('Successfully deleted token for %s.' % input_email)
+                print('Successfully deleted token for {email}.'.format(email=input_email))
             except:
-                print('No token exists for %s' % input_email)
+                print('No token exists for {email}'.format(email=input_email))
         except Exception as e:
-            print('User %s does not exist.' % input_email)
-            print('Details: %s' % e)
+            print('User {email} does not exist.'.format(email=input_email))
+            print('Details: {details}'.format(details=str(e)))
 
     def list_user_auth_tokens(self):
-        print("%s%sCreated" % ("Email".ljust(30), "Token".ljust(70)))
+        print("{email}{token}{created}".format(
+            email="Email".ljust(30),
+            token="Token".ljust(70),
+            token="Created"))
         for token in dal.Session().query(UserAuthToken):
-            line = "%s%s%s" % (token.user.email.ljust(30), token.uuid.ljust(70), token.created_on.strftime('%d-%m-%Y %H:%M:%S'))
-            print(str(line))
+            line = "{email}{token}{created}".format(
+                email=token.user.email.ljust(30),
+                token=token.uuid.ljust(70),
+                created=token.created_on.strftime('%d-%m-%Y %H:%M:%S')
+            print(line)
+
+    def generate_agent_name(self):
+        h = haiku()
+        num_haikus = str(dal.Session().query.filter(Agent.name.like('{haiku}%'.format(haiku=h))).count())
+        return '{haiku}-{num}'.format(haiku=h, num=num_haikus.ljust(4,'0'))
 
     def create_agent(self):
         session = dal.Session()
         print('Create agent: please authenticate...')
         self.auth_admin(session)
 
-        input_ip = raw_input('Enter agent ip address: ')
-        while True:
-            print('1) 3 days')
-            print('2) 1 week')
-            print('3) 3 weeks')
-            print('4) 5 weeks')
-            print('5) Infinite')
-            input_retention_policy = int(raw_input('Select a retention policy:'))
-            try:
-                if (input_retention_policy - 1) in range(5):
-                    break
-                else:
-                    pass
-            except:
-                pass
-        if input_retention_policy == 1:
-            retention_policy = '3d'
-        elif input_retention_policy == 2:
-            retention_policy = '1w'
-        elif input_retention_policy == 3:
-            retention_policy = '3w'
-        elif input_retention_policy == 4:
-            retention_policy = '5w'
-        elif input_retention_policy == 5:
-            retention_policy = 'INF'
+        name = raw_input('Enter agent name[Press ENTER to autogenerate]: ')
+        if len(name) == 0:
+            name = self.generate_agent_name()
 
-        dbname = Agent.supervisor_database_name(input_ip)
-        agent = Agent(ip=input_ip,
-            retention_policy=retention_policy,
-            timeseries_database_name=dbname)
+        agent = Agent(name=name)
         session.add(agent)
         session.commit()
 
-        # Now create timeseries database.
-        # tal.connect(config.timeseries, dbname)
-        # conn = tal.connection(dbname)
-        # conn.create_database(dbname)
-
-        policy_name = 'policy_{rt}'.format(rt=retention_policy)
-        conn.create_retention_policy(policy_name, retention_policy, 3, default=True)
-        print('Successfully created agent {ip}'.format(ip=agent.ip))
+        print('Successfully created agent {name}'.format(name=agent.name))
 
     def delete_agent(self):
         session = dal.Session()
         print('Delete agent: please authenticate...')
         self.auth_admin(session)
 
-        input_ip = raw_input('Enter agent ip address: ')
+        input_id = raw_input('Enter agent id: ')
 
         try:
-            input_agent = session.query(Agent).filter(Agent.ip == input_ip).one()
-            # Delete timeseries database.
-            # try:
-            #     tal.connect(config.timeseries, input_agent.timeseries_database_name)
-            #     conn = tal.connection(input_agent.timeseries_database_name)
-            #     conn.drop_database(input_agent.timeseries_database_name)
-            # except Exception as e:
-            #     print('Exception dropping timeseries database: %s' % e)
-            session.delete(input_agent)
+            agent = session.query(Agent).filter(Agent.id == input_id).one()
+            # Delete timeseries data here!
+            session.delete(agent)
             session.commit()
             print('Successfully deleted agent %s' % input_ip)
         except:
             print('Agent does not exist.')
 
     def list_agents(self):
-        print("%s%s%sCreated" % ("IP Address".ljust(30), "Retention Policy".ljust(30), "Timeseries".ljust(30)))
+        print("{id}{name}{created}".format(id="id".ljust(30), name="Name".ljust(30), created="Created"))
         for agent in dal.Session().query(Agent):
-            line = "%s%s%s%s" % (agent.ip.ljust(30), agent.retention_policy.ljust(30),
-                agent.timeseries_database_name.ljust(30), agent.created_on.strftime('%d-%m-%Y %H:%M:%S'))
-            print(str(line))
+            line = "{id}{name}{created}".format(id=str(agent.id).ljust(30), name=agent.name.ljust(30),
+                created=agent.created_on.strftime('%d-%m-%Y %H:%M:%S'))
+            print(line)
 
     def create_agent_auth_token(self):
         session = dal.Session()
         print('Create agent token: please authenticate...')
         self.auth_admin(session)
 
-        input_ip = raw_input('Enter ip of agent to create token for: ')
+        input_id = raw_input('Enter id of agent to create token for: ')
         try:
-            input_agent = session.query(Agent).filter(Agent.ip == input_ip).one()
-            agent_token = AgentAuthToken(agent=input_agent)
+            agent = session.query(Agent).filter(Agent.id == input_id).one()
+            token = AgentAuthToken(agent=agent)
             try:
-                session.add(agent_token)
+                session.add(token)
                 session.commit()
-                print(str('Token %s created for %s' % (agent_token.uuid, input_ip)))
+                print(str('Token {token} created for {id}. {name}'
+                    .format(token=token.uuid, id=agent.id,
+                        name=agent.name)))
             except:
-                print('A token already exists for %s. Doing nothing.' % input_ip)
+                print('A token already exists for {id}. {name}. Doing nothing.'
+                    .format(id=agent.id, name=agent.name))
         except Exception as e:
-            print('Agent %s does not exist.' % input_ip)
-            print('Details: %s' % e)
+            print('Agent {id} does not exist.'.format(id=input_id))
+            print('Details: {details}'.format(details=str(e)))
 
     def delete_agent_auth_token(self):
         session = dal.Session()
         print('Delete agent token: please authenticate...')
         self.auth_admin(session)
-
-        input_ip = raw_input('Enter ip of agent to delete token for: ')
+        input_id = raw_input('Enter id of agent to delete token for: ')
         try:
-            input_agent = session.query(Agent).filter(Agent.ip == input_ip).one()
+            agent = session.query(Agent).filter(Agent.id == input_id).one()
             try:
-                agent_token = session.query(AgentAuthToken).filter(AgentAuthToken.agent == input_agent).one()
-                session.delete(agent_token)
+                token = session.query(AgentAuthToken).filter(AgentAuthToken.agent == agent).one()
+                session.delete(token)
                 session.commit()
-                print('Successfully deleted token for %s.' % input_ip)
+                print('Successfully deleted token for {id}. {name}'.format(id=agent.id, name=agent.name))
             except:
-                print('No token exists for %s' % input_ip)
+                print('No token exists for {id}'.format(id=input_id))
         except Exception as e:
-            print('Agent %s does not exist.' % input_ip)
-            print('Details: %s' % e)
+            print('Agent {id} does not exist.'.format(id=input_id))
+            print('Details: {details}'.format(details=str(e)))
 
     def list_agent_auth_tokens(self):
-        print("%s%sCreated" % ("Ip".ljust(30), "Token".ljust(70)))
+        print("{created}{id}{name}{token}".format(
+            created="Created".ljust(30),
+            id="id".ljust(30),
+            name="Name".ljust(30),
+            name="Token".ljust(70)))
         for token in dal.Session().query(AgentAuthToken):
-            line = "%s%s%s" % (token.agent.ip.ljust(30), token.uuid.ljust(70), token.created_on.strftime('%d-%m-%Y %H:%M:%S'))
-            print(str(line))
+            line = "{created}{id}{name}{token}".format(
+                created=token.created_on.strftime('%d-%m-%Y %H:%M:%S').ljust(30),
+                id=str(token.agent.id).ljust(30),
+                name=token.agent.name.ljust(30),
+                token=token.uuid.ljust(70))
+            print(line)

@@ -1,7 +1,8 @@
 #! /usr/bin/env python
+# from kafka import KafkaProducer
 from procinfo import ProcInfo
-from influxdb import InfluxDBClient, SeriesHelper
 from time import time
+from db import kal
 
 
 STATE_MAP = {
@@ -177,6 +178,14 @@ class SupervisorAgent(object):
     def reset(self):
         for p in self.all():
             p.reset()
+
+    def flush_timeseries(self):
+        print('flush_timeseries')
+        for process in self.all():
+            data = json.dumps(process.data())
+            kal.connection.send('supervisor', data.encode('utf-8'))
+        # https://github.com/dpkp/kafka-python
+        # kal.connection.send('supervisor', b'some message')
 
     # def flush_timeseries(self):
     #     print('flush_timeseries')

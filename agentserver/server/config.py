@@ -7,7 +7,7 @@ class Config(object):
     'log_level',
     'log_file',
     'database',
-    'timeseries',
+    'kafka',
     'port',
     'max_wait_seconds_before_shutdown',
     'flush_data_period',
@@ -28,8 +28,8 @@ class Config(object):
             config_parser.read(paths)
             data = {p: config_parser.get('agentserver', p) for p in Config.possible_args}
             self.__dict__.update(data)
-        except:
-            print('Error loading configuration file at %s.' % paths)
+        except Exception as e:
+            print('Error loading configuration file at %s.\nEXCEPTION DETAILS: %s' % (paths, e))
 
     def resolveArgs(self, args):
         """
