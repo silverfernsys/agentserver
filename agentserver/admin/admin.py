@@ -1,8 +1,9 @@
 #! /usr/bin/env python
-from db import dal, User, Agent, UserAuthToken, AgentAuthToken
+from agentserver.db import dal, User, Agent, UserAuthToken, AgentAuthToken
+from agentserver.admin.config import config
+from agentserver.utils import haiku
 from datetime import datetime
-from config import config
-from utils import haiku
+
 import getpass
 
 
@@ -135,17 +136,17 @@ class Admin(object):
         print("{email}{token}{created}".format(
             email="Email".ljust(30),
             token="Token".ljust(70),
-            token="Created"))
+            created="Created"))
         for token in dal.Session().query(UserAuthToken):
             line = "{email}{token}{created}".format(
                 email=token.user.email.ljust(30),
                 token=token.uuid.ljust(70),
-                created=token.created_on.strftime('%d-%m-%Y %H:%M:%S')
+                created=token.created_on.strftime('%d-%m-%Y %H:%M:%S'))
             print(line)
 
     def generate_agent_name(self):
         h = haiku()
-        num_haikus = str(dal.Session().query.filter(Agent.name.like('{haiku}%'.format(haiku=h))).count())
+        num_haikus = str(dal.Session().query(Agent).filter(Agent.name.like('{haiku}%'.format(haiku=h))).count())
         return '{haiku}-{num}'.format(haiku=h, num=num_haikus.ljust(4,'0'))
 
     def create_agent(self):
@@ -231,7 +232,7 @@ class Admin(object):
             created="Created".ljust(30),
             id="id".ljust(30),
             name="Name".ljust(30),
-            name="Token".ljust(70)))
+            token="Token".ljust(70)))
         for token in dal.Session().query(AgentAuthToken):
             line = "{created}{id}{name}{token}".format(
                 created=token.created_on.strftime('%d-%m-%Y %H:%M:%S').ljust(30),

@@ -29,8 +29,8 @@ except ImportError:
 
 from tornado.websocket import WebSocketHandler, websocket_connect, WebSocketError
 
-import sys, os
-sys.path.insert(0, os.path.split(os.path.split(os.path.dirname(os.path.abspath(__file__)))[0])[0])
+# import sys, os
+# sys.path.insert(0, os.path.split(os.path.split(os.path.dirname(os.path.abspath(__file__)))[0])[0])
 
 try:
     from tornado import speedups

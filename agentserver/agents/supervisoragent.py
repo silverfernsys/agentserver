@@ -2,7 +2,7 @@
 # from kafka import KafkaProducer
 from procinfo import ProcInfo
 from time import time
-from db import kal
+from agentserver.db import kal
 
 
 STATE_MAP = {

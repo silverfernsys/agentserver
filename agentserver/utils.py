@@ -61,7 +61,4 @@ def haiku(separator='-'):
          adj=adj,
          noun=noun,
          separator=separator)
-
-
-
-
+    

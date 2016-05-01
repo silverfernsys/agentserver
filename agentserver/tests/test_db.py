@@ -44,9 +44,9 @@ class TestApp(unittest.TestCase):
 
     def test_agents_and_agent_tokens(self):
         # Generate agents
-        agent_0 = Agent(ip='192.168.10.12', retention_policy='5d', timeseries_database_name='timeseries1')
-        agent_1 = Agent(ip='192.168.10.13', retention_policy='1w', timeseries_database_name='timeseries2')
-        agent_2 = Agent(ip='192.168.10.14', retention_policy='INF', timeseries_database_name='timeseries3')
+        agent_0 = Agent(name='Agent 1')
+        agent_1 = Agent(name='Agent 2')
+        agent_2 = Agent(name='Agent 3')
 
         # Generate agent tokens
         a_token_0 = AgentAuthToken(agent=agent_0)
