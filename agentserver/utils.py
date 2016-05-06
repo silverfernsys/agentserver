@@ -12,22 +12,6 @@ def uuid():
     return binascii.hexlify(os.urandom(20)).decode()
 
 
-def timestamp(dt, epoch=datetime(1970,1,1)):
-    td = dt - epoch
-    # return td.total_seconds()
-    return (td.microseconds + (td.seconds + td.days * 86400) * 10**6) / 10**6
-
-
-def is_rfc_3339_format(date_str):
-    prog = re.compile("^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?[A-Z]?$")
-    result = prog.match(date_str)
-    print('result: %s' % result)
-    if result:
-        return True
-    else:
-        return False
-
-
 adjs = [
     "autumn", "hidden", "bitter", "misty", "silent", "empty", "dry", "dark",
     "summer", "icy", "delicate", "quiet", "white", "cool", "spring", "winter",
@@ -54,6 +38,26 @@ nouns = [
 ]
 
 
+# http://preshing.com/20121224/how-to-generate-a-sequence-of-unique-random-integers/
+def permute(x):
+    """
+    permute returns a number in the range 0 to 9999
+    that is unique for each x
+    """
+    prime = 9887
+    offset = 453
+    maximum = 9999
+    x = (x + offset) % maximum
+    if (x >= prime):
+        return x
+    else:
+        residue = (x * x) % prime
+        if x <= (prime / 2):
+            return residue
+        else:
+            return prime - residue
+
+
 def haiku(separator='-'):
     adj = random.choice(adjs)
     noun = random.choice(nouns)
@@ -61,4 +65,11 @@ def haiku(separator='-'):
          adj=adj,
          noun=noun,
          separator=separator)
-    
+
+
+def haiku_permute(id, separator='-'):
+    return '{h}{separator}{p}'.format(
+        h=haiku(separator),
+        separator=separator,
+        p=str(permute(id)).rjust(4,'0'))
+  

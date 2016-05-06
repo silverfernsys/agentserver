@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 from agentserver.db import dal, User, Agent, UserAuthToken, AgentAuthToken
 from agentserver.admin.config import config
-from agentserver.utils import haiku
+from agentserver.utils import haiku, permute
 from datetime import datetime
 
 import getpass
@@ -146,8 +146,8 @@ class Admin(object):
 
     def generate_agent_name(self):
         h = haiku()
-        num_haikus = str(dal.Session().query(Agent).filter(Agent.name.like('{haiku}%'.format(haiku=h))).count())
-        return '{haiku}-{num}'.format(haiku=h, num=num_haikus.ljust(4,'0'))
+        count = dal.Session().query(Agent).filter(Agent.name.like('{haiku}%'.format(haiku=h))).count()
+        return '{haiku}-{num}'.format(haiku=h, num=str(permute(count)).rjust(4, '0'))
 
     def create_agent(self):
         session = dal.Session()

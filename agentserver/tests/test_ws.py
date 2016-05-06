@@ -29,9 +29,6 @@ except ImportError:
 
 from tornado.websocket import WebSocketHandler, websocket_connect, WebSocketError
 
-# import sys, os
-# sys.path.insert(0, os.path.split(os.path.split(os.path.dirname(os.path.abspath(__file__)))[0])[0])
-
 try:
     from tornado import speedups
 except ImportError:
@@ -128,12 +125,9 @@ class WebSocketTest(WebSocketBaseTestCase):
         cls.USER_TOKEN = token_0.uuid
 
         # Generate agents
-        agent_0 = Agent(ip='192.168.10.12', retention_policy='5d', timeseries_database_name='timeseries1')
-        agent_1 = Agent(ip='192.168.10.13', retention_policy='1w', timeseries_database_name='timeseries2')
-        agent_2 = Agent(ip='192.168.10.14', retention_policy='INF', timeseries_database_name='timeseries3')
-        # dal.session.bulk_save_objects([agent_0, agent_1, agent_2])
-        # dal.session.commit()
-
+        agent_0 = Agent(name='Agent 1')
+        agent_1 = Agent(name='Agent 2')
+        agent_2 = Agent(name='Agent 3')
         agent_token_0 = AgentAuthToken(agent=agent_0)
         agent_token_1 = AgentAuthToken(agent=agent_1)
         agent_token_2 = AgentAuthToken(agent=agent_2)
@@ -143,7 +137,7 @@ class WebSocketTest(WebSocketBaseTestCase):
         dal.session.commit()
 
         cls.AGENT_TOKEN = agent_token_0.uuid
-        cls.AGENT_IP = agent_0.ip
+        cls.AGENT_ID = agent_0.id
         cls.fixtures_dir =  os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fixtures')
 
     @classmethod
