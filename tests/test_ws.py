@@ -7,6 +7,7 @@ import tempfile
 import time
 import unittest
 import traceback
+import os
 
 from tornado.concurrent import Future
 from tornado import gen
@@ -34,9 +35,9 @@ try:
 except ImportError:
     speedups = None
 
-from agentserver.tests.ws_helpers import websocket_connect
-from agentserver.ws import SupervisorAgentHandler, SupervisorStatusHandler, SupervisorCommandHandler
-from agentserver.db import dal, User, UserAuthToken, Agent, AgentAuthToken
+from ws_helpers import websocket_connect
+from ws import SupervisorAgentHandler, SupervisorStatusHandler, SupervisorCommandHandler
+from db import dal, User, UserAuthToken, Agent, AgentAuthToken
 
 
 class TestWebSocketHandler(WebSocketHandler):
@@ -187,7 +188,7 @@ class WebSocketTest(WebSocketBaseTestCase):
         agent_conn = yield self.ws_connect('/supervisor/',
             headers={'authorization':WebSocketTest.AGENT_TOKEN})
         
-        agent = SupervisorAgentHandler.IPConnections[WebSocketTest.AGENT_IP]
+        # agent = SupervisorAgentHandler.IPConnections[WebSocketTest.AGENT_IP]
 
         self.assertEqual(len(SupervisorAgentHandler.Connections.keys()), connection_count + 1, "+1 websocket connections.")
 

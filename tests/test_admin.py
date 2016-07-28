@@ -1,7 +1,9 @@
 #! /usr/bin/env python
-from agentserver.admin.admin import Admin
-from agentserver.admin.config import config
-from agentserver.db import dal, User, UserAuthToken, Agent, AgentAuthToken
+from __future__ import absolute_import
+
+from admin.admin import Admin
+from admin.config import config
+from db import dal, User, UserAuthToken, Agent, AgentAuthToken
 from tempfile import NamedTemporaryFile
 
 import mock

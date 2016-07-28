@@ -44,7 +44,7 @@ def permute(x):
     permute returns a number in the range 0 to 9999
     that is unique for each x
     """
-    prime = 9887
+    prime = 9887 # https://primes.utm.edu/lists/small/10000.txt
     offset = 453
     maximum = 9999
     x = (x + offset) % maximum

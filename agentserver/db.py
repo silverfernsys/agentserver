@@ -1,4 +1,3 @@
-import re
 from datetime import datetime
 
 from sqlalchemy import (Column, Integer, Numeric, String, DateTime, ForeignKey,
@@ -18,57 +17,6 @@ from utils import uuid
 Base = declarative_base()
 
 
-class AgentEvent(Base):
-    __tablename__ = 'agent_events'
-    id = Column(Integer(), primary_key=True)
-    ip = Column(String(), nullable=False)
-    agent_id = Column(Integer(), ForeignKey('agents.id'))
-    created_on = Column(DateTime(), default=datetime.now)
-    event = Column(String(), nullable=False)
-
-    agent = relationship("Agent", backref=backref('events', uselist=True))
-
-    @validates('ip')
-    def validate_ip(self, key, ipadddress):
-        """
-        Validates an IPv4 or IPv6 IP address
-        """
-        regex = re.compile('^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$|' \
-            '(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}| ' \
-                '([0-9a-fA-F]{1,4}:){1,7}:|' \
-                '([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|' \
-                '([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|' \
-                '([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|' \
-                '([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|' \
-                '([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|' \
-                '[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|' \
-                ':((:[0-9a-fA-F]{1,4}){1,7}|:)|' \
-                'fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|' \
-                '::(ffff(:0{1,4}){0,1}:){0,1}' \
-                '((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}' \
-                '(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|' \
-                '([0-9a-fA-F]{1,4}:){1,4}:' \
-                '((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}' \
-                '(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])' \
-                ')')
-        result = regex.match(ipadddress)
-        assert result != None
-        return ipadddress
-
-    @validates('event')
-    def validate_event(self, key, event):
-        """
-        Validates an agent event.
-        """
-        assert (event == 'C' or event == 'D')
-        return event
-
-    def __repr__(self):
-        return "AgentEvent(ip='{self.ip}', " \
-            "name='{self.agent.name}', " \
-            "event='{self.event}', " \
-            "created_on='{self.created_on}'".format(self=self)
-
 class Agent(Base):
     __tablename__ = 'agents'
 
@@ -79,7 +27,7 @@ class Agent(Base):
     def __repr__(self):
         return "Agent(ip='{self.ip}', " \
             "name='{self.retention_policy}', " \
-            "created_on='{self.created_on}'".format(self=self)
+            "created_on='{self.created_on}')".format(self=self)
 
 
 class AgentDetail(Base):
@@ -87,21 +35,28 @@ class AgentDetail(Base):
 
     id = Column(Integer(), primary_key=True)
     agent_id = Column(Integer(), ForeignKey('agents.id'), unique=True)
+    hostname = Column(String, nullable=False)
+    processor = Column(String(), nullable=False)
     num_cores = Column(Integer(), default=1)
     memory = Column(Integer(), default=0)
-    os_version = Column(String(), nullable=False)
-    hostname = Column(String, nullable=False)
+    dist_name = Column(String(), nullable=False)
+    dist_version = Column(String(), nullable=False)
+    updated_on = Column(DateTime(), default=datetime.now, onupdate=datetime.now)
     created_on = Column(DateTime(), default=datetime.now)
 
     agent = relationship("Agent", backref=backref('details', uselist=False))
 
     def __repr__(self):
-        return "UserAuthToken(agent_id='{self.agent_id}', " \
+        return "AgentDetail(id='{self.id}', " \
+            "agent_id='{self.agent_id}', " \
+            "hostname='{self.hostname}', " \
+            "processor='{self.processor}', " \
             "num_cores='{self.num_cores}', " \
             "memory='{self.memory}', " \
-            "os_version='{self.os_version}', " \
-            "hostname='{self.hostname}', " \
-            "created_on='{self.created_on}'".format(self=self)
+            "dist_name='{self.dist_name}', " \
+            "dist_version='{self.dist_version}', " \
+            "updated_on='{self.updated_on}, '" \
+            "created_on='{self.created_on}')".format(self=self)
 
 
 class AgentAuthToken(Base):
@@ -114,9 +69,9 @@ class AgentAuthToken(Base):
     agent = relationship("Agent", backref=backref('token', uselist=False))
 
     def __repr__(self):
-        return "UserAuthToken(uuid='{self.uuid}', " \
+        return "AgentAuthToken(uuid='{self.uuid}', " \
             "agent_id='{self.agent_id}', " \
-            "created_on='{self.created_on}'".format(self=self)
+            "created_on='{self.created_on}')".format(self=self)
 
 
 class User(Base):
@@ -161,12 +116,13 @@ class UserAuthToken(Base):
     def __repr__(self):
         return "UserAuthToken(uuid='{self.uuid}', " \
             "user_id='{self.user_id}', " \
-            "created_on='{self.created_on}'".format(self=self)  
+            "created_on='{self.created_on}')".format(self=self)  
 
 
 class DataAccessLayer:
 
     def __init__(self):
+        # http://pythoncentral.io/understanding-python-sqlalchemy-session/
         self.engine = None
         self.Session = None
         self.conn_string = None
@@ -183,9 +139,62 @@ dal = DataAccessLayer()
 
 class KafkaAccessLayer(object):   
     def connect(self, uri):
-        self.connection = KafkaProducer(bootstrap_servers=uri)
+        self.connection = KafkaProducer(bootstrap_servers=uri,
+            value_serializer=lambda v: json.dumps(v).encode('utf-8'))
 
 kal = KafkaAccessLayer()
+
+# import re
+# class AgentEvent(Base):
+#     __tablename__ = 'agent_events'
+#     id = Column(Integer(), primary_key=True)
+#     ip = Column(String(), nullable=False)
+#     agent_id = Column(Integer(), ForeignKey('agents.id'))
+#     created_on = Column(DateTime(), default=datetime.now)
+#     event = Column(String(), nullable=False)
+
+#     agent = relationship("Agent", backref=backref('events', uselist=True))
+
+#     @validates('ip')
+#     def validate_ip(self, key, ipadddress):
+#         """
+#         Validates an IPv4 or IPv6 IP address
+#         """
+#         regex = re.compile('^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$|' \
+#             '(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}| ' \
+#                 '([0-9a-fA-F]{1,4}:){1,7}:|' \
+#                 '([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|' \
+#                 '([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|' \
+#                 '([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|' \
+#                 '([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|' \
+#                 '([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|' \
+#                 '[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|' \
+#                 ':((:[0-9a-fA-F]{1,4}){1,7}|:)|' \
+#                 'fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|' \
+#                 '::(ffff(:0{1,4}){0,1}:){0,1}' \
+#                 '((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}' \
+#                 '(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|' \
+#                 '([0-9a-fA-F]{1,4}:){1,4}:' \
+#                 '((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}' \
+#                 '(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])' \
+#                 ')')
+#         result = regex.match(ipadddress)
+#         assert result != None
+#         return ipadddress
+
+#     @validates('event')
+#     def validate_event(self, key, event):
+#         """
+#         Validates an agent event.
+#         """
+#         assert (event == 'C' or event == 'D')
+#         return event
+
+#     def __repr__(self):
+#         return "AgentEvent(ip='{self.ip}', " \
+#             "name='{self.agent.name}', " \
+#             "event='{self.event}', " \
+#             "created_on='{self.created_on}'".format(self=self)
 
 # class Cookie(Base):
 #     __tablename__ = 'cookies'

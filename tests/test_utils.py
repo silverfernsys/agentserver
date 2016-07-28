@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 import unittest
-from agentserver.utils import permute, haiku, haiku_permute, adjs, nouns, uuid
+from utils import permute, haiku, haiku_permute, adjs, nouns, uuid
 
 class TestApp(unittest.TestCase):
     @classmethod

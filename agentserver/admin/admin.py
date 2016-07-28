@@ -1,11 +1,14 @@
 #! /usr/bin/env python
-from agentserver.db import dal, User, Agent, UserAuthToken, AgentAuthToken
-from agentserver.admin.config import config
-from agentserver.utils import haiku, permute
+# import sys
+# for d in sys.path:
+#     print d
+
+from db import dal, User, Agent, UserAuthToken, AgentAuthToken
+from config import config
+from utils import haiku, permute
 from datetime import datetime
 
 import getpass
-
 
 class Admin(object):
     def __init__(self):
@@ -176,7 +179,7 @@ class Admin(object):
             # Delete timeseries data here!
             session.delete(agent)
             session.commit()
-            print('Successfully deleted agent %s' % input_ip)
+            print('Successfully deleted agent %s' % input_id)
         except:
             print('Agent does not exist.')
 

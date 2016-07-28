@@ -2,7 +2,7 @@
 # from kafka import KafkaProducer
 from procinfo import ProcInfo
 from time import time
-from agentserver.db import kal
+# from agentserver.db import kal
 
 
 STATE_MAP = {
@@ -183,7 +183,7 @@ class SupervisorAgent(object):
         print('flush_timeseries')
         for process in self.all():
             data = json.dumps(process.data())
-            kal.connection.send('supervisor', data.encode('utf-8'))
+            # kal.connection.send('supervisor', data.encode('utf-8'))
         # https://github.com/dpkp/kafka-python
         # kal.connection.send('supervisor', b'some message')
 

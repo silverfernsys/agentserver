@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 import unittest
 from decimal import Decimal
-from agentserver.db import dal, User, UserAuthToken, Agent, AgentAuthToken
+from db import dal, User, UserAuthToken, Agent, AgentAuthToken
 
 
 class TestApp(unittest.TestCase):
