@@ -17,6 +17,26 @@ from utils import uuid
 Base = declarative_base()
 
 
+class ProcessDetail(Base):
+    __tablename__ = 'processdetails'
+
+    id = Column(Integer(), primary_key=True)
+    agent_id = Column(Integer(), ForeignKey('agents.id'))
+    name = Column(String(), nullable=False)
+    start = Column(DateTime())
+
+    created_on = Column(DateTime(), default=datetime.now)
+
+    agent = relationship("Agent", backref=backref('processdetails'))
+
+    def __repr__(self):
+        return "ProcessDetail(id='{self.id}', " \
+            "name='{self.name}', " \
+            "agent='{self.agent.name}', " \
+            "start='{self.start}', " \
+            "created_on='{self.created_on}')".format(self=self)
+
+
 class Agent(Base):
     __tablename__ = 'agents'
 
@@ -26,7 +46,7 @@ class Agent(Base):
 
     def __repr__(self):
         return "Agent(ip='{self.ip}', " \
-            "name='{self.retention_policy}', " \
+            "name='{self.name}', " \
             "created_on='{self.created_on}')".format(self=self)
 
 
@@ -120,7 +140,6 @@ class UserAuthToken(Base):
 
 
 class DataAccessLayer:
-
     def __init__(self):
         # http://pythoncentral.io/understanding-python-sqlalchemy-session/
         self.engine = None
@@ -137,10 +156,26 @@ class DataAccessLayer:
 dal = DataAccessLayer()
 
 
-class KafkaAccessLayer(object):   
+class KafkaProducerMock(object):
+    def __init__(self, bootstrap_servers=None, value_serializer=None):
+        pass
+    def send(self, topic, data):
+        pass
+    def flush(self):
+        pass
+
+
+class KafkaAccessLayer(object): 
+    def __init__(self):
+        self.connection = None
+
     def connect(self, uri):
-        self.connection = KafkaProducer(bootstrap_servers=uri,
-            value_serializer=lambda v: json.dumps(v).encode('utf-8'))
+        if uri.lower() == 'debug':
+            self.connection = KafkaProducerMock()
+        else:
+            self.connection = KafkaProducer(bootstrap_servers=uri,
+                value_serializer=lambda v: json.dumps(v).encode('utf-8'))
+
 
 kal = KafkaAccessLayer()
 

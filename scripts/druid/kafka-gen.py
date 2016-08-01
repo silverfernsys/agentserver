@@ -17,7 +17,3 @@ if __name__ == '__main__':
 			'mem': random.randint(1, 10000000)}
 		producer.send('supervisor', data)
 		producer.flush()
-
-	
-
-

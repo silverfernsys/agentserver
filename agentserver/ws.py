@@ -37,7 +37,7 @@ class SupervisorAgentHandler(tornado.websocket.WebSocketHandler):
                     SupervisorAgentHandler.IPConnections[agent.ip] = supervisor_agent
                     SupervisorAgentHandler.Connections[self] = supervisor_agent
             except Exception as e:
-                # print('SupervisorAgentHandler.open EXCEPTION: %s' % e)
+                print('SupervisorAgentHandler.open EXCEPTION: %s' % e)
                 self.close()
       
     def on_message(self, message):

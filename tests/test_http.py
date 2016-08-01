@@ -5,15 +5,16 @@ import os
 import tempfile
 import time
 import urllib
+import mock
 
 from tornado.testing import AsyncHTTPTestCase
 from tornado.web import Application, RequestHandler, url
 
 from http import (HTTPVersionHandler, HTTPStatusHandler,
     HTTPTokenHandler, HTTPListHandler, HTTPDetailHandler,
-    HTTPDetailCreateUpdateHandler)
+    HTTPDetailCreateUpdateHandler, HTTPAgentUpdateHandler)
 
-from db import dal, User, UserAuthToken, Agent, AgentAuthToken, AgentDetail
+from db import dal, kal, User, UserAuthToken, Agent, AgentAuthToken, AgentDetail
 
 
 class HTTPTestCase(AsyncHTTPTestCase):
@@ -26,6 +27,8 @@ class HTTPTestCase(AsyncHTTPTestCase):
     def setUpClass(cls):
         dal.connect('sqlite:///:memory:')
         dal.session = dal.Session()
+        # kal.connection = KafkaProducerMock()
+        kal.connect('debug')
 
         # Generate users
         user_0 = User(name=HTTPTestCase.NAME,
@@ -85,21 +88,19 @@ class HTTPTestCase(AsyncHTTPTestCase):
         dal.session.commit()
         dal.session.close()
 
+        cls.fixtures_dir =  os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fixtures')
 
     @classmethod
     def tearDownClass(cls):
         pass
 
-
     def setUp(self):
         super(HTTPTestCase, self).setUp()
         dal.session = dal.Session()
 
-
     def tearDown(self):
         dal.session.rollback()
         dal.session.close()
-
 
     def get_app(self):
         return Application([
@@ -109,8 +110,8 @@ class HTTPTestCase(AsyncHTTPTestCase):
             url(r'/list/', HTTPListHandler),
             url(r'/detail/', HTTPDetailHandler),
             url(r'/detail_update/', HTTPDetailCreateUpdateHandler),
+            url(r'/agent/update/', HTTPAgentUpdateHandler),
         ])
-
 
     def test_http_handler(self):
         response = self.fetch('/', method='GET')
@@ -118,14 +119,12 @@ class HTTPTestCase(AsyncHTTPTestCase):
         self.assertTrue('version' in response_data)
         self.assertEqual(response.code, 200)
 
-
     def test_http_token_handler_success(self):
         headers = {'username':HTTPTestCase.EMAIL, 'password':HTTPTestCase.PW}
     	response = self.fetch('/token/', method='GET', headers=headers)
         response_data = json.loads(response.body)
         self.assertEqual(response.code, 200)
         self.assertEqual(HTTPTestCase.TOKEN, response_data['token'])
-
 
     def test_http_token_handler_failure(self):
         headers = {'username':HTTPTestCase.EMAIL, 'password':'gibberish'}
@@ -146,7 +145,6 @@ class HTTPTestCase(AsyncHTTPTestCase):
         self.assertEqual(response.code, 400)
         self.assertEqual(response_data['error'], 'invalid username/password')
 
-
     def test_http_status_handler(self):
         headers = {'authorization':HTTPTestCase.TOKEN}
         response = self.fetch('/status/', method='GET', headers=headers)
@@ -155,7 +153,6 @@ class HTTPTestCase(AsyncHTTPTestCase):
         # self.assertEqual(len(response_data), 3)
         self.assertEqual(response.code, 200)
 
-
     def test_http_list_handler(self):
         headers = {'authorization':HTTPTestCase.TOKEN}
         response = self.fetch('/list/', method='GET', headers=headers)
@@ -163,7 +160,6 @@ class HTTPTestCase(AsyncHTTPTestCase):
         # print('response_data: %s' % response_data)
         self.assertEqual(response.code, 200)
         self.assertEqual(len(response_data), 3)
-
 
     def test_http_detail_handler_success(self):
         headers = {'authorization':HTTPTestCase.TOKEN}
@@ -180,7 +176,6 @@ class HTTPTestCase(AsyncHTTPTestCase):
         self.assertIn('created', response_data)
         self.assertEqual(response.code, 200)
 
-
     def test_http_detail_handler_failure(self):
         headers = {'authorization':HTTPTestCase.TOKEN}
         body = json.dumps({'id': 4})
@@ -189,7 +184,6 @@ class HTTPTestCase(AsyncHTTPTestCase):
         self.assertIn('error', response_data)
         self.assertEqual(response_data['error'], 'invalid id')
         self.assertEqual(response.code, 400)
-
 
     def test_http_detail_update_handler(self):
         count_before = dal.Session().query(AgentDetail).count()
@@ -229,7 +223,6 @@ class HTTPTestCase(AsyncHTTPTestCase):
         count_after = dal.Session().query(AgentDetail).count()
         self.assertEqual(count_before, count_after)
 
-
     def test_http_detail_update_handler_missing_params(self):
         count_before = dal.Session().query(AgentDetail).count()
 
@@ -255,7 +248,6 @@ class HTTPTestCase(AsyncHTTPTestCase):
 
         count_after = dal.Session().query(AgentDetail).count()
         self.assertEqual(count_before, count_after)
-
 
     def test_http_detail_create_handler(self):
         count_before = dal.Session().query(AgentDetail).count()
@@ -295,7 +287,6 @@ class HTTPTestCase(AsyncHTTPTestCase):
         count_after = dal.Session().query(AgentDetail).count()
         self.assertEqual(count_before + 1, count_after)
 
-
     def test_http_detail_create_handler_missing_params(self):
         count_before = dal.Session().query(AgentDetail).count()
 
@@ -321,7 +312,6 @@ class HTTPTestCase(AsyncHTTPTestCase):
 
         count_after = dal.Session().query(AgentDetail).count()
         self.assertEqual(count_before, count_after)
-
 
     def test_http_detail_create_handler_incorrect_params(self):
         count_before = dal.Session().query(AgentDetail).count()
@@ -352,4 +342,27 @@ class HTTPTestCase(AsyncHTTPTestCase):
 
         count_after = dal.Session().query(AgentDetail).count()
         self.assertEqual(count_before, count_after)
-        
+
+    def test_http_agent_update_handler(self):
+        headers = {'authorization': HTTPTestCase.AGENT_TOKEN_0}
+        body = open(os.path.join(HTTPTestCase.fixtures_dir, 'snapshot0.json')).read()
+        response = self.fetch('/agent/update/', method='POST', headers=headers, body=body)
+        response_data = json.loads(response.body)
+        self.assertEqual(response.code, 200)
+        self.assertEqual(response_data['status'], 'success')
+
+        body = open(os.path.join(HTTPTestCase.fixtures_dir, 'snapshot1.json')).read()
+        response = self.fetch('/agent/update/', method='POST', headers=headers, body=body)
+        response_data = json.loads(response.body)
+        self.assertEqual(response.code, 200)
+        self.assertEqual(response_data['status'], 'success')
+
+    def test_http_agent_update_handler_bad_auth(self):
+        headers = {'authorization': 'gibberish'}
+        body = open(os.path.join(HTTPTestCase.fixtures_dir, 'snapshot0.json')).read()
+        response = self.fetch('/agent/update/', method='POST', headers=headers, body=body)
+        response_data = json.loads(response.body)
+        self.assertEqual(response.code, 401)
+        self.assertEqual(response_data['status'], 'error')
+        self.assertEqual(response_data['error_type'], 'not authorized')
+

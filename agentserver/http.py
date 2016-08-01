@@ -1,13 +1,15 @@
 #!/usr/bin/env python
 import json
 import tornado.httpserver
+from tornado.web import RequestHandler, Finish
+from datetime import datetime
 from sqlalchemy.orm.exc import NoResultFound
-from db import dal, User, UserAuthToken, Agent, AgentDetail, AgentAuthToken
+from db import dal, kal, User, UserAuthToken, Agent, AgentDetail, AgentAuthToken, ProcessDetail
 
 SERVER_VERSION = '0.0.1a'
 
 
-class HTTPVersionHandler(tornado.web.RequestHandler):
+class HTTPVersionHandler(RequestHandler):
     @tornado.web.addslash
     def get(self):
         data = {'version': SERVER_VERSION}
@@ -15,7 +17,7 @@ class HTTPVersionHandler(tornado.web.RequestHandler):
         self.write(json.dumps(data))
 
 
-class HTTPCommandHandler(tornado.web.RequestHandler):
+class HTTPCommandHandler(RequestHandler):
     @tornado.web.addslash
     def post(self):
         print('self.request: %s' % dir(self.request))
@@ -23,7 +25,7 @@ class HTTPCommandHandler(tornado.web.RequestHandler):
         self.write(json.dumps({'status': 'success'}))
 
 
-class HTTPStatusHandler(tornado.web.RequestHandler):
+class HTTPStatusHandler(RequestHandler):
     @tornado.web.addslash
     def get(self):
         try:
@@ -47,7 +49,7 @@ class HTTPStatusHandler(tornado.web.RequestHandler):
         self.write(json.dumps(data))
 
 
-class HTTPListHandler(tornado.web.RequestHandler):
+class HTTPListHandler(RequestHandler):
     @tornado.web.addslash
     def get(self):
         try:
@@ -69,7 +71,7 @@ class HTTPListHandler(tornado.web.RequestHandler):
         self.write(json.dumps(data))
 
 
-class HTTPDetailHandler(tornado.web.RequestHandler):
+class HTTPDetailHandler(RequestHandler):
     @tornado.web.addslash
     def post(self):
         try:
@@ -84,6 +86,7 @@ class HTTPDetailHandler(tornado.web.RequestHandler):
             data = {'error': 'not authorized'}
             status = 403
         try:
+            print('REQUEST.BODY: %s' % self.request.body)
             agent_id = tornado.escape.json_decode(self.request.body)['id']
             detail = dal.Session().query(AgentDetail).filter(AgentDetail.agent_id == agent_id).one()
             data = {'hostname': detail.hostname,
@@ -108,7 +111,7 @@ class HTTPDetailHandler(tornado.web.RequestHandler):
         self.write(json.dumps(data))
 
 
-class HTTPDetailCreateUpdateHandler(tornado.web.RequestHandler):
+class HTTPDetailCreateUpdateHandler(RequestHandler):
     @tornado.web.addslash
     def post(self):
         session = dal.Session()
@@ -161,7 +164,60 @@ class HTTPDetailCreateUpdateHandler(tornado.web.RequestHandler):
         self.write(json.dumps(data))
 
 
-class HTTPTokenHandler(tornado.web.RequestHandler):
+class HTTPAgentUpdateHandler(RequestHandler):
+    @tornado.web.addslash
+    def prepare(self):
+        self.session = dal.Session()
+        try:
+            auth_token = self.request.headers.get('authorization')
+            self.token = self.session.query(AgentAuthToken) \
+            .filter(AgentAuthToken.uuid == auth_token).one()
+            self.agent_id = self.token.agent.id
+        except Exception as e:
+            print('EXCEPTION: %s' % e)
+            try:
+                logger = logging.getLogger('Web Server')
+                logger.error(e)
+            except:
+                pass
+            data = {'status': 'error', 'error_type': 'not authorized'}
+            status = 401
+            self.set_status(status)
+            self.set_header('Content-Type', 'application/json')
+            self.write(json.dumps(data))
+            raise Finish()
+
+    def post(self):
+        data = tornado.escape.json_decode(self.request.body)['snapshot_update']
+        for row in data:
+            name = row['name']
+            start = datetime.fromtimestamp(row['start'])
+            try:
+                process_detail = self.session.query(ProcessDetail) \
+                .filter(ProcessDetail.agent_id == self.agent_id,
+                        ProcessDetail.name == name).one()
+                process_detail.start = start
+                self.session.commit()
+            except NoResultFound:
+                process_detail = ProcessDetail(name=name,
+                    agent_id=self.agent_id,
+                    start=start)
+                self.session.add(process_detail)
+                self.session.commit()
+            for stat in row['stats']:
+                d = {'agent_id': self.agent_id, 'process_id': process_detail.id,
+                    'timestamp': datetime.fromtimestamp(stat[0]).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                    'cpu': stat[1], 'mem': stat[2]}
+                kal.connection.send('supervisor', d)
+        kal.connection.flush()
+        data = {'status': 'success'}
+        status = 200
+        self.set_status(status)
+        self.set_header('Content-Type', 'application/json')
+        self.write(json.dumps(data))
+
+
+class HTTPTokenHandler(RequestHandler):
     @tornado.web.addslash
     def get(self):
         try:
