@@ -5,6 +5,7 @@ import tornado.websocket
 from db import dal, kal, UserAuthToken, AgentAuthToken
 from sqlalchemy.orm.exc import NoResultFound
 from agents.supervisoragent import SupervisorAgent
+from clients.supervisorclient import SupervisorClient
 
 
 class SupervisorAgentHandler(tornado.websocket.WebSocketHandler):

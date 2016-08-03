@@ -68,6 +68,17 @@ class MockSupervisorClientHandler(SupervisorClientHandler, TestWebSocketHandler)
 
 
 class WebSocketBaseTestCase(AsyncHTTPTestCase):
+    @classmethod
+    def setUpClass(cls):
+        dal.connect('sqlite:///:memory:')
+        dal.session = dal.Session()
+        kal.connect('debug')
+
+    @classmethod
+    def tearDownClass(cls):
+        dal.session.rollback()
+        dal.session.close()
+
     @gen.coroutine
     def ws_connect(self, path, headers=None, compression_options=None):
         ws = yield websocket_connect(
@@ -87,35 +98,7 @@ class WebSocketBaseTestCase(AsyncHTTPTestCase):
 class SupervisorAgentHandlerTest(WebSocketBaseTestCase):
     @classmethod
     def setUpClass(cls):
-        dal.connect('sqlite:///:memory:')
-        dal.session = dal.Session()
-        kal.connect('debug')
-
-        # Generate users
-        user_0 = User(name='Marc Wilson',
-                         email='marcw@silverfern.io',
-                         is_admin=True,
-                         password='asdf')
-        user_1 = User(name='Phil Lake',
-                         email='philip@gmail.com',
-                         is_admin=False,
-                         password='asdf')
-        user_2 = User(name='Colin Ng',
-                         email='colin@ngland.net',
-                         is_admin=True,
-                         password='asdf')
-
-        # Generate user tokens
-        token_0 = UserAuthToken(user=user_0)
-        token_1 = UserAuthToken(user=user_1)
-        token_2 = UserAuthToken(user=user_2)
-        dal.session.add(token_0)
-        dal.session.add(token_1)
-        dal.session.add(token_2)
-        dal.session.commit()
-
-        cls.USER_TOKEN = token_0.uuid
-
+        super(SupervisorAgentHandlerTest, cls).setUpClass()
         # Generate agents
         agent_0 = Agent(name='Agent 1')
         agent_1 = Agent(name='Agent 2')
@@ -131,11 +114,6 @@ class SupervisorAgentHandlerTest(WebSocketBaseTestCase):
         cls.AGENT_TOKEN = agent_token_0.uuid
         cls.AGENT_ID = agent_0.id
         cls.FIXTURES_DIR =  os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fixtures')
-
-    @classmethod
-    def tearDownClass(cls):
-        dal.session.rollback()
-        dal.session.close()
 
     def get_app(self):
         self.close_future = Future()
@@ -154,21 +132,25 @@ class SupervisorAgentHandlerTest(WebSocketBaseTestCase):
     @gen_test
     def test_no_authorization(self):
         connection_count = len(SupervisorAgentHandler.Connections.keys())
+        id_count = len(SupervisorAgentHandler.IDs.keys())
         ws_client = yield websocket_connect(self.url())
         # print(dir(ws_client))
         ws_client.write_message(json.dumps({'msg':'update'}))
         response = yield ws_client.read_message()
         self.assertEqual(response, None, "No response from server because authorization not provided.")
         self.assertEqual(len(SupervisorAgentHandler.Connections.keys()), connection_count, "+0 websocket connections.")
+        self.assertEqual(len(SupervisorAgentHandler.IDs.keys()), id_count, "+0 websocket connections.")
 
     @gen_test
     def test_bad_authorization(self):
         connection_count = len(SupervisorAgentHandler.Connections.keys())
+        id_count = len(SupervisorAgentHandler.IDs.keys())
         ws_client = yield websocket_connect(self.url(), headers={'authorization':'gibberish'})
         ws_client.write_message(json.dumps({'msg':'update'}))
         response = yield ws_client.read_message()
         self.assertEqual(response, None, "No response from server because bad authorization provided.")
         self.assertEqual(len(SupervisorAgentHandler.Connections.keys()), connection_count, "+0 websocket connections.")
+        self.assertEqual(len(SupervisorAgentHandler.IDs.keys()), id_count, "+0 websocket connections.")
 
     @gen_test
     def test_successful_authorization(self):
@@ -276,7 +258,71 @@ class SupervisorAgentHandlerTest(WebSocketBaseTestCase):
         self.assertEqual(len(SupervisorAgentHandler.IDs.keys()), 0, "0 websocket connections.")
 
 
+class SupervisorClientHandlerTest(WebSocketBaseTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super(SupervisorClientHandlerTest, cls).setUpClass()
+        # Generate users
+        user_0 = User(name='User A',
+                         email='user_a@example.com',
+                         is_admin=True,
+                         password='randompassworda')
+        user_1 = User(name='User B',
+                         email='user_b@example.com',
+                         is_admin=False,
+                         password='randompasswordb')
+        user_2 = User(name='User C',
+                         email='user_c@example.com',
+                         is_admin=True,
+                         password='randompasswordc')
 
+        # Generate user tokens
+        token_0 = UserAuthToken(user=user_0)
+        token_1 = UserAuthToken(user=user_1)
+        token_2 = UserAuthToken(user=user_2)
+        dal.session.add(token_0)
+        dal.session.add(token_1)
+        dal.session.add(token_2)
+        dal.session.commit()
+
+        cls.USER_TOKEN = token_0.uuid
+
+    def get_app(self):
+        self.close_future = Future()
+        return Application([
+            ('/client/supervisor/', MockSupervisorClientHandler,
+                dict(close_future=self.close_future)),
+        ])
+
+    def url(self):
+        return 'ws://localhost:' + str(self.get_http_port()) + '/client/supervisor/'  
+
+    @gen_test
+    def test_no_authorization(self):
+        connection_count = len(SupervisorClientHandler.Connections.keys())
+        ws_client = yield websocket_connect(self.url())
+        ws_client.write_message(json.dumps({'cmd':'restart'}))
+        response = yield ws_client.read_message()
+        self.assertEqual(response, None, "No response from server because authorization not provided.")
+        self.assertEqual(len(SupervisorClientHandler.Connections.keys()), connection_count, "+0 websocket connections.")
+
+    @gen_test
+    def test_bad_authorization(self):
+        connection_count = len(SupervisorClientHandler.Connections.keys())
+        ws_client = yield websocket_connect(self.url(), headers={'authorization':'gibberish'})
+        ws_client.write_message(json.dumps({'cmd':'restart'}))
+        response = yield ws_client.read_message()
+        self.assertEqual(response, None, "No response from server because bad authorization provided.")
+        self.assertEqual(len(SupervisorClientHandler.Connections.keys()), connection_count, "+0 websocket connections.")
+
+    @gen_test
+    def test_successful_authorization(self):
+        connection_count = len(SupervisorClientHandler.Connections.keys())
+        ws_client = yield websocket_connect(self.url(), headers={'authorization': type(self).USER_TOKEN})
+        self.assertEqual(len(SupervisorClientHandler.Connections.keys()), connection_count + 1, "+1 websocket connections.")
+        ws_client.close()
+        yield self.close_future
+        self.assertEqual(len(SupervisorClientHandler.Connections.keys()), connection_count, "0 websocket connections.")
 
     # @gen_test
     # def test_supervisoragenthandler_state_update(self):

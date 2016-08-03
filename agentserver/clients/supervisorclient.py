@@ -12,3 +12,6 @@ class SupervisorClient(object):
         self.ip = self.get_ip(ws.request)
         self.ws = ws
         self.session = dal.Session()
+
+    def get_ip(self, request):
+        return request.headers.get("X-Real-IP") or request.remote_ip
