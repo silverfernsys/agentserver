@@ -1,8 +1,10 @@
 #! /usr/bin/env python
-# from kafka import KafkaProducer
 from procinfo import ProcInfo
 from time import time
-# from agentserver.db import kal
+from datetime import datetime
+import json
+from sqlalchemy.orm.exc import NoResultFound
+from db import dal, kal, ProcessDetail, ProcessState
 
 
 STATE_MAP = {
@@ -120,69 +122,145 @@ class ProcInfo(object):
         self.mem = []
 
 
+class ProcessInfo(object):
+    def __init__(self, id, name, start, state):
+        self.id = id
+        self.name = name
+        self.start = start
+        self.state = state
+
+
 class SupervisorAgent(object):
-    def __init__(self, ip, dbname, conn):
+    def __init__(self, id, ws):
+        self.id = id
+        self.ip = self.get_ip(ws.request)
+        self.ws = ws
+        self.session = dal.Session()
         self.processes = {}
-        self.agent_ip = ip
-        self.dbname = dbname
-        self.conn = conn
-        # tal.connect(config.data['timeseries'], self.dbname)
-        # (username, password, host, port) = self._parseTimeseriesURI(config.data['timeseries'])
-        # self.client = InfluxDBClient(host, port, username, password, dbname)
-        self.time = 0.0
 
-    def get(self, group, name):
+    def get_ip(self, request):
+        return request.headers.get("X-Real-IP") or request.remote_ip
+
+    def update(self, message):
         try:
-            return self.processes[group][name]
-        except:
-            None
-
-    def add(self, proc):
-        if proc.group not in self.processes:
-            self.processes[proc.group] = {}
-        self.processes[proc.group][proc.name] = proc
-
-    # A class method generator that yields the contents of the 'processes' dictionary
-    def all(self):
-        for group in self.processes:
-            for name in self.processes[group]:
-                yield self.processes[group][name]
-        raise StopIteration()
-
-    def snapshot_update(self, data):
-        for d in data:
-            info = self.get(d['group'], d['name'])
-            if info:
-                info.update(d)
+            data = json.loads(message)
+            if 'snapshot_update' in data:
+                update = data['snapshot_update']
+                for row in update:
+                    name = row['name']
+                    start = datetime.fromtimestamp(row['start'])
+                    if name in self.processes:
+                        process = self.processes['name']
+                        if process.start != start:
+                            process.start = start
+                            ProcessDetail.update_or_create(name, self.id, start)
+                    else:
+                        detail = ProcessDetail.update_or_create(name, self.id, start, self.session)
+                        state = ProcessState(detail_id=detail.id, name=row['statename'])
+                        self.session.add(state)
+                        self.session.commit()
+                        process = ProcessInfo(detail.id, name, start, row['statename'])
+                        self.processes['name'] = process
+                    for stat in row['stats']:
+                        msg = {'agent_id': self.id, 'process_id': process.id,
+                            'timestamp': datetime.fromtimestamp(stat[0]).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                            'cpu': stat[1], 'mem': stat[2]}
+                        kal.connection.send('supervisor', msg)
+                kal.connection.flush()
+                self.ws.write_message(json.dumps({'status': 'success', 'type': 'snapshot updated'}))
+            elif 'state_update' in data:
+                update = data['state_update']
+                name = update['name']
+                state = update['statename']
+                start = datetime.fromtimestamp(update['start'])
+                if update['name'] in self.processes:
+                    process = self.processes[name]
+                    process.state = state
+                    process.start = start
+                    ProcessDetail.update_or_create(name, self.id, start)
+                else:
+                    detail = ProcessDetail.update_or_create(name, self.id, start)
+                    process = ProcessInfo(detail.id, name, start, state)
+                    state = ProcessState(detail_id=detail.id, name=state)
+                    self.session.add(state)
+                    self.session.commit()
+                # print(update)
+                self.ws.write_message(json.dumps({'status': 'success', 'type': 'state updated'}))
             else:
-                # name, group, pid, state, statename, start
-                info = ProcInfo(d['name'], d['group'], d['pid'],
-                    d['state'], d['statename'], d['start'])
-                info.update(d)
-                self.add(info)
+                self.ws.write_message(json.dumps({'status': 'error', 'type': 'unknown message type'}))
+        except ValueError as e:
+            # print(e)
+            self.ws.write_message(json.dumps({'status': 'error', 'type': 'unknown message type'}))
+        except Exception as e:
+            # print(e)
+            self.ws.write_message(json.dumps({'status': 'error', 'type': 'unknown message type'}))
 
-    def state_update(self, data):
-        info = self.get(data['group'], data['name'])
-        if info != None:
-            info.update_state(data)
+    # def __init__(self, ip, dbname, conn):
+    #     self.processes = {}
+    #     self.agent_ip = ip
+    #     self.dbname = dbname
+    #     self.conn = conn
+    #     # tal.connect(config.data['timeseries'], self.dbname)
+    #     # (username, password, host, port) = self._parseTimeseriesURI(config.data['timeseries'])
+    #     # self.client = InfluxDBClient(host, port, username, password, dbname)
+    #     self.time = 0.0
 
-    def data(self):
-        data = []
-        for p in self.all():
-            data.append(p.data())
-        return data
+    # def get(self, group, name):
+    #     try:
+    #         return self.processes[group][name]
+    #     except:
+    #         None
 
-    def snapshot(self):
-        return [p.snapshot() for p in self.all()]
+    # def add(self, proc):
+    #     if proc.group not in self.processes:
+    #         self.processes[proc.group] = {}
+    #     self.processes[proc.group][proc.name] = proc
 
-    def reset(self):
-        for p in self.all():
-            p.reset()
+    # # A class method generator that yields the contents of the 'processes' dictionary
+    # def all(self):
+    #     for group in self.processes:
+    #         for name in self.processes[group]:
+    #             yield self.processes[group][name]
+    #     raise StopIteration()
 
-    def flush_timeseries(self):
-        print('flush_timeseries')
-        for process in self.all():
-            data = json.dumps(process.data())
+    # def snapshot_update(self, data):
+    #     for d in data:
+    #         info = self.get(d['group'], d['name'])
+    #         if info:
+    #             info.update(d)
+    #         else:
+    #             # name, group, pid, state, statename, start
+    #             info = ProcInfo(d['name'], d['group'], d['pid'],
+    #                 d['state'], d['statename'], d['start'])
+    #             info.update(d)
+    #             self.add(info)
+
+    # def state_update(self, data):
+    #     info = self.get(data['group'], data['name'])
+    #     if info != None:
+    #         info.update_state(data)
+
+    # def data(self):
+    #     data = []
+    #     for p in self.all():
+    #         data.append(p.data())
+    #     return data
+
+    # def snapshot(self):
+    #     return [p.snapshot() for p in self.all()]
+
+    # def reset(self):
+    #     for p in self.all():
+    #         p.reset()
+
+    # def flush_timeseries(self):
+    #     print('flush_timeseries')
+    #     for process in self.all():
+    #         data = json.dumps(process.data())
+
+
+
+
             # kal.connection.send('supervisor', data.encode('utf-8'))
         # https://github.com/dpkp/kafka-python
         # kal.connection.send('supervisor', b'some message')

@@ -192,23 +192,12 @@ class HTTPAgentUpdateHandler(RequestHandler):
         for row in data:
             name = row['name']
             start = datetime.fromtimestamp(row['start'])
-            try:
-                process_detail = self.session.query(ProcessDetail) \
-                .filter(ProcessDetail.agent_id == self.agent_id,
-                        ProcessDetail.name == name).one()
-                process_detail.start = start
-                self.session.commit()
-            except NoResultFound:
-                process_detail = ProcessDetail(name=name,
-                    agent_id=self.agent_id,
-                    start=start)
-                self.session.add(process_detail)
-                self.session.commit()
+            process_detail = ProcessDetail.update_or_create(name, self.agent_id, start, self.session)
             for stat in row['stats']:
-                d = {'agent_id': self.agent_id, 'process_id': process_detail.id,
+                msg = {'agent_id': self.agent_id, 'process_id': process_detail.id,
                     'timestamp': datetime.fromtimestamp(stat[0]).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
                     'cpu': stat[1], 'mem': stat[2]}
-                kal.connection.send('supervisor', d)
+                kal.connection.send('supervisor', msg)
         kal.connection.flush()
         data = {'status': 'success'}
         status = 200

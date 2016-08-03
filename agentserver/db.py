@@ -4,7 +4,7 @@ from sqlalchemy import (Column, Integer, Numeric, String, DateTime, ForeignKey,
                         Boolean, create_engine)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, backref, sessionmaker, validates
-
+from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.event import listen
 
 from kafka import KafkaProducer
@@ -34,6 +34,41 @@ class ProcessDetail(Base):
             "name='{self.name}', " \
             "agent='{self.agent.name}', " \
             "start='{self.start}', " \
+            "created_on='{self.created_on}')".format(self=self)
+
+    @classmethod
+    def update_or_create(self, name, agent_id, start, session=None):
+        if session is None:
+            session = dal.Session()
+        try:
+            detail = session.query(ProcessDetail) \
+            .filter(ProcessDetail.agent_id == agent_id,
+                    ProcessDetail.name == name).one()
+            if detail.start != start:
+                detail.start = start
+                session.commit()
+        except NoResultFound:
+            detail = ProcessDetail(name=name,
+                agent_id=agent_id, start=start)
+            session.add(detail)
+            session.commit()
+        return detail
+
+
+class ProcessState(Base):
+    __tablename__ = 'processstates'
+
+    id = Column(Integer(), primary_key=True)
+    detail_id = Column(Integer(), ForeignKey('processdetails.id'))
+    name = Column(String(), nullable=False)
+    created_on = Column(DateTime(), default=datetime.now)
+
+    detail = relationship("ProcessDetail", backref=backref('processdetails'))
+
+    def __repr__(self):
+        return "ProcessState(id='{self.id}', " \
+            "name='{self.name}', " \
+            "detail='{self.detail.name}', " \
             "created_on='{self.created_on}')".format(self=self)
 
 

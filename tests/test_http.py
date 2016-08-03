@@ -27,7 +27,6 @@ class HTTPTestCase(AsyncHTTPTestCase):
     def setUpClass(cls):
         dal.connect('sqlite:///:memory:')
         dal.session = dal.Session()
-        # kal.connection = KafkaProducerMock()
         kal.connect('debug')
 
         # Generate users
