@@ -97,6 +97,8 @@ class TestDb(unittest.TestCase):
         dal.session.commit()
 
         print(dal.session.query(ProcessState).count())
+
+        states = dal.session.query(ProcessState).join(ProcessDetail).filter(ProcessDetail.agent_id == agent.id).all()
         # states = dal.session.query(ProcessState).filter(ProcessState.detail.agent == agent).all()
         # print(len(states))
         # self.assertEqual()
