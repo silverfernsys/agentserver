@@ -72,7 +72,10 @@ class SupervisorClientHandler(tornado.websocket.WebSocketHandler):
                 self.close()
 
     def on_message(self, message):
-        pass
+        if self in SupervisorClientHandler.Connections:
+            SupervisorClientHandler.Connections[self].update(message)
+        else:
+            print('Writing to non-existent client!')
 
     def on_close(self):
         client = SupervisorClientHandler.Connections[self]

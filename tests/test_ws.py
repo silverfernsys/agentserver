@@ -286,6 +286,7 @@ class SupervisorClientHandlerTest(WebSocketBaseTestCase):
         dal.session.commit()
 
         cls.USER_TOKEN = token_0.uuid
+        cls.AGENT_ID = 1
 
     def get_app(self):
         self.close_future = Future()
@@ -320,6 +321,68 @@ class SupervisorClientHandlerTest(WebSocketBaseTestCase):
         connection_count = len(SupervisorClientHandler.Connections.keys())
         ws_client = yield websocket_connect(self.url(), headers={'authorization': type(self).USER_TOKEN})
         self.assertEqual(len(SupervisorClientHandler.Connections.keys()), connection_count + 1, "+1 websocket connections.")
+        ws_client.close()
+        yield self.close_future
+        self.assertEqual(len(SupervisorClientHandler.Connections.keys()), connection_count, "0 websocket connections.")
+
+    @gen_test
+    def test_cmd_success(self):
+        connection_count = len(SupervisorClientHandler.Connections.keys())
+        ws_client = yield websocket_connect(self.url(), headers={'authorization': type(self).USER_TOKEN})
+        self.assertEqual(len(SupervisorClientHandler.Connections.keys()), connection_count + 1, "+1 websocket connections.")
+        
+        ws_client.write_message(json.dumps({'cmd': 'restart', 'id': type(self).AGENT_ID, 'process': 'web'}))
+        response = yield ws_client.read_message()
+        data = json.loads(response)
+        self.assertEqual(data['status'], 'success')
+        self.assertEqual(data['type'], 'command restart accepted')
+
+        ws_client.write_message(json.dumps({'cmd': 'follow', 'id': type(self).AGENT_ID, 'process': 'web'}))
+        response = yield ws_client.read_message()
+        data = json.loads(response)
+        self.assertEqual(data['status'], 'success')
+        self.assertEqual(data['type'], 'command follow accepted')
+
+        ws_client.close()
+        yield self.close_future
+        self.assertEqual(len(SupervisorClientHandler.Connections.keys()), connection_count, "0 websocket connections.")
+
+    @gen_test
+    def test_cmd_failure(self):
+        connection_count = len(SupervisorClientHandler.Connections.keys())
+        ws_client = yield websocket_connect(self.url(), headers={'authorization': type(self).USER_TOKEN})
+        self.assertEqual(len(SupervisorClientHandler.Connections.keys()), connection_count + 1, "+1 websocket connections.")
+
+        # ws_client.write_message(json.dumps({'cmd': 'restart', 'id': 100, 'process': 'web'}))
+        # response = yield ws_client.read_message()
+        # data = json.loads(response)
+        # self.assertEqual(data['status'], 'error')
+        # self.assertEqual(data['type'], 'unknown message type')
+
+        ws_client.write_message(json.dumps({'id': type(self).AGENT_ID, 'process': 'web'}))
+        response = yield ws_client.read_message()
+        data = json.loads(response)
+        self.assertEqual(data['status'], 'error')
+        self.assertEqual(data['type'], 'unknown message type')
+
+        ws_client.write_message(json.dumps({'cmd': 'restart', 'process': 'web'}))
+        response = yield ws_client.read_message()
+        data = json.loads(response)
+        self.assertEqual(data['status'], 'error')
+        self.assertEqual(data['type'], 'unknown message type')
+
+        ws_client.write_message(json.dumps({'cmd': 'restart', 'id': type(self).AGENT_ID}))
+        response = yield ws_client.read_message()
+        data = json.loads(response)
+        self.assertEqual(data['status'], 'error')
+        self.assertEqual(data['type'], 'unknown message type')
+
+        ws_client.write_message(json.dumps({'cmd': 'unknown', 'id': type(self).AGENT_ID, 'process': 'web'}))
+        response = yield ws_client.read_message()
+        data = json.loads(response)
+        self.assertEqual(data['status'], 'error')
+        self.assertEqual(data['type'], 'unknown message type')
+
         ws_client.close()
         yield self.close_future
         self.assertEqual(len(SupervisorClientHandler.Connections.keys()), connection_count, "0 websocket connections.")
