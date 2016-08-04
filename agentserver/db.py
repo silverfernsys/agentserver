@@ -6,6 +6,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, backref, sessionmaker, validates
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.event import listen
+from sqlalchemy import desc
 
 from kafka import KafkaProducer
 
@@ -51,7 +52,7 @@ class ProcessDetail(Base):
     @classmethod
     def update_or_create(self, name, agent_id, start, session=None):
         if session is None:
-            session = dal.Session()
+            session = dal.session #dal.Session()
         try:
             detail = session.query(ProcessDetail) \
             .filter(ProcessDetail.agent_id == agent_id,
@@ -66,6 +67,15 @@ class ProcessDetail(Base):
             session.commit()
         return detail
 
+    @classmethod
+    def started_from(self, agent_id, start, session=None):
+        if session is None:
+            session = dal.Session()
+        details = session.query(ProcessDetail) \
+        .filter(ProcessDetail.agent_id == agent_id,
+                ProcessDetail.start >= start)
+        return details
+
 
 class ProcessState(Base):
     __tablename__ = 'processstates'
@@ -75,13 +85,25 @@ class ProcessState(Base):
     name = Column(String(), nullable=False)
     created_on = Column(DateTime(), default=datetime.now)
 
-    detail = relationship("ProcessDetail", backref=backref('processdetails'))
+    detail = relationship("ProcessDetail", backref=backref('processstates'))
 
     def __repr__(self):
         return "ProcessState(id='{self.id}', " \
             "name='{self.name}', " \
             "detail='{self.detail.name}', " \
             "created_on='{self.created_on}')".format(self=self)
+
+    @classmethod
+    def latest(self, name, detail, session=None):
+        if session is None:
+            session = dal.Session()
+        try:
+            return session.query(ProcessState) \
+            .filter(ProcessState.name == name,
+             ProcessState.detail_id == detail.id) \
+            .order_by(desc(ProcessState.created_on)).one()
+        except NoResultFound:
+            return None
 
 
 class Agent(Base):

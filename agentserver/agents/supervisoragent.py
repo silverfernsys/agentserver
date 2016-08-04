@@ -37,7 +37,7 @@ class SupervisorAgent(object):
                         process = self.processes['name']
                         if process.start != start:
                             process.start = start
-                            ProcessDetail.update_or_create(name, self.id, start)
+                            ProcessDetail.update_or_create(name, self.id, start, self.session)
                     else:
                         detail = ProcessDetail.update_or_create(name, self.id, start, self.session)
                         state = ProcessState(detail_id=detail.id, name=row['statename'])
@@ -61,9 +61,9 @@ class SupervisorAgent(object):
                     process = self.processes[name]
                     process.state = state
                     process.start = start
-                    ProcessDetail.update_or_create(name, self.id, start)
+                    ProcessDetail.update_or_create(name, self.id, start, self.session)
                 else:
-                    detail = ProcessDetail.update_or_create(name, self.id, start)
+                    detail = ProcessDetail.update_or_create(name, self.id, start, self.session)
                     process = ProcessInfo(detail.id, name, start, state)
                     state = ProcessState(detail_id=detail.id, name=state)
                     self.session.add(state)

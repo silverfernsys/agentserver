@@ -100,9 +100,9 @@ class SupervisorAgentHandlerTest(WebSocketBaseTestCase):
     def setUpClass(cls):
         super(SupervisorAgentHandlerTest, cls).setUpClass()
         # Generate agents
-        agent_0 = Agent(name='Agent 1')
-        agent_1 = Agent(name='Agent 2')
-        agent_2 = Agent(name='Agent 3')
+        agent_0 = Agent(name='Agent 0')
+        agent_1 = Agent(name='Agent 1')
+        agent_2 = Agent(name='Agent 2')
         agent_token_0 = AgentAuthToken(agent=agent_0)
         agent_token_1 = AgentAuthToken(agent=agent_1)
         agent_token_2 = AgentAuthToken(agent=agent_2)
@@ -258,6 +258,16 @@ class SupervisorAgentHandlerTest(WebSocketBaseTestCase):
         self.assertEqual(len(SupervisorAgentHandler.IDs.keys()), 0, "0 websocket connections.")
 
 
+class SupervisorAgentMock(object):
+    def __init__(self, id, ip):
+        self.id = id
+        self.ip = ip
+        self.session = dal.Session()
+        self.processes = {}
+
+    def update(self, message):
+        pass
+
 class SupervisorClientHandlerTest(WebSocketBaseTestCase):
     @classmethod
     def setUpClass(cls):
@@ -342,6 +352,11 @@ class SupervisorClientHandlerTest(WebSocketBaseTestCase):
         data = json.loads(response)
         self.assertEqual(data['status'], 'success')
         self.assertEqual(data['type'], 'command follow accepted')
+
+        # try:
+        #     response = yield ws_client.read_message()
+        # except Exception as e:
+        #     print(e)
 
         ws_client.close()
         yield self.close_future
