@@ -1,12 +1,12 @@
 from datetime import datetime, timedelta
 
 from sqlalchemy import (Column, Integer, Numeric, String, DateTime, ForeignKey,
-                        Boolean, create_engine)
+                        Boolean, create_engine, desc, Enum)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, backref, sessionmaker, validates
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.event import listen
-from sqlalchemy import desc
+import enum
 
 from kafka import KafkaProducer
 
@@ -16,18 +16,6 @@ from utils import uuid
 
 
 Base = declarative_base()
-
-
-STATE_MAP = {
-    'STOPPED': 0,
-    'STARTING': 10,
-    'RUNNING': 20,
-    'BACKOFF': 30,
-    'STOPPING': 40,
-    'EXITED': 100,
-    'FATAL': 200,
-    'UNKNOWN': 1000 
-}
 
 
 class ProcessDetail(Base):
@@ -77,12 +65,23 @@ class ProcessDetail(Base):
         return details
 
 
+class StateEnum(enum.Enum):
+    STOPPED = 'STOPPED'
+    STARTING = 'STARTING'
+    RUNNING = 'RUNNING'
+    BACKOFF = 'BACKOFF'
+    STOPPING = 'STOPPING'
+    EXITED = 'EXITED'
+    FATAL = 'FATAL'
+    UNKNOWN = 'UNKNOWN' 
+
+
 class ProcessState(Base):
     __tablename__ = 'processstates'
 
     id = Column(Integer(), primary_key=True)
     detail_id = Column(Integer(), ForeignKey('processdetails.id'))
-    name = Column(String(), nullable=False)
+    name = Column(Enum(StateEnum), nullable=False)
     created_on = Column(DateTime(), default=datetime.now)
 
     detail = relationship("ProcessDetail", backref=backref('processstates', order_by=desc(created_on)))

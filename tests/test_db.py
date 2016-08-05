@@ -4,7 +4,7 @@ from datetime import datetime
 # from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from db import (dal, User, UserAuthToken, Agent, AgentAuthToken,
-    ProcessDetail, ProcessState)
+    ProcessDetail, ProcessState, StateEnum)
 
 
 class TestDb(unittest.TestCase):
@@ -13,10 +13,8 @@ class TestDb(unittest.TestCase):
         dal.connect('sqlite:///:memory:')
         dal.session = dal.Session()
 
-    def setUp(self):
-        dal.session = dal.Session()
-
-    def tearDown(self):
+    @classmethod
+    def tearDownClass(cls):
         dal.session.rollback()
         dal.session.close()
 
@@ -115,13 +113,15 @@ class TestDb(unittest.TestCase):
         for detail in details:
             for i in range(4):
                 dal.session.add(ProcessState(detail_id=detail.id,
-                    name='state_{0}_{1}'.format(detail.name, i)))
+                    name=StateEnum.STARTING))
         dal.session.commit()
 
         print(dal.session.query(ProcessState).count())
 
         details = agent.process_states()
         print(details)
+
+
         # states = dal.session.query(ProcessState).join(ProcessDetail).filter(ProcessDetail.agent_id == agent.id).all()
         # dal.session.query(ProcessDetail).filter(ProcessDetail.agent_id == agent.id)
         # print(states)
