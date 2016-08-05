@@ -100,19 +100,14 @@ class SupervisorAgentHandlerTest(WebSocketBaseTestCase):
     def setUpClass(cls):
         super(SupervisorAgentHandlerTest, cls).setUpClass()
         # Generate agents
-        agent_0 = Agent(name='Agent 0')
-        agent_1 = Agent(name='Agent 1')
-        agent_2 = Agent(name='Agent 2')
-        agent_token_0 = AgentAuthToken(agent=agent_0)
-        agent_token_1 = AgentAuthToken(agent=agent_1)
-        agent_token_2 = AgentAuthToken(agent=agent_2)
-        dal.session.add(agent_token_0)
-        dal.session.add(agent_token_1)
-        dal.session.add(agent_token_2)
+        agent = Agent(name='Agent 0')
+        dal.session.add_all([AgentAuthToken(agent=agent),
+            AgentAuthToken(agent=Agent(name='Agent 1')),
+            AgentAuthToken(agent=Agent(name='Agent 2'))])
         dal.session.commit()
 
-        cls.AGENT_TOKEN = agent_token_0.uuid
-        cls.AGENT_ID = agent_0.id
+        cls.AGENT_TOKEN = agent.token.uuid
+        cls.AGENT_ID = agent.id
         cls.FIXTURES_DIR =  os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fixtures')
 
     def get_app(self):
@@ -272,30 +267,23 @@ class SupervisorClientHandlerTest(WebSocketBaseTestCase):
     @classmethod
     def setUpClass(cls):
         super(SupervisorClientHandlerTest, cls).setUpClass()
-        # Generate users
-        user_0 = User(name='User A',
+        # Generate users and tokens
+        user = User(name='User A',
                          email='user_a@example.com',
                          is_admin=True,
                          password='randompassworda')
-        user_1 = User(name='User B',
-                         email='user_b@example.com',
-                         is_admin=False,
-                         password='randompasswordb')
-        user_2 = User(name='User C',
-                         email='user_c@example.com',
-                         is_admin=True,
-                         password='randompasswordc')
-
-        # Generate user tokens
-        token_0 = UserAuthToken(user=user_0)
-        token_1 = UserAuthToken(user=user_1)
-        token_2 = UserAuthToken(user=user_2)
-        dal.session.add(token_0)
-        dal.session.add(token_1)
-        dal.session.add(token_2)
+        dal.session.add_all([UserAuthToken(user=user),
+            UserAuthToken(user=User(name='User B',
+                     email='user_b@example.com',
+                     is_admin=False,
+                     password='randompasswordb')),
+            UserAuthToken(user=User(name='User C',
+                     email='user_c@example.com',
+                     is_admin=True,
+                     password='randompasswordc'))])
         dal.session.commit()
 
-        cls.USER_TOKEN = token_0.uuid
+        cls.USER_TOKEN = user.token.uuid
         cls.AGENT_ID = 1
 
     def get_app(self):

@@ -116,12 +116,9 @@ class TestDb(unittest.TestCase):
                     name=StateEnum.STARTING))
         dal.session.commit()
 
-        print(dal.session.query(ProcessState).count())
-
-        details = agent.process_states()
-        print(details)
-
-
+        # print(dal.session.query(ProcessState).count())
+        # details = agent.process_states()
+        # print(details)
         # states = dal.session.query(ProcessState).join(ProcessDetail).filter(ProcessDetail.agent_id == agent.id).all()
         # dal.session.query(ProcessDetail).filter(ProcessDetail.agent_id == agent.id)
         # print(states)

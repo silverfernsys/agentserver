@@ -18,11 +18,6 @@ from db import dal, kal, User, UserAuthToken, Agent, AgentAuthToken, AgentDetail
 
 
 class HTTPTestCase(AsyncHTTPTestCase):
-    NAME = 'Marc Wilson'
-    EMAIL = 'marcw@silverfern.io'
-    PW = 'asdf'
-    TOKEN = None
-
     @classmethod
     def setUpClass(cls):
         dal.connect('sqlite:///:memory:')
@@ -30,74 +25,50 @@ class HTTPTestCase(AsyncHTTPTestCase):
         kal.connect('debug')
 
         # Generate users
-        user_0 = User(name=HTTPTestCase.NAME,
-                         email=HTTPTestCase.EMAIL,
-                         is_admin=True,
-                         password=HTTPTestCase.PW)
-        user_1 = User(name='Phil Lake',
-                         email='philip@gmail.com',
+        cls.EMAIL = 'user_a@example.com'
+        cls.PASSWORD = 'randompassworda'
+        user = User(name='User A',
+                     email=cls.EMAIL,
+                     is_admin=True,
+                     password=cls.PASSWORD)
+        dal.session.add_all([UserAuthToken(user=user),
+                        UserAuthToken(user=User(name='User B',
+                         email='user_b@example.com',
                          is_admin=False,
-                         password='asdf')
-        user_2 = User(name='Colin Ng',
-                         email='colin@ngland.net',
+                         password='randompasswordb')),
+                        UserAuthToken(user=User(name='User C',
+                         email='user_c@example.com',
                          is_admin=True,
-                         password='asdf')
-
-        # Generate user tokens
-        token_0 = UserAuthToken(user=user_0)
-        token_1 = UserAuthToken(user=user_1)
-        token_2 = UserAuthToken(user=user_2)
-        dal.session.add(token_0)
-        dal.session.add(token_1)
-        dal.session.add(token_2)
-        dal.session.commit()
-
-        HTTPTestCase.TOKEN = token_0.uuid
+                         password='randompasswordc'))])
 
         # Generate agents
-        agent_0 = Agent(name='Agent 1')
-        agent_token_0 = AgentAuthToken(agent=agent_0)
-        dal.session.add(agent_token_0)
+        agent_0 = Agent(name='Agent 0')
+        agent_1 = Agent(name='Agent 1')
+        agent_2 = Agent(name='Agent 2')
 
-        agent_detail_0 = AgentDetail(agent=agent_0,
+        dal.session.add_all([AgentAuthToken(agent=agent_0),
+            AgentAuthToken(agent=agent_1),
+            AgentAuthToken(agent=agent_2)])
+
+        dal.session.add(AgentDetail(agent=agent_0,
             hostname='agent_1',
             processor='x86_64',
             num_cores=2,
             memory=8372064256,
             dist_name='Ubuntu',
-            dist_version='15.04')
-        dal.session.add(agent_detail_0)
+            dist_version='15.04'))
+
         dal.session.commit()
 
-        HTTPTestCase.AGENT_TOKEN_0 = agent_token_0.uuid
+        cls.TOKEN = user.token.uuid
+        cls.AGENT_TOKEN_0 = agent_0.token.uuid
+        cls.AGENT_TOKEN_1 = agent_1.token.uuid
+        cls.AGENT_TOKEN_2 = agent_2.token.uuid
 
-        agent_1 = Agent(name='Agent 2')
-        agent_token_1 = AgentAuthToken(agent=agent_1)
-        dal.session.add(agent_token_1)
-        dal.session.commit()
-
-        HTTPTestCase.AGENT_TOKEN_1 = agent_token_1.uuid
-
-        agent_2 = Agent(name='Agent 3')
-        agent_token_2 = AgentAuthToken(agent=agent_2)
-        dal.session.add(agent_token_2)
-        dal.session.commit()
-
-        HTTPTestCase.AGENT_TOKEN_2 = agent_token_2.uuid
-        dal.session.commit()
-        dal.session.close()
-
-        cls.fixtures_dir =  os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fixtures')
+        cls.FIXTURES_DIR =  os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fixtures')
 
     @classmethod
     def tearDownClass(cls):
-        pass
-
-    def setUp(self):
-        super(HTTPTestCase, self).setUp()
-        dal.session = dal.Session()
-
-    def tearDown(self):
         dal.session.rollback()
         dal.session.close()
 
@@ -119,7 +90,7 @@ class HTTPTestCase(AsyncHTTPTestCase):
         self.assertEqual(response.code, 200)
 
     def test_http_token_handler_success(self):
-        headers = {'username':HTTPTestCase.EMAIL, 'password':HTTPTestCase.PW}
+        headers = {'username':HTTPTestCase.EMAIL, 'password':HTTPTestCase.PASSWORD}
     	response = self.fetch('/token/', method='GET', headers=headers)
         response_data = json.loads(response.body)
         self.assertEqual(response.code, 200)
@@ -344,13 +315,13 @@ class HTTPTestCase(AsyncHTTPTestCase):
 
     def test_http_agent_update_handler(self):
         headers = {'authorization': HTTPTestCase.AGENT_TOKEN_0}
-        body = open(os.path.join(HTTPTestCase.fixtures_dir, 'snapshot0.json')).read()
+        body = open(os.path.join(HTTPTestCase.FIXTURES_DIR, 'snapshot0.json')).read()
         response = self.fetch('/agent/update/', method='POST', headers=headers, body=body)
         response_data = json.loads(response.body)
         self.assertEqual(response.code, 200)
         self.assertEqual(response_data['status'], 'success')
 
-        body = open(os.path.join(HTTPTestCase.fixtures_dir, 'snapshot1.json')).read()
+        body = open(os.path.join(HTTPTestCase.FIXTURES_DIR, 'snapshot1.json')).read()
         response = self.fetch('/agent/update/', method='POST', headers=headers, body=body)
         response_data = json.loads(response.body)
         self.assertEqual(response.code, 200)
@@ -358,7 +329,7 @@ class HTTPTestCase(AsyncHTTPTestCase):
 
     def test_http_agent_update_handler_bad_auth(self):
         headers = {'authorization': 'gibberish'}
-        body = open(os.path.join(HTTPTestCase.fixtures_dir, 'snapshot0.json')).read()
+        body = open(os.path.join(HTTPTestCase.FIXTURES_DIR, 'snapshot0.json')).read()
         response = self.fetch('/agent/update/', method='POST', headers=headers, body=body)
         response_data = json.loads(response.body)
         self.assertEqual(response.code, 401)
