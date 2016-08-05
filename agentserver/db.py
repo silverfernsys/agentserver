@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from sqlalchemy import (Column, Integer, Numeric, String, DateTime, ForeignKey,
                         Boolean, create_engine)
@@ -43,16 +43,16 @@ class ProcessDetail(Base):
     agent = relationship("Agent", backref=backref('processdetails'))
 
     def __repr__(self):
-        return "ProcessDetail(id='{self.id}', " \
+        return "<ProcessDetail(id='{self.id}', " \
             "name='{self.name}', " \
             "agent='{self.agent.name}', " \
             "start='{self.start}', " \
-            "created_on='{self.created_on}')".format(self=self)
+            "created_on='{self.created_on}')>".format(self=self)
 
     @classmethod
     def update_or_create(self, name, agent_id, start, session=None):
         if session is None:
-            session = dal.session #dal.Session()
+            session = dal.session
         try:
             detail = session.query(ProcessDetail) \
             .filter(ProcessDetail.agent_id == agent_id,
@@ -70,7 +70,7 @@ class ProcessDetail(Base):
     @classmethod
     def started_from(self, agent_id, start, session=None):
         if session is None:
-            session = dal.Session()
+            session = dal.session
         details = session.query(ProcessDetail) \
         .filter(ProcessDetail.agent_id == agent_id,
                 ProcessDetail.start >= start)
@@ -85,25 +85,24 @@ class ProcessState(Base):
     name = Column(String(), nullable=False)
     created_on = Column(DateTime(), default=datetime.now)
 
-    detail = relationship("ProcessDetail", backref=backref('processstates'))
+    detail = relationship("ProcessDetail", backref=backref('processstates', order_by=desc(created_on)))
 
     def __repr__(self):
-        return "ProcessState(id='{self.id}', " \
+        return "<ProcessState(id='{self.id}', " \
             "name='{self.name}', " \
             "detail='{self.detail.name}', " \
-            "created_on='{self.created_on}')".format(self=self)
+            "created_on='{self.created_on}')>".format(self=self)
 
-    @classmethod
-    def latest(self, name, detail, session=None):
-        if session is None:
-            session = dal.Session()
-        try:
-            return session.query(ProcessState) \
-            .filter(ProcessState.name == name,
-             ProcessState.detail_id == detail.id) \
-            .order_by(desc(ProcessState.created_on)).one()
-        except NoResultFound:
-            return None
+    # @classmethod
+    # def latest(self, detail, session=None):
+    #     if session is None:
+    #         session = dal.session
+    #     try:
+    #         return session.query(ProcessState) \
+    #         .filter(ProcessState.detail_id == detail.id) \
+    #         .order_by(desc(ProcessState.created_on)).one()
+    #     except NoResultFound:
+    #         return None
 
 
 class Agent(Base):
@@ -114,9 +113,19 @@ class Agent(Base):
     created_on = Column(DateTime(), default=datetime.now)
 
     def __repr__(self):
-        return "Agent(ip='{self.ip}', " \
+        return "<Agent(ip='{self.ip}', " \
             "name='{self.name}', " \
-            "created_on='{self.created_on}')".format(self=self)
+            "created_on='{self.created_on}')>".format(self=self)
+
+    def process_states(self, delta=timedelta(weeks=6), session=None):
+        if session is None:
+            session = dal.session
+        details = session.query(ProcessDetail) \
+                    .filter(ProcessDetail.agent_id == self.id) \
+                    .all()
+        return details
+        # states = []
+        # join = session.query()
 
 
 class AgentDetail(Base):
@@ -136,7 +145,7 @@ class AgentDetail(Base):
     agent = relationship("Agent", backref=backref('details', uselist=False))
 
     def __repr__(self):
-        return "AgentDetail(id='{self.id}', " \
+        return "<AgentDetail(id='{self.id}', " \
             "agent_id='{self.agent_id}', " \
             "hostname='{self.hostname}', " \
             "processor='{self.processor}', " \
@@ -145,7 +154,7 @@ class AgentDetail(Base):
             "dist_name='{self.dist_name}', " \
             "dist_version='{self.dist_version}', " \
             "updated_on='{self.updated_on}, '" \
-            "created_on='{self.created_on}')".format(self=self)
+            "created_on='{self.created_on}')>".format(self=self)
 
 
 class AgentAuthToken(Base):
@@ -158,9 +167,9 @@ class AgentAuthToken(Base):
     agent = relationship("Agent", backref=backref('token', uselist=False))
 
     def __repr__(self):
-        return "AgentAuthToken(uuid='{self.uuid}', " \
+        return "<AgentAuthToken(uuid='{self.uuid}', " \
             "agent_id='{self.agent_id}', " \
-            "created_on='{self.created_on}')".format(self=self)
+            "created_on='{self.created_on}')>".format(self=self)
 
 
 class User(Base):
@@ -181,10 +190,10 @@ class User(Base):
             return False
 
     def __repr__(self):
-        return "User(name='{self.name}', " \
+        return "<User(name='{self.name}', " \
             "email='{self.email}', " \
             "is_admin='{self.is_admin}', " \
-            "password='{self.password}')".format(self=self)
+            "password='{self.password}')>".format(self=self)
 
 def hash_password(target, value, oldvalue, initiator):
     "hashes password"
@@ -203,9 +212,9 @@ class UserAuthToken(Base):
     user = relationship("User", backref=backref('token', uselist=False))
 
     def __repr__(self):
-        return "UserAuthToken(uuid='{self.uuid}', " \
+        return "<UserAuthToken(uuid='{self.uuid}', " \
             "user_id='{self.user_id}', " \
-            "created_on='{self.created_on}')".format(self=self)  
+            "created_on='{self.created_on}')>".format(self=self)  
 
 
 class DataAccessLayer:
@@ -247,205 +256,3 @@ class KafkaAccessLayer(object):
 
 
 kal = KafkaAccessLayer()
-
-# import re
-# class AgentEvent(Base):
-#     __tablename__ = 'agent_events'
-#     id = Column(Integer(), primary_key=True)
-#     ip = Column(String(), nullable=False)
-#     agent_id = Column(Integer(), ForeignKey('agents.id'))
-#     created_on = Column(DateTime(), default=datetime.now)
-#     event = Column(String(), nullable=False)
-
-#     agent = relationship("Agent", backref=backref('events', uselist=True))
-
-#     @validates('ip')
-#     def validate_ip(self, key, ipadddress):
-#         """
-#         Validates an IPv4 or IPv6 IP address
-#         """
-#         regex = re.compile('^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$|' \
-#             '(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}| ' \
-#                 '([0-9a-fA-F]{1,4}:){1,7}:|' \
-#                 '([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|' \
-#                 '([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|' \
-#                 '([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|' \
-#                 '([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|' \
-#                 '([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|' \
-#                 '[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|' \
-#                 ':((:[0-9a-fA-F]{1,4}){1,7}|:)|' \
-#                 'fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|' \
-#                 '::(ffff(:0{1,4}){0,1}:){0,1}' \
-#                 '((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}' \
-#                 '(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|' \
-#                 '([0-9a-fA-F]{1,4}:){1,4}:' \
-#                 '((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}' \
-#                 '(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])' \
-#                 ')')
-#         result = regex.match(ipadddress)
-#         assert result != None
-#         return ipadddress
-
-#     @validates('event')
-#     def validate_event(self, key, event):
-#         """
-#         Validates an agent event.
-#         """
-#         assert (event == 'C' or event == 'D')
-#         return event
-
-#     def __repr__(self):
-#         return "AgentEvent(ip='{self.ip}', " \
-#             "name='{self.agent.name}', " \
-#             "event='{self.event}', " \
-#             "created_on='{self.created_on}'".format(self=self)
-
-# class Cookie(Base):
-#     __tablename__ = 'cookies'
-
-#     cookie_id = Column(Integer, primary_key=True)
-#     cookie_name = Column(String(50), index=True)
-#     cookie_recipe_url = Column(String(255))
-#     cookie_sku = Column(String(55))
-#     quantity = Column(Integer())
-#     unit_cost = Column(Numeric(12, 2))
-
-#     def __repr__(self):
-#         return "Cookie(cookie_name='{self.cookie_name}', " \
-#             "cookie_recipe_url='{self.cookie_recipe_url}', " \
-#             "cookie_sku='{self.cookie_sku}', " \
-#             "quantity={self.quantity}, " \
-#             "unit_cost={self.unit_cost})".format(self=self)
-
-
-# class Order(Base):
-#     __tablename__ = 'orders'
-#     order_id = Column(Integer(), primary_key=True)
-#     user_id = Column(Integer(), ForeignKey('users.id'))
-#     shipped = Column(Boolean(), default=False)
-
-#     user = relationship("User", backref=backref('orders', order_by=order_id))
-
-#     def __repr__(self):
-#         return "Order(user_id={self.user_id}, " \
-#             "shipped={self.shipped})".format(self=self)
-
-
-# class LineItem(Base):
-#     __tablename__ = 'line_items'
-#     line_item_id = Column(Integer(), primary_key=True)
-#     order_id = Column(Integer(), ForeignKey('orders.order_id'))
-#     cookie_id = Column(Integer(), ForeignKey('cookies.cookie_id'))
-#     quantity = Column(Integer())
-#     extended_cost = Column(Numeric(12, 2))
-
-#     order = relationship("Order", backref=backref('line_items',
-#                                                   order_by=line_item_id))
-#     cookie = relationship("Cookie", uselist=False)
-
-#     def __repr__(self):
-#         return "LineItems(order_id={self.order_id}, " \
-#             "cookie_id={self.cookie_id}, " \
-#             "quantity={self.quantity}, " \
-#             "extended_cost={self.extended_cost})".format(
-#                 self=self)
-
-# from itertools import takewhile, islice, tee
-
-# class SupervisorSeries(object):
-#     series_name = 'supervisor'
-#     # Defines all the fields in this time series.
-#     fields = ['cpu', 'mem', 'time']
-#     # Defines all the tags for the series.
-#     tags = ['processgroup', 'processname']
-
-#     @classmethod
-#     def Aggregate(cls, resultset, processes, starttime, timedelta, func):
-#         """
-#         Aggregates resultset using processes, timedelta, and func.
-#         resultset: generator for influxdb query
-#         processes: list of (processgroup, processname) tuples for filtering
-#         starttime: the start time over which to accumulate results
-#         timedelta: the time period over which to apply func
-#         func: function that reduces results: Max, Min, Sum
-#         returns: a list of dictionaries with keys 'processgroup', 'processname', and 'supervisorseries'
-#         """
-#         def aggregate_helper(iterator, currenttime, timedelta, func, acc):
-#             it_0, it_1 = tee(iterator)
-#             try:
-#                 it_0.next()
-
-#                 def less_than_time(item):
-#                     return item.time < (currenttime + timedelta)
-
-#                 subset = list(takewhile(less_than_time, it_1))
-#                 islice(it_0, 0, len(subset) - 1) # Already popped off one result in it_0.next() call above.
-#                 mapreduce = reduce(func, map(SupervisorSeries, arr))
-#                 if func == SupervisorSeries.Sum:
-#                     mapreduce = SupervisorSeries.Div(mapreduce, len(subset))
-#                 acc.append(mapreduce)
-#             except StopIteration as e:
-#                 print('StopIteration: {0}'.format(str(e)))
-#                 return acc
-
-#         results = []
-#         for process in processes:
-#             filtered_resultset = resultset.get_points(tags={'groupname': process[0], 'processname': process[1]})
-#             aggregate = aggregate_helper(filtered_resultset, starttime, timedelta, func, [])
-#             results.append({ 'processgroup': process[0], 'processname': process[1], 'series': aggregate })
-#         return results
-
-
-#         # def helper(iterator, timedelta, func, currenttime, acc):
-#         #     it_0, it_1 = tee(iterator)
-#         #     try:
-#         #         it_1.next()
-#         #         def less_than_time(item):
-#         #             return item.time < (currenttime + timedelta)
-
-#         #         # Expect a relatively small subset to be returned.
-#         #         subset = list(takewhile(less_than_time, it_0))
-#         #         islice(it_1, 0, len(subset) - 1) # Because we've already popped off one result in it_1.next() call above.
-#         #         result = reduce(func, subset)
-#         #         acc.append(result)
-
-#         #         return helper(it_1, timedelta, func, currentime + timedelta, acc)
-#         #     except StopIteration as e:
-#         #         print('e: %s' % e)
-#         #         return acc
-
-#     @classmethod
-#     def Max(cls, s1, s2):
-#         data = {'cpu': max(s1.cpu, s2.cpu), 'mem': max(s1.mem, s2.mem),
-#         'time': max(s1.time, s2.time), 'processgroup': s1.processgroup,
-#         'processname': s1.processname}
-#         return SupervisorSeries(data)
-
-#     @classmethod
-#     def Min(cls, s1, s2):
-#         data = {'cpu': min(s1.cpu, s2.cpu), 'mem': min(s1.mem, s2.mem),
-#         'time': min(s1.time, s2.time), 'processgroup': s1.processgroup,
-#         'processname': s1.processname}
-#         return SupervisorSeries(data)
-
-#     @classmethod
-#     def Sum(cls, s1, s2):
-#         data = {'cpu': s1.cpu + s2.cpu, 'mem': s1.mem + s2.mem,
-#         'time': s1.time + s2.time, 'processgroup': s1.processgroup,
-#         'processname': s1.processname}
-#         return SupervisorSeries(data)
-
-#     @classmethod
-#     def Div(cls, s1, div=1.0):
-#         data = {'cpu': s1.cpu / float(div), 'mem': s1.mem / float(div),
-#         'time': s1.time / float(div), 'processgroup': s1.processgroup,
-#         'processname': s1.processname }
-#         return SupervisorSeries(data)
-
-#     def __init__(self, data):
-#         self.cpu = data['cpu']
-#         self.mem = data['mem']
-#         self.time = data['time']
-
-#         self.processgroup = data['processgroup']
-#         self.processname = data['processname']

@@ -90,15 +90,21 @@ class TestDb(unittest.TestCase):
         details = agent.processdetails
         self.assertEqual(len(details), 4)
 
-        for i in range(4):
-            for detail in details:
+        for detail in details:
+            for i in range(4):
                 dal.session.add(ProcessState(detail_id=detail.id,
                     name='state_{0}_{1}'.format(detail.name, i)))
         dal.session.commit()
 
         print(dal.session.query(ProcessState).count())
 
-        states = dal.session.query(ProcessState).join(ProcessDetail).filter(ProcessDetail.agent_id == agent.id).all()
+        details = agent.process_states()
+        print(details)
+        # states = dal.session.query(ProcessState).join(ProcessDetail).filter(ProcessDetail.agent_id == agent.id).all()
+
+
+        # dal.session.query(ProcessDetail).filter(ProcessDetail.agent_id == agent.id)
+        # print(states)
         # states = dal.session.query(ProcessState).filter(ProcessState.detail.agent == agent).all()
         # print(len(states))
         # self.assertEqual()

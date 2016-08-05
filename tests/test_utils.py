@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 import unittest
-from utils import permute, haiku, haiku_permute, adjs, nouns, uuid
+from utils import permute, haiku, haiku_permute, adjs, nouns, uuid, validate_ip
 
 class TestApp(unittest.TestCase):
     @classmethod
@@ -40,3 +40,11 @@ class TestApp(unittest.TestCase):
     def test_uuid(self):
         id = uuid()
         self.assertEqual(len(id), 40)
+
+    def test_validate_ip(self):
+        self.assertTrue(validate_ip('10.0.1.1'))
+        self.assertTrue(validate_ip('2001:cdba:0000:0000:0000:0000:3257:9652'))
+        self.assertTrue(validate_ip('2001:cdba:0:0:0:0:3257:9652'))
+        self.assertTrue(validate_ip('2001:cdba::3257:9652'))
+        self.assertTrue(validate_ip('2001:db8:85a3:8d3:1319:8a2e:370:7348'))
+        self.assertFalse(validate_ip('4.4.4'))
