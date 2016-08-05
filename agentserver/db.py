@@ -164,7 +164,8 @@ class AgentAuthToken(Base):
     agent_id = Column(Integer(), ForeignKey('agents.id'), unique=True, nullable=False)
     created_on = Column(DateTime(), default=datetime.now)
 
-    agent = relationship("Agent", backref=backref('token', uselist=False))
+    agent = relationship("Agent", backref=backref('token',
+        cascade='all,delete,delete-orphan', uselist=False))
 
     def __repr__(self):
         return "<AgentAuthToken(uuid='{self.uuid}', " \
@@ -209,7 +210,9 @@ class UserAuthToken(Base):
     user_id = Column(Integer(), ForeignKey('users.id'), unique=True, nullable=False)
     created_on = Column(DateTime(), default=datetime.now)
 
-    user = relationship("User", backref=backref('token', uselist=False))
+    user = relationship("User",
+        backref=backref('token', cascade='all,delete,delete-orphan', uselist=False),
+        single_parent=True)
 
     def __repr__(self):
         return "<UserAuthToken(uuid='{self.uuid}', " \

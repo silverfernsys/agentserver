@@ -45,13 +45,35 @@ class TestDb(unittest.TestCase):
         with self.assertRaises(IntegrityError) as e:
             dal.session.commit()
 
+        dal.session.rollback()
+
+        self.assertEqual(dal.session.query(User).count(), 3)
+        self.assertEqual(dal.session.query(UserAuthToken).count(), 3)
+
+        dal.session.delete(dal.session.query(User).filter(User.email == 'user_a@example.com').one())
+        dal.session.commit()
+
+        self.assertEqual(dal.session.query(User).count(), 2)
+        self.assertEqual(dal.session.query(UserAuthToken).count(), 2)
+
     def test_agents_and_agent_tokens(self):
         # Generate agents and tokens
+        agent = Agent(name='Agent 0')
+
         dal.session.add_all([
-            AgentAuthToken(agent=Agent(name='Agent 0')),
+            AgentAuthToken(agent=agent),
             AgentAuthToken(agent=Agent(name='Agent 1')),
             AgentAuthToken(agent=Agent(name='Agent 2'))])
         dal.session.commit()
+
+        self.assertEqual(dal.session.query(Agent).count(), 3)
+        self.assertEqual(dal.session.query(AgentAuthToken).count(), 3)
+
+        dal.session.delete(dal.session.query(Agent).get(agent.id))
+        dal.session.commit()
+
+        self.assertEqual(dal.session.query(Agent).count(), 2)
+        self.assertEqual(dal.session.query(AgentAuthToken).count(), 2)
 
     def test_process_detail(self):
         agent = Agent(name='Agent')
@@ -101,8 +123,6 @@ class TestDb(unittest.TestCase):
         details = agent.process_states()
         print(details)
         # states = dal.session.query(ProcessState).join(ProcessDetail).filter(ProcessDetail.agent_id == agent.id).all()
-
-
         # dal.session.query(ProcessDetail).filter(ProcessDetail.agent_id == agent.id)
         # print(states)
         # states = dal.session.query(ProcessState).filter(ProcessState.detail.agent == agent).all()
