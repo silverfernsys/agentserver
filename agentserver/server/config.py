@@ -8,6 +8,7 @@ class Config(object):
     'log_file',
     'database',
     'kafka',
+    'druid',
     'port',
     'max_wait_seconds_before_shutdown',
     'flush_data_period',

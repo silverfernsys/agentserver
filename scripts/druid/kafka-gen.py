@@ -10,7 +10,7 @@ if __name__ == '__main__':
 
 	random.seed()
 	for i in range(5):
-		data = {'agent_id': i,
+		data = {'agent_id': 1,
 			'process_name': 'process_{0}'.format(i),
 			'timestamp': datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
 			'cpu': random.uniform(0, 1),

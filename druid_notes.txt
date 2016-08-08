@@ -3,7 +3,27 @@ curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
 sudo apt-get install nodejs
 
 To install pivot:
-sudo npm i -g imply-pivot
-pivot --examples
-pivot --druid localhost:8082
+$ sudo npm i -g imply-pivot
+$ pivot --examples
+$ pivot --druid localhost:8082
 
+To install PlyQL:
+$ sudo npm install -g plyql
+$ plyql -h localhost:8082 -q 'SHOW TABLES'
+
+Example PlyQL:
+$ plyql -h localhost:8082 -q 'SHOW TABLES'
+$ plyql -h localhost:8082 -q 'DESCRIBE supervisor'
+$ plyql -h localhost:8082 -q 'SELECT MAX(__time) AS maxTime FROM supervisor WHERE agent_id = "1";' -o json
+$ plyql -h localhost:8082 -q 'SELECT process_name AS process, COUNT() AS count, MAX(__time) AS time FROM supervisor WHERE "2016-01-01T00:00:00" <= __time AND __time < "2016-12-31T23:59:59" AND agent_id = "1" GROUP BY process_name;' -o json
+$ plyql -h localhost:8082 -q 'SELECT process_name AS process, COUNT() AS count, MAX(__time) AS time FROM supervisor WHERE agent_id = "1" GROUP BY process_name;' -o json
+$ plyql -h localhost:8082 -i P6W -q 'SELECT process_name AS process, COUNT() AS count, MAX(__time) AS time FROM supervisor WHERE agent_id = "1" GROUP BY process_name;' -o json
+$ plyql -h localhost:8082 -q 'SELECT process_name AS process, COUNT() AS count, MAX(__time) AS time FROM supervisor WHERE agent_id = "1" GROUP BY process_name;' -o json -i P6W
+
+To reset druid data:
+$ cd /opt/druid
+$ sudo rm -r log var
+$ sudo bin/init
+
+1470558509.893
+1470684878.733821

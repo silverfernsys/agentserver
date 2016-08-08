@@ -2,7 +2,7 @@
 import unittest
 from utils import permute, haiku, haiku_permute, adjs, nouns, uuid, validate_ip
 
-class TestApp(unittest.TestCase):
+class TestUtils(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         pass

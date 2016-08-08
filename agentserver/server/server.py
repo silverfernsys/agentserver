@@ -9,7 +9,7 @@ import tornado.web
 import tornado.httpserver
 from termcolor import colored, cprint
 from config import config
-from db import dal, kal, Agent
+from db import dal, kal, dral, pal
 from http import HTTPVersionHandler, HTTPCommandHandler, HTTPStatusHandler, HTTPTokenHandler
 from ws import SupervisorAgentHandler, SupervisorCommandHandler, SupervisorStatusHandler
 
@@ -27,6 +27,8 @@ class Server():
         self.print_splash_page()
     	dal.connect(config.database)
         kal.connect(config.kafka)
+        dral.connect(config.druid)
+        pal.connect(config.druid)
     	self.session = dal.Session()
         self.logger = logging.getLogger('Web Server')
 

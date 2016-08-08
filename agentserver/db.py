@@ -6,7 +6,11 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, backref, sessionmaker, validates
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.event import listen
-import enum
+import enum, os, subprocess, json
+
+from pydruid.client import PyDruid
+from pydruid.utils.aggregators import doublesum
+from pydruid.utils.filters import Dimension, Filter
 
 from kafka import KafkaProducer
 
@@ -112,7 +116,7 @@ class Agent(Base):
     created_on = Column(DateTime(), default=datetime.now)
 
     def __repr__(self):
-        return "<Agent(ip='{self.ip}', " \
+        return "<Agent(id='{self.id}', " \
             "name='{self.name}', " \
             "created_on='{self.created_on}')>".format(self=self)
 
@@ -256,5 +260,64 @@ class KafkaAccessLayer(object):
             self.connection = KafkaProducer(bootstrap_servers=uri,
                 value_serializer=lambda v: json.dumps(v).encode('utf-8'))
 
-
 kal = KafkaAccessLayer()
+
+
+class PyDruidResultMock(object):
+    def __init__(self, result_json):
+        self.result_json = result_json
+
+
+class PyDruidMock(object):
+    def groupby(self, datasource, granularity, intervals, dimensions,
+        filter, aggregations):
+        f = Filter.build_filter(filter)
+        if f['type'] == 'selector' and f['dimension'] == 'agent_id' and 'value' in f:
+            try:
+                body = open(os.path.join(self.fixtures_dir,
+                    'groupby{0}.json'.format(f['value']))).read().decode('utf-8')
+            except:
+                body = '[]'
+        else:
+            body = '[]'
+        return PyDruidResultMock(body)
+
+
+class DruidAccessLayer(object):
+    def __init__(self):
+        self.connection = None
+
+    def connect(self, uri):
+        if uri.lower() == 'debug':
+            self.connection = PyDruidMock()
+        else:
+            self.connection = PyDruid('http://{0}'.format(uri), 'druid/v2/')
+
+dral = DruidAccessLayer()
+
+class PlyQLAccessLayer(object):
+    def __init__(self):
+        self.uri = None
+
+    def connect(self, uri):
+        if uri.lower() == 'debug':
+            self.uri = 'debug'
+        else:
+            self.uri = uri
+
+    def query(self, q, interval=None):
+        if not self.uri:
+            raise UnboundLocalError('Please connect to valid uri before calling query.')
+        
+        command = ['plyql', '-h', self.uri, '-q', q, '-o', 'json']
+        if interval:
+            command.extend(['-i', interval])
+        process = subprocess.Popen(command, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE)
+        out, err = process.communicate()
+        if err:
+            return json.dumps({'error': err.strip()})
+        else:
+            return out
+
+pal = PlyQLAccessLayer()
