@@ -308,7 +308,7 @@ class PlyQLAccessLayer(object):
     def query(self, q, interval=None):
         if not self.uri:
             raise UnboundLocalError('Please connect to valid uri before calling query.')
-        
+
         command = ['plyql', '-h', self.uri, '-q', q, '-o', 'json']
         if interval:
             command.extend(['-i', interval])

@@ -6,6 +6,7 @@ import tempfile
 import time
 import urllib
 import mock
+import re
 
 from tornado.testing import AsyncHTTPTestCase
 from tornado.web import Application, RequestHandler, url
@@ -14,19 +15,30 @@ from http import (HTTPVersionHandler, HTTPStatusHandler,
     HTTPTokenHandler, HTTPListHandler, HTTPDetailHandler,
     HTTPDetailCreateUpdateHandler, HTTPAgentUpdateHandler)
 
-from db import dal, kal, dral, User, UserAuthToken, Agent, AgentAuthToken, AgentDetail
+from db import dal, kal, dral, pal, User, UserAuthToken, Agent, AgentAuthToken, AgentDetail
 from clients.supervisorclientcoordinator import scc
+
+FIXTURES_DIR =  os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fixtures')
+
+def pal_mock_query(q, interval=None):
+    try:
+        agent_id = re.search(r'agent_id = "(.+?)"', q).group(1)
+        data = open(os.path.join(FIXTURES_DIR, 'plyql{0}.json'.format(agent_id))).read()
+        return data
+    except (AttributeError, IOError):
+        return '[]'
+
 
 class TestHTTP(AsyncHTTPTestCase):
     @classmethod
-    def setUpClass(cls):
-        cls.FIXTURES_DIR =  os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fixtures')
-
+    @mock.patch('db.pal.query', side_effect=pal_mock_query)
+    def setUpClass(cls, mock_query):
         dal.connect('sqlite:///:memory:')
         dal.session = dal.Session()
         kal.connect('debug')
         dral.connect('debug')
-        dral.connection.fixtures_dir = cls.FIXTURES_DIR
+        pal.connect('debug')
+        dral.connection.fixtures_dir = FIXTURES_DIR
 
         # Generate users
         cls.EMAIL = 'user_a@example.com'
@@ -66,7 +78,8 @@ class TestHTTP(AsyncHTTPTestCase):
 
         dal.session.commit()
         scc.initialize()
-        print(json.dumps(scc.AGENTS, indent=2))
+        print(scc.AGENTS)
+        # print(json.dumps(scc.AGENTS, indent=2))
 
         cls.TOKEN = user.token.uuid
         cls.AGENT_TOKEN_0 = agent_0.token.uuid
@@ -322,13 +335,13 @@ class TestHTTP(AsyncHTTPTestCase):
 
     def test_http_agent_update_handler(self):
         headers = {'authorization': type(self).AGENT_TOKEN_0}
-        body = open(os.path.join(type(self).FIXTURES_DIR, 'snapshot0.json')).read()
+        body = open(os.path.join(FIXTURES_DIR, 'snapshot0.json')).read()
         response = self.fetch('/agent/update/', method='POST', headers=headers, body=body)
         response_data = json.loads(response.body)
         self.assertEqual(response.code, 200)
         self.assertEqual(response_data['status'], 'success')
 
-        body = open(os.path.join(type(self).FIXTURES_DIR, 'snapshot1.json')).read()
+        body = open(os.path.join(FIXTURES_DIR, 'snapshot1.json')).read()
         response = self.fetch('/agent/update/', method='POST', headers=headers, body=body)
         response_data = json.loads(response.body)
         self.assertEqual(response.code, 200)
@@ -336,7 +349,7 @@ class TestHTTP(AsyncHTTPTestCase):
 
     def test_http_agent_update_handler_bad_auth(self):
         headers = {'authorization': 'gibberish'}
-        body = open(os.path.join(type(self).FIXTURES_DIR, 'snapshot0.json')).read()
+        body = open(os.path.join(FIXTURES_DIR, 'snapshot0.json')).read()
         response = self.fetch('/agent/update/', method='POST', headers=headers, body=body)
         response_data = json.loads(response.body)
         self.assertEqual(response.code, 401)
