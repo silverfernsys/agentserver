@@ -127,8 +127,6 @@ class Agent(Base):
                     .filter(ProcessDetail.agent_id == self.id) \
                     .all()
         return details
-        # states = []
-        # join = session.query()
 
 
 class AgentDetail(Base):

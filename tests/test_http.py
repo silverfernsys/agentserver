@@ -78,8 +78,7 @@ class TestHTTP(AsyncHTTPTestCase):
 
         dal.session.commit()
         scc.initialize()
-        # print(scc.AGENTS)
-        print(json.dumps(scc, indent=2))
+        # print(json.dumps(scc, indent=2))
 
         cls.TOKEN = user.token.uuid
         cls.AGENT_TOKEN_0 = agent_0.token.uuid
@@ -147,7 +146,7 @@ class TestHTTP(AsyncHTTPTestCase):
         headers = {'authorization':type(self).TOKEN}
         response = self.fetch('/list/', method='GET', headers=headers)
         response_data = json.loads(response.body)
-        # print('response_data: %s' % response_data)
+        print('response_data: %s' % response_data)
         self.assertEqual(response.code, 200)
         self.assertEqual(len(response_data), dal.session.query(Agent).count())
 

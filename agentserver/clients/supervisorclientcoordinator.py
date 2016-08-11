@@ -7,11 +7,23 @@ from pydruid.utils.filters import Dimension
 from db import dal, pal, Agent
 
 
-class SupervisorProcess(json.JSONEncoder):
-    def __init__(self, name, updated, state):
+class SupervisorProcess(object):
+    STOPPED = 'STOPPED'
+    STARTING = 'STARTING'
+    RUNNING = 'RUNNING'
+    BACKOFF = 'BACKOFF'
+    STOPPING = 'STOPPING'
+    EXITED = 'EXITED'
+    FATAL = 'FATAL'
+    UNKNOWN = 'UNKNOWN'
+
+    def __init__(self, name, updated, state=None):
         self.name = name
         self.updated = updated
-        self.state = state
+        if state:
+            self.state = state
+        else:
+            self.state = SupervisorProcess.UNKNOWN
 
     def __repr__(self):
         return "<SupervisorProcess(name={0}, " \
@@ -23,46 +35,50 @@ class SupervisorProcess(json.JSONEncoder):
             'state': self.state}    
 
 
+class AgentInfo(object):
+    DISCONNECTED = 'DISCONNECTED'
+    CONNECTED = 'CONNECTED'
+
+    def __init__(self, agent, state=None):
+        self.name = agent.name
+        self.id = agent.id
+        if state:
+            self.state = state
+        else:
+            self.state = AgentInfo.DISCONNECTED
+        self.processes = {}
+
+    def add(self, process):
+        self.processes[process.name] = process
+
+    def __repr__(self):
+        return "<AgentInfo(id={self.id}, " \
+            "name={self.name}, state={self.state}, " \
+            "processes={self.processes})>".format(self=self)
+
+    def __json__(self):
+        return {'name': self.name, 'id': self.id, 'state': self.state,
+            'processes': [val.__json__() for val in self.processes.values()]}
+
+
 class SupervisorClientCoordinator(object):
     AGENTS = {}
-    DISCONNECTED = 'DISCONNECTED'
 
     def initialize(self):
         agents = dal.session.query(Agent).all()
         for agent in agents:
+            info = AgentInfo(agent)
             result = pal.query('SELECT process_name AS process, ' \
                 'COUNT() AS count, MAX(__time) AS time FROM supervisor ' \
                 'WHERE agent_id = "{0}" GROUP BY process_name;'.format(agent.id), 'P6W')
             data = json.loads(result)
-            processes = {}
             for row in data:
-                processes[row['process']] = SupervisorProcess(row['process'],
-                    datetime.utcfromtimestamp(float(row['time'])/1000.0), type(self).DISCONNECTED)
-            type(self).AGENTS[agent.name] = processes
+                info.add(SupervisorProcess(row['process'],
+                    datetime.utcfromtimestamp(float(row['time'])/1000.0)))
+            type(self).AGENTS[info.name] = info
 
     def __json__(self):
-        return [key for key in type(self).AGENTS.keys()]
+        return [val.__json__() for val in type(self).AGENTS.values()]
 
 
 scc = SupervisorClientCoordinator()
-
-    # def initialize(self):
-    #     agents = dal.session.query(Agent).all()
-    #     intervals = '{0}/p6w'.format((datetime.utcnow() - timedelta(weeks=6)).strftime("%Y-%m-%d"))
-    #     # print(agents)
-    #     for agent in agents:
-    #         group = dral.connection.groupby(
-    #             datasource='supervisor',
-    #             granularity='all',
-    #             intervals=intervals,
-    #             dimensions=["process_name"],
-    #             filter=(Dimension("agent_id") == agent.id),
-    #             aggregations={"count": doublesum("count")})
-    #         # print(type(group.result_json))
-    #         # print(group.result_json)
-    #         data = json.loads(group.result_json)
-    #         processes = {}
-    #         for row in data:
-    #             if row['event']['count'] > 0:
-    #                 processes[row['event']['process_name']] = 'disconnected'
-    #         type(self).AGENTS[agent.name] = processes
