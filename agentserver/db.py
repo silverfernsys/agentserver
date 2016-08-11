@@ -295,6 +295,7 @@ class DruidAccessLayer(object):
 
 dral = DruidAccessLayer()
 
+
 class PlyQLAccessLayer(object):
     def __init__(self):
         self.uri = None

@@ -78,8 +78,8 @@ class TestHTTP(AsyncHTTPTestCase):
 
         dal.session.commit()
         scc.initialize()
-        print(scc.AGENTS)
-        # print(json.dumps(scc.AGENTS, indent=2))
+        # print(scc.AGENTS)
+        print(json.dumps(scc, indent=2))
 
         cls.TOKEN = user.token.uuid
         cls.AGENT_TOKEN_0 = agent_0.token.uuid
@@ -99,7 +99,7 @@ class TestHTTP(AsyncHTTPTestCase):
             url(r'/token/', HTTPTokenHandler),
             url(r'/list/', HTTPListHandler),
             url(r'/detail/', HTTPDetailHandler),
-            url(r'/detail_update/', HTTPDetailCreateUpdateHandler),
+            url(r'/detail/update/', HTTPDetailCreateUpdateHandler),
             url(r'/agent/update/', HTTPAgentUpdateHandler),
         ])
 
@@ -194,7 +194,7 @@ class TestHTTP(AsyncHTTPTestCase):
             'dist_name': dist_name,
             'dist_version': dist_version
         })
-        response = self.fetch('/detail_update/', method='POST', headers=headers, body=body)
+        response = self.fetch('/detail/update/', method='POST', headers=headers, body=body)
         response_data = json.loads(response.body)
         self.assertEqual(response.code, 200)
         self.assertIn('status', response_data)
@@ -228,7 +228,7 @@ class TestHTTP(AsyncHTTPTestCase):
             'dist_name': dist_name,
             'dist_version': dist_version
         })
-        response = self.fetch('/detail_update/', method='POST', headers=headers, body=body)
+        response = self.fetch('/detail/update/', method='POST', headers=headers, body=body)
         response_data = json.loads(response.body)
         self.assertEqual(response.code, 400)
         self.assertIn('status', response_data)
@@ -258,7 +258,7 @@ class TestHTTP(AsyncHTTPTestCase):
             'dist_name': dist_name,
             'dist_version': dist_version
         })
-        response = self.fetch('/detail_update/', method='POST', headers=headers, body=body)
+        response = self.fetch('/detail/update/', method='POST', headers=headers, body=body)
         response_data = json.loads(response.body)
         self.assertEqual(response.code, 201)
         self.assertIn('status', response_data)
@@ -292,7 +292,7 @@ class TestHTTP(AsyncHTTPTestCase):
             'dist_name': dist_name,
             'dist_version': dist_version
         })
-        response = self.fetch('/detail_update/', method='POST', headers=headers, body=body)
+        response = self.fetch('/detail/update/', method='POST', headers=headers, body=body)
         response_data = json.loads(response.body)
         self.assertEqual(response.code, 400)
         self.assertIn('status', response_data)
@@ -322,7 +322,7 @@ class TestHTTP(AsyncHTTPTestCase):
             'dist_name': dist_name,
             'dist_version': dist_version
         })
-        response = self.fetch('/detail_update/', method='POST', headers=headers, body=body)
+        response = self.fetch('/detail/update/', method='POST', headers=headers, body=body)
         response_data = json.loads(response.body)
         self.assertEqual(response.code, 400)
         self.assertIn('status', response_data)

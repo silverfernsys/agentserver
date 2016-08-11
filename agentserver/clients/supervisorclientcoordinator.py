@@ -7,7 +7,7 @@ from pydruid.utils.filters import Dimension
 from db import dal, pal, Agent
 
 
-class SupervisorProcess(object):
+class SupervisorProcess(json.JSONEncoder):
     def __init__(self, name, updated, state):
         self.name = name
         self.updated = updated
@@ -17,6 +17,10 @@ class SupervisorProcess(object):
         return "<SupervisorProcess(name={0}, " \
             "updated={1}, state={2})>".format(self.name,
                 self.updated.strftime("%Y-%m-%dT%H:%M:%S.%fZ"), self.state)
+
+    def __json__(self):
+        return {'name': self.name, 'update': self.updated.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+            'state': self.state}    
 
 
 class SupervisorClientCoordinator(object):
@@ -35,6 +39,9 @@ class SupervisorClientCoordinator(object):
                 processes[row['process']] = SupervisorProcess(row['process'],
                     datetime.utcfromtimestamp(float(row['time'])/1000.0), type(self).DISCONNECTED)
             type(self).AGENTS[agent.name] = processes
+
+    def __json__(self):
+        return [key for key in type(self).AGENTS.keys()]
 
 
 scc = SupervisorClientCoordinator()
