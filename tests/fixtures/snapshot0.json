@@ -1,7 +1,7 @@
 {
 	"snapshot_update": [{
-		"group": "celery",
-		"name": "celery",
+		"group": "process_0",
+		"name": "process_0",
 		"statename": "RUNNING",
 		"pid": 2109,
 		"start": 1469855706,
@@ -59,8 +59,8 @@
 			[1469943882.928638, 0.0, 184548]
 		]
 	}, {
-		"group": "web",
-		"name": "web",
+		"group": "process_1",
+		"name": "process_1",
 		"statename": "RUNNING",
 		"pid": 2110,
 		"start": 1469855706,
@@ -118,8 +118,8 @@
 			[1469943882.991799, 0.0, 156816]
 		]
 	}, {
-		"group": "supervisoragent",
-		"name": "supervisoragent",
+		"group": "process_2",
+		"name": "process_2",
 		"statename": "STOPPED",
 		"pid": 0,
 		"start": 1469855706,
@@ -177,8 +177,8 @@
 			[1469943883.038365, 0.0, 0]
 		]
 	}, {
-		"group": "agenteventlistener",
-		"name": "agenteventlistener",
+		"group": "process_3",
+		"name": "process_3",
 		"statename": "RUNNING",
 		"pid": 4812,
 		"start": 1469943822,

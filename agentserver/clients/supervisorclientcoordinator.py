@@ -29,9 +29,10 @@ class SupervisorProcess(object):
         else:
             self.state = SupervisorProcess.UNKNOWN
 
-    def update(started, updated, state):
+    def update(self, started, state, updated=None):
         self.started = started
-        self.updated = updated
+        if updated:
+            self.updated = updated
         if state in type(self).States:
             self.state = state
 
@@ -92,6 +93,9 @@ class SupervisorClientCoordinator(object):
                 info.add(SupervisorProcess(row['process'],
                     datetime.utcfromtimestamp(float(row['time'])/1000.0)))
             self.agents[info.id] = info
+
+    def __repr__(self):
+        return "<SupervisorClientCoordinator(agents={self.agents})>".format(self=self)
 
     def __json__(self):
         return [val.__json__() for val in self.agents.values()]

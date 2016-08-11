@@ -115,6 +115,7 @@ class SupervisorAgentHandlerTest(WebSocketBaseTestCase):
         dral.connect('debug')
         pal.connect('debug')
         scc.initialize()
+        print(scc)
 
         cls.AGENT_TOKEN = agent.token.uuid
         cls.AGENT_ID = agent.id
