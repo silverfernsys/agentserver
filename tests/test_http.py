@@ -1,12 +1,5 @@
-#!/usr/bin/env python
 # Adapted from https://github.com/tornadoweb/tornado/blob/master/tornado/test/httpclient_test.py
-import json
-import os
-import tempfile
-import time
-import urllib
-import mock
-import re
+import json, mock, os, re, tempfile, time
 
 from tornado.testing import AsyncHTTPTestCase
 from tornado.web import Application, RequestHandler, url

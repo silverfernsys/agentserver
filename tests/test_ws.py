@@ -1,20 +1,13 @@
-#!/usr/bin/env python
-
 from __future__ import absolute_import, division, print_function, with_statement
 
-import json
-import tempfile
-import time
-import unittest
-import traceback
-import os
+import json, mock, os, re, tempfile, time, traceback
 
 from tornado.concurrent import Future
 from tornado import gen
 from tornado.httpclient import HTTPError, HTTPRequest
 from tornado.log import gen_log, app_log
 from tornado.testing import AsyncHTTPTestCase, gen_test, bind_unused_port, ExpectLog
-from tornado.test.util import unittest
+# from tornado.test.util import unittest
 from tornado.web import Application, RequestHandler
 
 try:
@@ -37,7 +30,8 @@ except ImportError:
 
 from ws_helpers import websocket_connect
 from ws import SupervisorAgentHandler, SupervisorClientHandler
-from db import dal, kal, User, UserAuthToken, Agent, AgentAuthToken
+from db import dal, kal, dral, pal, User, UserAuthToken, Agent, AgentAuthToken
+from clients.supervisorclientcoordinator import scc
 
 
 class TestWebSocketHandler(WebSocketHandler):
@@ -95,9 +89,22 @@ class WebSocketBaseTestCase(AsyncHTTPTestCase):
         yield self.close_future
 
 
+FIXTURES_DIR =  os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fixtures')
+
+
+def pal_mock_query(q, interval=None):
+    try:
+        agent_id = re.search(r'agent_id = "(.+?)"', q).group(1)
+        data = open(os.path.join(FIXTURES_DIR, 'plyql{0}.json'.format(agent_id))).read()
+        return data
+    except (AttributeError, IOError):
+        return '[]'
+
+
 class SupervisorAgentHandlerTest(WebSocketBaseTestCase):
     @classmethod
-    def setUpClass(cls):
+    @mock.patch('db.pal.query', side_effect=pal_mock_query)
+    def setUpClass(cls, mock_query):
         super(SupervisorAgentHandlerTest, cls).setUpClass()
         # Generate agents
         agent = Agent(name='Agent 0')
@@ -105,10 +112,12 @@ class SupervisorAgentHandlerTest(WebSocketBaseTestCase):
             AgentAuthToken(agent=Agent(name='Agent 1')),
             AgentAuthToken(agent=Agent(name='Agent 2'))])
         dal.session.commit()
+        dral.connect('debug')
+        pal.connect('debug')
+        scc.initialize()
 
         cls.AGENT_TOKEN = agent.token.uuid
         cls.AGENT_ID = agent.id
-        cls.FIXTURES_DIR =  os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fixtures')
 
     def get_app(self):
         self.close_future = Future()
@@ -161,8 +170,8 @@ class SupervisorAgentHandlerTest(WebSocketBaseTestCase):
     
     @gen_test
     def test_snapshot_update(self):
-        update_0 = open(os.path.join(type(self).FIXTURES_DIR, 'snapshot0.json')).read()
-        update_1 = open(os.path.join(type(self).FIXTURES_DIR, 'snapshot1.json')).read()
+        update_0 = open(os.path.join(FIXTURES_DIR, 'snapshot0.json')).read()
+        update_1 = open(os.path.join(FIXTURES_DIR, 'snapshot1.json')).read()
 
         client = yield websocket_connect(self.url(), headers={'authorization': type(self).AGENT_TOKEN})
         client.write_message(update_0)
@@ -191,8 +200,8 @@ class SupervisorAgentHandlerTest(WebSocketBaseTestCase):
 
     @gen_test
     def test_state_update(self):
-        state_0 = open(os.path.join(type(self).FIXTURES_DIR, 'state0.json')).read().split('\n')
-        state_1 = open(os.path.join(type(self).FIXTURES_DIR, 'state1.json')).read().split('\n')
+        state_0 = open(os.path.join(FIXTURES_DIR, 'state0.json')).read().split('\n')
+        state_1 = open(os.path.join(FIXTURES_DIR, 'state1.json')).read().split('\n')
 
         client = yield websocket_connect(self.url(), headers={'authorization': type(self).AGENT_TOKEN})
 
@@ -473,6 +482,3 @@ class SupervisorClientHandlerTest(WebSocketBaseTestCase):
     #     agent_conn.close()
     #     yield self.close_future
     #     self.assertEqual(len(MockSupervisorAgentHandler.Connections), 0, '0 websocket connections.')
-
-if __name__ == '__main__':
-    unittest.main()
