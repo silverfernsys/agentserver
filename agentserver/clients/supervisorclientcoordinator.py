@@ -20,7 +20,8 @@ class SupervisorProcess(object):
     States = set([STOPPED, STARTING, RUNNING, BACKOFF,
         STOPPING, EXITED, FATAL, UNKNOWN])
 
-    def __init__(self, name, updated, state=None):
+    def __init__(self, id, name, updated, state=None):
+        self.id = id
         self.name = name
         self.started = None
         self.updated = updated
@@ -28,14 +29,26 @@ class SupervisorProcess(object):
             self.state = state
         else:
             self.state = SupervisorProcess.UNKNOWN
+        self.subscribers = []
+
+    def subscribe(self, client):
+        if client not in self.subscribers:
+            self.subscribers.append(client)
+
+    def unsubscribe(self, client):
+        if client in self.subscribers:
+            self.subscribers.remove(client)
 
     def update(self, started, state, updated=None):
-        print('UPDATE!!!!!')
         self.started = started
         if updated:
             self.updated = updated
         if state in type(self).States:
             self.state = state
+            for client in self.subscribers:
+                data = self.__json__()
+                data.update(id=self.id)
+                client.ws.write_message(json.dumps(data))
 
     def __repr__(self):
         return "<SupervisorProcess(name={0}, " \
@@ -92,7 +105,7 @@ class SupervisorClientCoordinator(object):
                 'WHERE agent_id = "{0}" GROUP BY process_name;'.format(agent.id), 'P6W')
             data = json.loads(result)
             for row in data:
-                info.add(SupervisorProcess(row['process'],
+                info.add(SupervisorProcess(info.id, row['process'],
                     datetime.utcfromtimestamp(float(row['time'])/1000.0)))
             self.agents[info.id] = info
 
@@ -100,10 +113,10 @@ class SupervisorClientCoordinator(object):
         self.agents[id].processes[process].update(started, state, updated)
 
     def subscribe(self, client, id, process):
-        print('SUBSCRIBE!')
+        self.agents[id].processes[process].subscribe(client)
 
     def unsubscribe(self, client, id, process):
-        print('UNSUBSCRIBE')
+        self.agents[id].processes[process].unsubscribe(client)
 
     def __repr__(self):
         return "<SupervisorClientCoordinator(agents={self.agents})>".format(self=self)

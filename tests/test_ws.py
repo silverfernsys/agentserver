@@ -1,5 +1,5 @@
 from __future__ import absolute_import, division, print_function, with_statement
-
+from datetime import datetime
 import json, mock, os, re, tempfile, time, traceback
 
 from tornado.concurrent import Future
@@ -380,8 +380,15 @@ class SupervisorClientHandlerTest(WebSocketBaseTestCase):
             self.assertEqual(data['status'], 'success')
             self.assertEqual(data['type'], 'state updated')
 
-        for i in range(len(state_0)):
-            print(i)
+        for state in state_0:
+            response = yield ws_client.read_message()
+            data = json.loads(response)
+            state_data = json.loads(state)
+            self.assertEqual(data['name'], state_data['state_update']['name'])
+            self.assertEqual(data['state'], state_data['state_update']['statename'])
+            self.assertEqual(data['started'],
+                datetime.utcfromtimestamp(state_data['state_update']['start']). \
+                strftime("%Y-%m-%dT%H:%M:%S.%fZ"))
 
         ws_client.write_message(json.dumps({'cmd': 'unsub', 'id': type(self).AGENT_ID, 'process': 'process_0'}))
         response = yield ws_client.read_message()
@@ -403,11 +410,11 @@ class SupervisorClientHandlerTest(WebSocketBaseTestCase):
             headers={'authorization': type(self).USER_TOKEN})
         self.assertEqual(len(SupervisorClientHandler.Connections.keys()), connection_count + 1, "+1 websocket connections.")
 
-        # ws_client.write_message(json.dumps({'cmd': 'restart', 'id': 100, 'process': 'web'}))
-        # response = yield ws_client.read_message()
-        # data = json.loads(response)
-        # self.assertEqual(data['status'], 'error')
-        # self.assertEqual(data['type'], 'unknown message type')
+        ws_client.write_message(json.dumps({'cmd': 'restart', 'id': 100, 'process': 'web'}))
+        response = yield ws_client.read_message()
+        data = json.loads(response)
+        self.assertEqual(data['status'], 'error')
+        self.assertEqual(data['type'], 'agent not connected')
 
         ws_client.write_message(json.dumps({'id': type(self).AGENT_ID, 'process': 'web'}))
         response = yield ws_client.read_message()

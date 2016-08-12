@@ -31,10 +31,9 @@ class SupervisorClient(object):
                         agent = ws.SupervisorAgentHandler.IDs[agent_id]
                         # message = {'cmd': 'restart web'}
                         agent.command(json.dumps({'cmd': '{0} {1}'.format(cmd, process)}))
+                        self.ws.write_message(json.dumps({'status': 'success', 'type': 'command {cmd} accepted'.format(cmd=cmd)}))
                     except Exception as e:
                         self.ws.write_message(json.dumps({'status': 'error', 'type': 'agent not connected'}))
-                        print('E: %s' % e)
-                    self.ws.write_message(json.dumps({'status': 'success', 'type': 'command {cmd} accepted'.format(cmd=cmd)}))
                 elif cmd == type(self).SUBSCRIBE_COMMAND:
                     scc.subscribe(self, agent_id, process)
                     self.ws.write_message(json.dumps({'status': 'success', 'type': 'command {cmd} accepted'.format(cmd=cmd)}))
@@ -46,8 +45,8 @@ class SupervisorClient(object):
             else:
                 self.ws.write_message(json.dumps({'status': 'error', 'type': 'unknown message type'}))
         except ValueError as e:
-            print('ValueError: %s' % e)
+            # print('ValueError: %s' % e)
             self.ws.write_message(json.dumps({'status': 'error', 'type': 'unknown message type'}))
         except Exception as e:
-            print('Exception: %s' % e)
+            # print('Exception: %s' % e)
             self.ws.write_message(json.dumps({'status': 'error', 'type': 'unknown message type'}))

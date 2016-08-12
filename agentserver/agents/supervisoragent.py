@@ -74,7 +74,7 @@ class SupervisorAgent(object):
                     state = ProcessState(detail_id=detail.id, name=state)
                     self.session.add(state)
                     self.session.commit()
-                scc.update(self.id, name, start, state, None)
+                scc.update(self.id, name, start, update['statename'], None)
                 self.ws.write_message(json.dumps({'status': 'success', 'type': 'state updated'}))
             else:
                 self.ws.write_message(json.dumps({'status': 'error', 'type': 'unknown message type'}))
