@@ -1,6 +1,7 @@
-from time import time
+from time import time, sleep
 from datetime import datetime, timedelta
 import json
+import threading
 from sqlalchemy.orm.exc import NoResultFound
 from pydruid.utils.aggregators import doublesum
 from pydruid.utils.filters import Dimension
@@ -103,8 +104,7 @@ class SupervisorClientCoordinator(object):
             result = pal.query('SELECT process_name AS process, ' \
                 'COUNT() AS count, MAX(__time) AS time FROM supervisor ' \
                 'WHERE agent_id = "{0}" GROUP BY process_name;'.format(agent.id), 'P6W')
-            data = json.loads(result)
-            for row in data:
+            for row in json.loads(result):
                 info.add(SupervisorProcess(info.id, row['process'],
                     datetime.utcfromtimestamp(float(row['time'])/1000.0)))
             self.agents[info.id] = info
@@ -115,8 +115,32 @@ class SupervisorClientCoordinator(object):
     def subscribe(self, client, id, process):
         self.agents[id].processes[process].subscribe(client)
 
+        if client not in self.clients:
+            self.clients[client] = [(id, process)]
+            def push_stats(*args):
+                while client in self.clients:
+                    print('push_stats')
+                    sleep(1.0)
+                print('DONE WITH THREAD!')
+
+            thread = threading.Thread(target=push_stats)
+            thread.start()
+        elif (id, process) not in self.clients[client]:
+            self.clients[client].append((id, process))
+
     def unsubscribe(self, client, id, process):
         self.agents[id].processes[process].unsubscribe(client)
+
+        if client in self.clients and (id, process) in self.clients[client]:
+            self.clients[client].remove((id, process))
+            if len(self.clients[client]) == 0:
+                self.clients.pop(client, None)
+
+    def unsubscribe_all(self, client):
+        if client in self.clients:
+            for (id, process) in self.clients[client]:
+                self.agents[id].processes[process].unsubscribe(client)
+            self.clients.pop(client)
 
     def __repr__(self):
         return "<SupervisorClientCoordinator(agents={self.agents})>".format(self=self)

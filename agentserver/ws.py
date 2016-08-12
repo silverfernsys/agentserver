@@ -6,7 +6,7 @@ from db import dal, kal, UserAuthToken, AgentAuthToken
 from sqlalchemy.orm.exc import NoResultFound
 from agents.supervisoragent import SupervisorAgent
 from clients.supervisorclient import SupervisorClient
-
+from clients.supervisorclientcoordinator import scc
 
 class SupervisorAgentHandler(tornado.websocket.WebSocketHandler):
     Connections = {}
@@ -81,6 +81,7 @@ class SupervisorClientHandler(tornado.websocket.WebSocketHandler):
     def on_close(self):
         try:
             client = SupervisorClientHandler.Connections[self]
+            scc.unsubscribe_all(client)
             client.ws = None
             SupervisorClientHandler.Connections.pop(self, None)
         except:
