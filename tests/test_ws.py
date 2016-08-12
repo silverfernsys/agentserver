@@ -355,7 +355,13 @@ class SupervisorClientHandlerTest(WebSocketBaseTestCase):
         ws_agent = yield self.ws_connect('/supervisor/',
             headers={'authorization': type(self).AGENT_TOKEN})
 
-        yield ws_client.write_message(json.dumps({'cmd': 'restart', 'id': type(self).AGENT_ID, 'process': 'web'}))
+        ws_client.write_message(json.dumps({'cmd': 'sub', 'id': type(self).AGENT_ID, 'process': 'process_0'}))
+        response = yield ws_client.read_message()
+        data = json.loads(response)
+        self.assertEqual(data['status'], 'success')
+        self.assertEqual(data['type'], 'command sub accepted')
+
+        yield ws_client.write_message(json.dumps({'cmd': 'restart', 'id': type(self).AGENT_ID, 'process': 'process_0'}))
         response = yield ws_client.read_message()
         data = json.loads(response)
         self.assertEqual(data['status'], 'success')
@@ -363,19 +369,25 @@ class SupervisorClientHandlerTest(WebSocketBaseTestCase):
 
         response = yield ws_agent.read_message()
         data = json.loads(response)
-        self.assertEqual(data['cmd'], 'restart web')
+        self.assertEqual(data['cmd'], 'restart process_0')
 
-        ws_client.write_message(json.dumps({'cmd': 'sub', 'id': type(self).AGENT_ID, 'process': 'web'}))
+        state_0 = open(os.path.join(FIXTURES_DIR, 'state0.json')).read().split('\n')
+
+        for state in state_0:
+            ws_agent.write_message(state)
+            response = yield ws_agent.read_message()
+            data = json.loads(response)
+            self.assertEqual(data['status'], 'success')
+            self.assertEqual(data['type'], 'state updated')
+
+        for i in range(len(state_0)):
+            print(i)
+
+        ws_client.write_message(json.dumps({'cmd': 'unsub', 'id': type(self).AGENT_ID, 'process': 'process_0'}))
         response = yield ws_client.read_message()
         data = json.loads(response)
         self.assertEqual(data['status'], 'success')
-        self.assertEqual(data['type'], 'command sub accepted')
-
-
-        # try:
-        #     response = yield ws_client.read_message()
-        # except Exception as e:
-        #     print(e)
+        self.assertEqual(data['type'], 'command unsub accepted')
 
         ws_client.close()
         yield self.close_future

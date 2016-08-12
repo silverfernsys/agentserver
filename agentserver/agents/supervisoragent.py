@@ -54,8 +54,7 @@ class SupervisorAgent(object):
                             'timestamp': datetime.utcfromtimestamp(stat[0]).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
                             'cpu': stat[1], 'mem': stat[2]}
                         kal.connection.send('supervisor', msg)
-                    scc.agents[self.id].processes[name].update(start,
-                        row['statename'],
+                    scc.update(self.id, name, start, row['statename'],
                         datetime.utcfromtimestamp(row['stats'][-1][0]))
                 kal.connection.flush()
                 self.ws.write_message(json.dumps({'status': 'success', 'type': 'snapshot updated'}))
@@ -75,7 +74,7 @@ class SupervisorAgent(object):
                     state = ProcessState(detail_id=detail.id, name=state)
                     self.session.add(state)
                     self.session.commit()
-                scc.agents[self.id].processes[name].update(start, state, None)
+                scc.update(self.id, name, start, state, None)
                 self.ws.write_message(json.dumps({'status': 'success', 'type': 'state updated'}))
             else:
                 self.ws.write_message(json.dumps({'status': 'error', 'type': 'unknown message type'}))

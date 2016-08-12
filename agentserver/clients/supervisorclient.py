@@ -3,11 +3,13 @@ from time import time
 from datetime import datetime
 import json
 from db import dral
+from supervisorclientcoordinator import scc
 import ws
 
 class SupervisorClient(object):
     SUPERVISOR_COMMANDS = ['start', 'stop', 'restart']
     SUBSCRIBE_COMMAND = 'sub'
+    UNSUBSCRIBE_COMMAND = 'unsub'
 
     def __init__(self, id, ws):
         self.id = id
@@ -34,6 +36,10 @@ class SupervisorClient(object):
                         print('E: %s' % e)
                     self.ws.write_message(json.dumps({'status': 'success', 'type': 'command {cmd} accepted'.format(cmd=cmd)}))
                 elif cmd == type(self).SUBSCRIBE_COMMAND:
+                    scc.subscribe(self, agent_id, process)
+                    self.ws.write_message(json.dumps({'status': 'success', 'type': 'command {cmd} accepted'.format(cmd=cmd)}))
+                elif cmd == type(self).UNSUBSCRIBE_COMMAND:
+                    scc.unsubscribe(self, agent_id, process)
                     self.ws.write_message(json.dumps({'status': 'success', 'type': 'command {cmd} accepted'.format(cmd=cmd)}))
                 else:
                     self.ws.write_message(json.dumps({'status': 'error', 'type': 'unknown command'}))

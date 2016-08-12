@@ -30,6 +30,7 @@ class SupervisorProcess(object):
             self.state = SupervisorProcess.UNKNOWN
 
     def update(self, started, state, updated=None):
+        print('UPDATE!!!!!')
         self.started = started
         if updated:
             self.updated = updated
@@ -94,6 +95,15 @@ class SupervisorClientCoordinator(object):
                 info.add(SupervisorProcess(row['process'],
                     datetime.utcfromtimestamp(float(row['time'])/1000.0)))
             self.agents[info.id] = info
+
+    def update(self, id, process, started, state, updated=None):
+        self.agents[id].processes[process].update(started, state, updated)
+
+    def subscribe(self, client, id, process):
+        print('SUBSCRIBE!')
+
+    def unsubscribe(self, client, id, process):
+        print('UNSUBSCRIBE')
 
     def __repr__(self):
         return "<SupervisorClientCoordinator(agents={self.agents})>".format(self=self)
