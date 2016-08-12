@@ -396,12 +396,48 @@ class SupervisorClientHandlerTest(WebSocketBaseTestCase):
         self.assertEqual(data['status'], 'success')
         self.assertEqual(data['type'], 'command unsub accepted')
 
+        ws_client.write_message(json.dumps({'cmd': 'sub', 'id': type(self).AGENT_ID, 'process': 'process_1'}))
+        response = yield ws_client.read_message()
+        data = json.loads(response)
+        self.assertEqual(data['status'], 'success')
+        self.assertEqual(data['type'], 'command sub accepted')
+
+        yield ws_client.write_message(json.dumps({'cmd': 'restart', 'id': type(self).AGENT_ID, 'process': 'process_1'}))
+        response = yield ws_client.read_message()
+        data = json.loads(response)
+        self.assertEqual(data['status'], 'success')
+        self.assertEqual(data['type'], 'command restart accepted')
+
+        response = yield ws_agent.read_message()
+        data = json.loads(response)
+        self.assertEqual(data['cmd'], 'restart process_1')
+
+        state_1 = open(os.path.join(FIXTURES_DIR, 'state1.json')).read().split('\n')
+
+        for state in state_1:
+            ws_agent.write_message(state)
+            response = yield ws_agent.read_message()
+            data = json.loads(response)
+            self.assertEqual(data['status'], 'success')
+            self.assertEqual(data['type'], 'state updated')
+
+        for state in state_1:
+            response = yield ws_client.read_message()
+            data = json.loads(response)
+            state_data = json.loads(state)
+            self.assertEqual(data['name'], state_data['state_update']['name'])
+            self.assertEqual(data['state'], state_data['state_update']['statename'])
+            self.assertEqual(data['started'],
+                datetime.utcfromtimestamp(state_data['state_update']['start']). \
+                strftime("%Y-%m-%dT%H:%M:%S.%fZ"))
+
         ws_client.close()
         yield self.close_future
         self.assertEqual(len(SupervisorClientHandler.Connections.keys()), connection_count, "0 websocket connections.")
 
         ws_agent.close()
         yield self.close_future
+        time.sleep(1.0)
 
     @gen_test
     def test_cmd_failure(self):
@@ -443,87 +479,3 @@ class SupervisorClientHandlerTest(WebSocketBaseTestCase):
         ws_client.close()
         yield self.close_future
         self.assertEqual(len(SupervisorClientHandler.Connections.keys()), connection_count, "0 websocket connections.")
-
-    # @gen_test
-    # def test_supervisoragenthandler_state_update(self):
-    #     connection_count = len(SupervisorAgentHandler.Connections.keys())
-    #     state_web_updates = open(os.path.join(WebSocketTest.fixtures_dir, 'state_web_update.json')).read().split('\n')
-    #     state_celery_updates = open(os.path.join(WebSocketTest.fixtures_dir, 'state_celery_update.json')).read().split('\n')
-    #     snapshot_update_0 = open(os.path.join(WebSocketTest.fixtures_dir, 'snapshot0.json')).read()
-    #     snapshot_update_1 = open(os.path.join(WebSocketTest.fixtures_dir, 'snapshot1.json')).read()
-
-    #     agent_conn = yield self.ws_connect('/supervisor/',
-    #         headers={'authorization':WebSocketTest.AGENT_TOKEN})
-        
-    #     # agent = SupervisorAgentHandler.IPConnections[WebSocketTest.AGENT_IP]
-
-    #     self.assertEqual(len(SupervisorAgentHandler.Connections.keys()), connection_count + 1, "+1 websocket connections.")
-
-    #     status_conn = yield self.ws_connect('/status/supervisor/',
-    #         headers={'authorization':WebSocketTest.USER_TOKEN})
-
-    #     cmd_conn = yield self.ws_connect('/cmd/supervisor/',
-    #         headers={'authorization':WebSocketTest.USER_TOKEN})
-
-    #     # Write a snapshot update and read the response:
-    #     agent_conn.write_message(snapshot_update_0)
-    #     response = yield agent_conn.read_message()
-    #     data = json.loads(response)
-    #     self.assertIn('AQL', data)
-
-    #     # Write a command to the agent
-    #     cmd_conn.write_message(json.dumps({'cmd': 'restart', 'ip': WebSocketTest.AGENT_IP, 'process': 'web'}))
-    #     # cmd_resp = yield cmd_conn.read_message()
-    #     # print('cmd_resp: %s' % cmd_resp)
-
-    #     # Read the command sent to the agent
-    #     response = yield agent_conn.read_message()
-    #     command = json.loads(response)
-    #     self.assertIn('cmd', command)
-    #     self.assertEqual(command['cmd'], 'restart web')
-
-    #     # Write state updates of web process restarting:
-    #     for state_web_update in state_web_updates:
-    #         agent_conn.write_message(state_web_update)
-    #         response = yield agent_conn.read_message()
-    #         data = json.loads(response)
-    #         self.assertIn('AQL', data)
-
-    #     process_info_web = agent.get('web', 'web')
-    #     self.assertEqual(8, len(process_info_web.cpu), '8 cpu datapoints')
-    #     self.assertEqual(8, len(process_info_web.mem), '8 mem datapoints')
-
-    #     # Write a command to the agent
-    #     cmd_conn.write_message(json.dumps({'cmd': 'restart', 'ip': WebSocketTest.AGENT_IP, 'process': 'celery'}))
-
-    #     # Read the command sent to the agent
-    #     response = yield agent_conn.read_message()
-    #     command = json.loads(response)
-    #     self.assertIn('cmd', command)
-    #     self.assertEqual(command['cmd'], 'restart celery')
-
-    #     # Write state updates of celery process restarting:
-    #     for state_celery_update in state_celery_updates:
-    #         agent_conn.write_message(state_celery_update)
-    #         response = yield agent_conn.read_message()
-    #         data = json.loads(response)
-    #         self.assertIn('AQL', data)
-
-    #     # Read updates from status connection:
-    #     for i in range(len(state_web_updates) + len(state_celery_updates)):
-    #         response = yield status_conn.read_message()
-    #         data = json.loads(response)
-    #         self.assertIn('cmd', data)
-    #         self.assertEqual(data['cmd'], 'update')
-
-    #     # Write a snapshot update and read the response:
-    #     agent_conn.write_message(snapshot_update_1)
-    #     response = yield agent_conn.read_message()
-    #     data = json.loads(response)
-    #     self.assertIn('AQL', data)
-    #     self.assertEqual(16, len(process_info_web.cpu), '16 cpu datapoints')
-    #     self.assertEqual(16, len(process_info_web.mem), '16 mem datapoints')
-
-    #     agent_conn.close()
-    #     yield self.close_future
-    #     self.assertEqual(len(MockSupervisorAgentHandler.Connections), 0, '0 websocket connections.')
