@@ -6,6 +6,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from db import dal, kal, ProcessDetail, ProcessState
 from clients.supervisorclientcoordinator import scc
 
+
 class ProcessInfo(object):
     def __init__(self, id, name, start, state):
         self.id = id
@@ -24,6 +25,9 @@ class SupervisorAgent(object):
 
     def get_ip(self, request):
         return request.headers.get("X-Real-IP") or request.remote_ip
+
+    def command(self, message):
+        self.ws.write_message(message)
 
     def update(self, message):
         try:

@@ -40,11 +40,14 @@ class SupervisorAgentHandler(tornado.websocket.WebSocketHandler):
         else:
             print('Writing to non-existent agent!')
  
-    def on_close(self):       
-        supervisor_agent = SupervisorAgentHandler.Connections[self]
-        supervisor_agent.ws = None
-        SupervisorAgentHandler.IDs.pop(supervisor_agent.id, None)
-        SupervisorAgentHandler.Connections.pop(self, None)
+    def on_close(self):
+        try:   
+            supervisor_agent = SupervisorAgentHandler.Connections[self]
+            supervisor_agent.ws = None
+            SupervisorAgentHandler.IDs.pop(supervisor_agent.id, None)
+            SupervisorAgentHandler.Connections.pop(self, None)
+        except:
+            pass
 
     def check_origin(self, origin):
         """'origin' is the base url hit by the request.
@@ -76,9 +79,12 @@ class SupervisorClientHandler(tornado.websocket.WebSocketHandler):
             print('Writing to non-existent client!')
 
     def on_close(self):
-        client = SupervisorClientHandler.Connections[self]
-        client.ws = None
-        SupervisorClientHandler.Connections.pop(self, None)
+        try:
+            client = SupervisorClientHandler.Connections[self]
+            client.ws = None
+            SupervisorClientHandler.Connections.pop(self, None)
+        except:
+            pass
 
     def check_origin(self, origin):
         return True

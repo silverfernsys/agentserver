@@ -129,17 +129,13 @@ class SupervisorAgentHandlerTest(WebSocketBaseTestCase):
             #     dict(close_future=self.close_future)),
             # ('/status/supervisor/', MockSupervisorStatusHandler,
             #  dict(close_future=self.close_future)),
-        ])
-
-    def url(self):
-        return 'ws://localhost:' + str(self.get_http_port()) + '/supervisor/'  
+        ])  
 
     @gen_test
     def test_no_authorization(self):
         connection_count = len(SupervisorAgentHandler.Connections.keys())
         id_count = len(SupervisorAgentHandler.IDs.keys())
-        ws_client = yield websocket_connect(self.url())
-        # print(dir(ws_client))
+        ws_client = yield self.ws_connect('/supervisor/')
         ws_client.write_message(json.dumps({'msg':'update'}))
         response = yield ws_client.read_message()
         self.assertEqual(response, None, "No response from server because authorization not provided.")
@@ -150,7 +146,8 @@ class SupervisorAgentHandlerTest(WebSocketBaseTestCase):
     def test_bad_authorization(self):
         connection_count = len(SupervisorAgentHandler.Connections.keys())
         id_count = len(SupervisorAgentHandler.IDs.keys())
-        ws_client = yield websocket_connect(self.url(), headers={'authorization':'gibberish'})
+        ws_client = yield self.ws_connect('/supervisor/',
+            headers={'authorization':'gibberish'})
         ws_client.write_message(json.dumps({'msg':'update'}))
         response = yield ws_client.read_message()
         self.assertEqual(response, None, "No response from server because bad authorization provided.")
@@ -161,7 +158,8 @@ class SupervisorAgentHandlerTest(WebSocketBaseTestCase):
     def test_successful_authorization(self):
         connection_count = len(SupervisorAgentHandler.Connections.keys())
         id_count = len(SupervisorAgentHandler.IDs.keys())
-        ws_client = yield websocket_connect(self.url(), headers={'authorization': type(self).AGENT_TOKEN})
+        ws_client = yield self.ws_connect('/supervisor/',
+            headers={'authorization': type(self).AGENT_TOKEN})
         self.assertEqual(len(SupervisorAgentHandler.Connections.keys()), connection_count + 1, "+1 websocket connections.")
         self.assertEqual(len(SupervisorAgentHandler.IDs.keys()), id_count + 1, "+1 websocket connections.")
         ws_client.close()
@@ -174,7 +172,8 @@ class SupervisorAgentHandlerTest(WebSocketBaseTestCase):
         update_0 = open(os.path.join(FIXTURES_DIR, 'snapshot0.json')).read()
         update_1 = open(os.path.join(FIXTURES_DIR, 'snapshot1.json')).read()
 
-        client = yield websocket_connect(self.url(), headers={'authorization': type(self).AGENT_TOKEN})
+        client = yield self.ws_connect('/supervisor/',
+            headers={'authorization': type(self).AGENT_TOKEN})
         client.write_message(update_0)
         response = yield client.read_message()
         data = json.loads(response)
@@ -204,7 +203,8 @@ class SupervisorAgentHandlerTest(WebSocketBaseTestCase):
         state_0 = open(os.path.join(FIXTURES_DIR, 'state0.json')).read().split('\n')
         state_1 = open(os.path.join(FIXTURES_DIR, 'state1.json')).read().split('\n')
 
-        client = yield websocket_connect(self.url(), headers={'authorization': type(self).AGENT_TOKEN})
+        client = yield self.ws_connect('/supervisor/',
+            headers={'authorization': type(self).AGENT_TOKEN})
 
         for state in state_0:
             client.write_message(state)
@@ -230,7 +230,8 @@ class SupervisorAgentHandlerTest(WebSocketBaseTestCase):
     def test_state_update_bad_start_value(self):
         state = json.dumps({"state_update":{"group": "celery", "name": "celery", "statename": "STOPPING", "pid": "8593", "start": 'asdf', "state": 40}})
 
-        client = yield websocket_connect(self.url(), headers={'authorization': type(self).AGENT_TOKEN})
+        client = yield self.ws_connect('/supervisor/',
+            headers={'authorization': type(self).AGENT_TOKEN})
 
         client.write_message(state)
         response = yield client.read_message()
@@ -248,7 +249,8 @@ class SupervisorAgentHandlerTest(WebSocketBaseTestCase):
     def test_state_update_missing_values(self):
         state = json.dumps({"state_update":{"group": "celery", "statename": "STOPPING", "pid": "8593", "start": 1460513750, "state": 40}})
 
-        client = yield websocket_connect(self.url(), headers={'authorization': type(self).AGENT_TOKEN})
+        client = yield self.ws_connect('/supervisor/',
+            headers={'authorization': type(self).AGENT_TOKEN})
 
         client.write_message(state)
         response = yield client.read_message()
@@ -293,23 +295,31 @@ class SupervisorClientHandlerTest(WebSocketBaseTestCase):
                      password='randompasswordc'))])
         dal.session.commit()
 
+        agent = Agent(name='Agent 0')
+        dal.session.add(AgentAuthToken(agent=agent))
+        dal.session.commit()
+        # dral.connect('debug')
+        # pal.connect('debug')
+        # scc.initialize()
+        # print(scc)
+
+        cls.AGENT_TOKEN = agent.token.uuid
+        cls.AGENT_ID = agent.id
         cls.USER_TOKEN = user.token.uuid
-        cls.AGENT_ID = 1
 
     def get_app(self):
         self.close_future = Future()
         return Application([
+            ('/supervisor/', MockSupervisorAgentHandler,
+                dict(close_future=self.close_future)),
             ('/client/supervisor/', MockSupervisorClientHandler,
                 dict(close_future=self.close_future)),
-        ])
-
-    def url(self):
-        return 'ws://localhost:' + str(self.get_http_port()) + '/client/supervisor/'  
+        ]) 
 
     @gen_test
     def test_no_authorization(self):
         connection_count = len(SupervisorClientHandler.Connections.keys())
-        ws_client = yield websocket_connect(self.url())
+        ws_client = yield self.ws_connect('/client/supervisor/')
         ws_client.write_message(json.dumps({'cmd':'restart'}))
         response = yield ws_client.read_message()
         self.assertEqual(response, None, "No response from server because authorization not provided.")
@@ -318,7 +328,8 @@ class SupervisorClientHandlerTest(WebSocketBaseTestCase):
     @gen_test
     def test_bad_authorization(self):
         connection_count = len(SupervisorClientHandler.Connections.keys())
-        ws_client = yield websocket_connect(self.url(), headers={'authorization':'gibberish'})
+        ws_client = yield self.ws_connect('/client/supervisor/',
+            headers={'authorization':'gibberish'})
         ws_client.write_message(json.dumps({'cmd':'restart'}))
         response = yield ws_client.read_message()
         self.assertEqual(response, None, "No response from server because bad authorization provided.")
@@ -327,7 +338,8 @@ class SupervisorClientHandlerTest(WebSocketBaseTestCase):
     @gen_test
     def test_successful_authorization(self):
         connection_count = len(SupervisorClientHandler.Connections.keys())
-        ws_client = yield websocket_connect(self.url(), headers={'authorization': type(self).USER_TOKEN})
+        ws_client = yield self.ws_connect('/client/supervisor/',
+            headers={'authorization': type(self).USER_TOKEN})
         self.assertEqual(len(SupervisorClientHandler.Connections.keys()), connection_count + 1, "+1 websocket connections.")
         ws_client.close()
         yield self.close_future
@@ -336,20 +348,29 @@ class SupervisorClientHandlerTest(WebSocketBaseTestCase):
     @gen_test
     def test_cmd_success(self):
         connection_count = len(SupervisorClientHandler.Connections.keys())
-        ws_client = yield websocket_connect(self.url(), headers={'authorization': type(self).USER_TOKEN})
+        ws_client = yield self.ws_connect('/client/supervisor/',
+            headers={'authorization': type(self).USER_TOKEN})
         self.assertEqual(len(SupervisorClientHandler.Connections.keys()), connection_count + 1, "+1 websocket connections.")
         
-        ws_client.write_message(json.dumps({'cmd': 'restart', 'id': type(self).AGENT_ID, 'process': 'web'}))
+        ws_agent = yield self.ws_connect('/supervisor/',
+            headers={'authorization': type(self).AGENT_TOKEN})
+
+        yield ws_client.write_message(json.dumps({'cmd': 'restart', 'id': type(self).AGENT_ID, 'process': 'web'}))
         response = yield ws_client.read_message()
         data = json.loads(response)
         self.assertEqual(data['status'], 'success')
         self.assertEqual(data['type'], 'command restart accepted')
 
-        ws_client.write_message(json.dumps({'cmd': 'follow', 'id': type(self).AGENT_ID, 'process': 'web'}))
+        response = yield ws_agent.read_message()
+        data = json.loads(response)
+        self.assertEqual(data['cmd'], 'restart web')
+
+        ws_client.write_message(json.dumps({'cmd': 'sub', 'id': type(self).AGENT_ID, 'process': 'web'}))
         response = yield ws_client.read_message()
         data = json.loads(response)
         self.assertEqual(data['status'], 'success')
-        self.assertEqual(data['type'], 'command follow accepted')
+        self.assertEqual(data['type'], 'command sub accepted')
+
 
         # try:
         #     response = yield ws_client.read_message()
@@ -360,10 +381,14 @@ class SupervisorClientHandlerTest(WebSocketBaseTestCase):
         yield self.close_future
         self.assertEqual(len(SupervisorClientHandler.Connections.keys()), connection_count, "0 websocket connections.")
 
+        ws_agent.close()
+        yield self.close_future
+
     @gen_test
     def test_cmd_failure(self):
         connection_count = len(SupervisorClientHandler.Connections.keys())
-        ws_client = yield websocket_connect(self.url(), headers={'authorization': type(self).USER_TOKEN})
+        ws_client = yield self.ws_connect('/client/supervisor/',
+            headers={'authorization': type(self).USER_TOKEN})
         self.assertEqual(len(SupervisorClientHandler.Connections.keys()), connection_count + 1, "+1 websocket connections.")
 
         # ws_client.write_message(json.dumps({'cmd': 'restart', 'id': 100, 'process': 'web'}))
@@ -394,7 +419,7 @@ class SupervisorClientHandlerTest(WebSocketBaseTestCase):
         response = yield ws_client.read_message()
         data = json.loads(response)
         self.assertEqual(data['status'], 'error')
-        self.assertEqual(data['type'], 'unknown message type')
+        self.assertEqual(data['type'], 'unknown command')
 
         ws_client.close()
         yield self.close_future
