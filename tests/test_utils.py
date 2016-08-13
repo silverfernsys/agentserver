@@ -1,6 +1,8 @@
 #! /usr/bin/env python
+from datetime import timedelta
 import unittest
-from utils import permute, haiku, haiku_permute, adjs, nouns, uuid, validate_ip
+from utils import (permute, haiku, haiku_permute, adjs,
+    nouns, uuid, validate_ip, iso_8601_to_timedelta)
 
 class TestUtils(unittest.TestCase):
     @classmethod
@@ -12,6 +14,25 @@ class TestUtils(unittest.TestCase):
 
     def tearDown(self):
         pass
+
+    def test_iso_8601_to_timedelta(self):
+        self.assertEqual(iso_8601_to_timedelta('P3Y6M4DT12H30M5S'),
+            timedelta(days=3*365 + 6 * 30 + 4,
+                hours=12, minutes=30, seconds=5))
+        self.assertEqual(iso_8601_to_timedelta('P6M4DT12H30M15S'),
+            timedelta(days=6 * 30 + 4, hours=12,
+                minutes=30, seconds=15))
+        self.assertEqual(iso_8601_to_timedelta('P6M1DT'),
+            timedelta(days=6 * 30 + 1))
+        self.assertEqual(iso_8601_to_timedelta('P5M3DT5S'),
+            timedelta(days=5 * 30 + 3, seconds=5))
+        self.assertEqual(iso_8601_to_timedelta('P3Y4DT12H5S'),
+            timedelta(days=365 * 3 + 4, hours=12, seconds=5))
+        self.assertEqual(iso_8601_to_timedelta('P3Y4DT12H30M0.5005S'),
+            timedelta(days=365 * 3 + 4, hours=12, minutes=30,
+                milliseconds=500, microseconds=500))
+        self.assertEqual(iso_8601_to_timedelta('PT.5005S'),
+            timedelta(milliseconds=500, microseconds=500))
 
     def test_haiku(self):
         h = haiku()

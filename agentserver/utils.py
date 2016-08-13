@@ -7,6 +7,27 @@ import os
 import random
 import re
 
+iso_8601_regex = re.compile(r'P((?P<year>(\d+(\.\d*)?|\.\d+))Y)'
+        r'?((?P<month>(\d+(\.\d*)?|\.\d+))M)?'
+        r'((?P<day>(\d+(\.\d*)?|\.\d+))D)?'
+        r'(T((?P<hour>(\d+(\.\d*)?|\.\d+))H)?'
+        r'((?P<minute>(\d+(\.\d*)?|\.\d+))M)'
+        r'?((?P<second>(\d+(\.\d*)?|\.\d+))S)?)?')
+
+def iso_8601_to_timedelta(duration):
+    """ Extracts a string such as P3Y6M4DT12H30M5S to
+    a timedelta object.
+    NOTE: Months are converted into 30 days.
+    NOTE: Years are converted into 365 days.
+    """
+    t = {k: float(v) for k, v in iso_8601_regex.match(duration).groupdict().items() if v}
+    return timedelta(weeks = t.get('week', 0),
+        days = t.get('day', 0) + 30 * t.get('month', 0)
+            + 365 * t.get('year', 0),
+        hours = t.get('hour', 0),
+        minutes = t.get('minute', 0),
+        seconds = t.get('second', 0))
+
 
 def uuid():
     return binascii.hexlify(os.urandom(20)).decode()

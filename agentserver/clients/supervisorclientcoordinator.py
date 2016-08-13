@@ -99,6 +99,8 @@ class SupervisorClientCoordinator(object):
     def initialize(self):
         self.agents = {}
         self.clients = {}
+        self.updates = {}
+        
         for agent in dal.session.query(Agent).all():
             info = AgentInfo(agent)
             result = pal.query('SELECT process_name AS process, ' \
