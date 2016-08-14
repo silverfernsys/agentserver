@@ -7,7 +7,6 @@ from tornado import gen
 from tornado.httpclient import HTTPError, HTTPRequest
 from tornado.log import gen_log, app_log
 from tornado.testing import AsyncHTTPTestCase, gen_test, bind_unused_port, ExpectLog
-# from tornado.test.util import unittest
 from tornado.web import Application, RequestHandler
 
 try:
@@ -115,10 +114,14 @@ class SupervisorAgentHandlerTest(WebSocketBaseTestCase):
         dral.connect('debug')
         pal.connect('debug')
         scc.initialize()
-        print(scc)
 
         cls.AGENT_TOKEN = agent.token.uuid
         cls.AGENT_ID = agent.id
+
+    @classmethod
+    def tearDownClass(cls):
+        super(SupervisorAgentHandlerTest, cls).tearDownClass()
+        scc.destroy()
 
     def get_app(self):
         self.close_future = Future()
@@ -277,7 +280,8 @@ class SupervisorAgentMock(object):
 
 class SupervisorClientHandlerTest(WebSocketBaseTestCase):
     @classmethod
-    def setUpClass(cls):
+    @mock.patch('db.pal.query', side_effect=pal_mock_query)
+    def setUpClass(cls, mock_query):
         super(SupervisorClientHandlerTest, cls).setUpClass()
         # Generate users and tokens
         user = User(name='User A',
@@ -298,14 +302,19 @@ class SupervisorClientHandlerTest(WebSocketBaseTestCase):
         agent = Agent(name='Agent 0')
         dal.session.add(AgentAuthToken(agent=agent))
         dal.session.commit()
-        # dral.connect('debug')
-        # pal.connect('debug')
-        # scc.initialize()
-        # print(scc)
+        dral.connect('debug')
+        pal.connect('debug')
+        scc.initialize()
+        print(scc)
 
         cls.AGENT_TOKEN = agent.token.uuid
         cls.AGENT_ID = agent.id
         cls.USER_TOKEN = user.token.uuid
+
+    @classmethod
+    def tearDownClass(cls):
+        super(SupervisorClientHandlerTest, cls).tearDownClass()
+        scc.destroy()
 
     def get_app(self):
         self.close_future = Future()

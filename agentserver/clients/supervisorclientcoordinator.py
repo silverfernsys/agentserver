@@ -6,6 +6,8 @@ from sqlalchemy.orm.exc import NoResultFound
 from pydruid.utils.aggregators import doublesum
 from pydruid.utils.filters import Dimension
 from db import dal, pal, Agent
+from utils import (iso_8601_duration_to_timedelta,
+    iso_8601_interval_to_datetimes)
 
 
 class SupervisorProcess(object):
@@ -96,11 +98,13 @@ class AgentInfo(object):
 
 
 class SupervisorClientCoordinator(object):
+    granularities = ['second', 'minute', 'hour', 'day', 'month']
+
     def initialize(self):
         self.agents = {}
         self.clients = {}
         self.updates = {}
-        
+
         for agent in dal.session.query(Agent).all():
             info = AgentInfo(agent)
             result = pal.query('SELECT process_name AS process, ' \
@@ -111,16 +115,27 @@ class SupervisorClientCoordinator(object):
                     datetime.utcfromtimestamp(float(row['time'])/1000.0)))
             self.agents[info.id] = info
 
+    def destroy(self):
+        print('SupervisorClientCoordinator.destroy()')
+
     def update(self, id, process, started, state, updated=None):
         self.agents[id].processes[process].update(started, state, updated)
 
-    def subscribe(self, client, id, process):
+    def subscribe(self, client, id, process, granularity='hour', interval='P6W'):
+        if granularity not in self.granularities:
+            raise ValueError('Granularity "{0}" not in granularities {1}'.
+                format(granularity, self.granularities))
+
+        (start, end) = iso_8601_interval_to_datetimes(interval)
+
         self.agents[id].processes[process].subscribe(client)
 
         if client not in self.clients:
             self.clients[client] = [(id, process)]
+            self.updates[(client, id, process)] = (granularity, (start, end))
             def push_stats(*args):
                 while client in self.clients:
+                    # Note: when end != None and start > end, remove key from self.updates
                     print('push_stats')
                     sleep(1.0)
                 print('DONE WITH THREAD!')
@@ -129,6 +144,8 @@ class SupervisorClientCoordinator(object):
             thread.start()
         elif (id, process) not in self.clients[client]:
             self.clients[client].append((id, process))
+        # Create a new key if it doesn't exist, or update value if it does.
+        self.updates[(client, id, process)] = (granularity, (start, end))
 
     def unsubscribe(self, client, id, process):
         self.agents[id].processes[process].unsubscribe(client)
@@ -137,10 +154,13 @@ class SupervisorClientCoordinator(object):
             self.clients[client].remove((id, process))
             if len(self.clients[client]) == 0:
                 self.clients.pop(client, None)
+        if (client, id, process) in self.updates:
+            self.updates.pop((client, id, process), None)
 
     def unsubscribe_all(self, client):
         if client in self.clients:
             for (id, process) in self.clients[client]:
+                self.updates.pop((client, id, process), None)
                 self.agents[id].processes[process].unsubscribe(client)
             self.clients.pop(client)
 
