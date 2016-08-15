@@ -28,6 +28,8 @@ class TestUtils(unittest.TestCase):
         self.assertIn('Malformed ISO 8601 interval', context.exception.message)
         self.assertEqual(iso_8601_interval_to_datetimes('P7Y'),
             (now - timedelta(days=365*7), None))
+        self.assertEqual(iso_8601_interval_to_datetimes('P6W'),
+            (now - timedelta(days=6 * 7), None))
         self.assertEqual(iso_8601_interval_to_datetimes('P6Y5M'),
             (now - timedelta(days=(365*6 + 5 * 30)), None))
 
@@ -63,6 +65,8 @@ class TestUtils(unittest.TestCase):
                 minutes=30, seconds=15))
         self.assertEqual(iso_8601_duration_to_timedelta('P6M1DT'),
             timedelta(days=6 * 30 + 1))
+        self.assertEqual(iso_8601_duration_to_timedelta('P6W'),
+            timedelta(weeks=6))
         self.assertEqual(iso_8601_duration_to_timedelta('P5M3DT5S'),
             timedelta(days=5 * 30 + 3, seconds=5))
         self.assertEqual(iso_8601_duration_to_timedelta('P3Y4DT12H5S'),

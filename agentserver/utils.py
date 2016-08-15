@@ -7,9 +7,11 @@ import os
 import random
 import re
 
+# https://en.wikipedia.org/wiki/ISO_8601
 iso_8601_interval_regex = re.compile(
     r'^(P((?P<s_i_year>(\d+(\.\d*)?|\.\d+))Y)?'
     r'((?P<s_i_month>(\d+(\.\d*)?|\.\d+))M)?'
+    r'((?P<s_i_week>(\d+(\.\d*)?|\.\d+))W)?'
     r'((?P<s_i_day>(\d+(\.\d*)?|\.\d+))D)?'
     r'(T((?P<s_i_hour>(\d+(\.\d*)?|\.\d+))H)?'
     r'((?P<s_i_minute>(\d+(\.\d*)?|\.\d+))M)?'
@@ -19,6 +21,7 @@ iso_8601_interval_regex = re.compile(
     r'(?P<s_dt_second>(\d{2}))(\.(?P<s_dt_microsecond>\d+))?Z)?)(/'
     r'(P((?P<e_i_year>(\d+(\.\d*)?|\.\d+))Y)?'
     r'((?P<e_i_month>(\d+(\.\d*)?|\.\d+))M)?'
+    r'((?P<e_i_week>(\d+(\.\d*)?|\.\d+))W)?'
     r'((?P<e_i_day>(\d+(\.\d*)?|\.\d+))D)?'
     r'(T((?P<e_i_hour>(\d+(\.\d*)?|\.\d+))H)?'
     r'((?P<e_i_minute>(\d+(\.\d*)?|\.\d+))M)?'
@@ -61,6 +64,7 @@ def iso_8601_interval_to_datetimes(interval):
 iso_8601_duration_regex = re.compile(
     r'^P((?P<year>(\d+(\.\d*)?|\.\d+))Y)?'
     r'((?P<month>(\d+(\.\d*)?|\.\d+))M)?'
+    r'((?P<week>(\d+(\.\d*)?|\.\d+))W)?'
     r'((?P<day>(\d+(\.\d*)?|\.\d+))D)?'
     r'(T((?P<hour>(\d+(\.\d*)?|\.\d+))H)?'
     r'((?P<minute>(\d+(\.\d*)?|\.\d+))M)?'

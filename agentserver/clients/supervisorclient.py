@@ -45,8 +45,8 @@ class SupervisorClient(object):
             else:
                 self.ws.write_message(json.dumps({'status': 'error', 'type': 'unknown message type'}))
         except ValueError as e:
-            # print('ValueError: %s' % e)
+            print('ValueError: %s' % e)
             self.ws.write_message(json.dumps({'status': 'error', 'type': 'unknown message type'}))
         except Exception as e:
-            # print('Exception: %s' % e)
+            print('Exception: %s' % e)
             self.ws.write_message(json.dumps({'status': 'error', 'type': 'unknown message type'}))
