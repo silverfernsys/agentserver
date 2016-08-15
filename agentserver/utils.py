@@ -61,7 +61,15 @@ def iso_8601_interval_to_datetimes(interval):
                 format(interval))
 
 
-iso_8601_duration_regex = re.compile(
+def validate_iso_8601_interval(interval):
+    match = iso_8601_interval_regex.match(interval)
+    if match:
+        return True
+    else:
+        return False
+
+
+iso_8601_period_regex = re.compile(
     r'^P((?P<year>(\d+(\.\d*)?|\.\d+))Y)?'
     r'((?P<month>(\d+(\.\d*)?|\.\d+))M)?'
     r'((?P<week>(\d+(\.\d*)?|\.\d+))W)?'
@@ -70,18 +78,26 @@ iso_8601_duration_regex = re.compile(
     r'((?P<minute>(\d+(\.\d*)?|\.\d+))M)?'
     r'((?P<second>(\d+(\.\d*)?|\.\d+))S)?)?$')
 
-def iso_8601_duration_to_timedelta(duration):
+def iso_8601_period_to_timedelta(period):
     """ Extracts a string such as P3Y6M4DT12H30M5S to
     a timedelta object.
     NOTE: Months are converted into 30 days.
     NOTE: Years are converted into 365 days.
     """
-    match = iso_8601_duration_regex.match(duration)
+    match = iso_8601_period_regex.match(period)
     if match:
         return timedelta_from_dict({k: float(v)
             for k, v in match.groupdict().items() if v})
     else:
         return None
+
+
+def validate_iso_8601_period(period):
+    match = iso_8601_period_regex.match(period)
+    if match:
+        return True
+    else:
+        return False
 
 
 def timedelta_from_dict(dict, prefix=''):

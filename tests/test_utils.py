@@ -2,8 +2,9 @@
 import unittest, mock
 from datetime import datetime, timedelta
 from utils import (permute, haiku, haiku_permute, adjs,
-    nouns, uuid, validate_ip, iso_8601_duration_to_timedelta,
-    iso_8601_interval_to_datetimes)
+    nouns, uuid, validate_ip, iso_8601_period_to_timedelta,
+    iso_8601_interval_to_datetimes, validate_iso_8601_period,
+    validate_iso_8601_interval)
 
 class TestUtils(unittest.TestCase):
     @classmethod
@@ -56,31 +57,64 @@ class TestUtils(unittest.TestCase):
             (datetime(year=2016, month=8, day=1, hour=23, minute=10, second=59, microsecond=111),
                 datetime(year=2016, month=8, day=8, hour=0, minute=13, second=23, microsecond=001)))
 
-    def test_iso_8601_duration_to_timedelta(self):
-        self.assertEqual(iso_8601_duration_to_timedelta('P3Y6M4DT12H30M5S'),
+    def test_validate_iso_8601_interval(self):
+        self.assertTrue(validate_iso_8601_interval('P7Y'))
+        self.assertTrue(validate_iso_8601_interval('P6W'))
+        self.assertTrue(validate_iso_8601_interval('P6Y5M'))
+        self.assertTrue(validate_iso_8601_interval('1999-12-31T16:00:00.000Z'))
+        self.assertTrue(validate_iso_8601_interval('2016-08-01T23:10:59.111Z'))
+        self.assertTrue(validate_iso_8601_interval('P6Y5M/P9D'))
+        self.assertTrue(validate_iso_8601_interval('1999-12-31T16:00:00.000Z/P5DT7H'))
+        self.assertTrue(validate_iso_8601_interval('2016-08-01T23:10:59.111Z/2016-08-08T00:13:23.001Z'))
+        self.assertFalse(validate_iso_8601_interval('P6Yasdf'))
+        self.assertFalse(validate_iso_8601_interval('7432891'))
+        self.assertFalse(validate_iso_8601_interval('23P7DT5H'))
+        self.assertFalse(validate_iso_8601_interval('P6Yasdf/P8Y'))
+        self.assertFalse(validate_iso_8601_interval('P7Y/asdf'))
+        self.assertFalse(validate_iso_8601_interval('7432891/1234'))
+        self.assertFalse(validate_iso_8601_interval('asdf/87rf'))
+        self.assertFalse(validate_iso_8601_interval('23P7DT5H/89R3'))
+
+    def test_iso_8601_period_to_timedelta(self):
+        self.assertEqual(iso_8601_period_to_timedelta('P3Y6M4DT12H30M5S'),
             timedelta(days=3*365 + 6 * 30 + 4,
                 hours=12, minutes=30, seconds=5))
-        self.assertEqual(iso_8601_duration_to_timedelta('P6M4DT12H30M15S'),
+        self.assertEqual(iso_8601_period_to_timedelta('P6M4DT12H30M15S'),
             timedelta(days=6 * 30 + 4, hours=12,
                 minutes=30, seconds=15))
-        self.assertEqual(iso_8601_duration_to_timedelta('P6M1DT'),
+        self.assertEqual(iso_8601_period_to_timedelta('P6M1DT'),
             timedelta(days=6 * 30 + 1))
-        self.assertEqual(iso_8601_duration_to_timedelta('P6W'),
+        self.assertEqual(iso_8601_period_to_timedelta('P6W'),
             timedelta(weeks=6))
-        self.assertEqual(iso_8601_duration_to_timedelta('P5M3DT5S'),
+        self.assertEqual(iso_8601_period_to_timedelta('P5M3DT5S'),
             timedelta(days=5 * 30 + 3, seconds=5))
-        self.assertEqual(iso_8601_duration_to_timedelta('P3Y4DT12H5S'),
+        self.assertEqual(iso_8601_period_to_timedelta('P3Y4DT12H5S'),
             timedelta(days=365 * 3 + 4, hours=12, seconds=5))
-        self.assertEqual(iso_8601_duration_to_timedelta('P3Y4DT12H30M0.5005S'),
+        self.assertEqual(iso_8601_period_to_timedelta('P3Y4DT12H30M0.5005S'),
             timedelta(days=365 * 3 + 4, hours=12, minutes=30,
                 milliseconds=500, microseconds=500))
-        self.assertEqual(iso_8601_duration_to_timedelta('PT.5005S'),
+        self.assertEqual(iso_8601_period_to_timedelta('PT.5005S'),
             timedelta(milliseconds=500, microseconds=500))
-        self.assertIsNone(iso_8601_duration_to_timedelta('P6Yasdf'))
-        self.assertIsNone(iso_8601_duration_to_timedelta('7432891'))
-        self.assertIsNone(iso_8601_duration_to_timedelta('asdf'))
-        self.assertIsNone(iso_8601_duration_to_timedelta('23P7DT5H'))
-        self.assertIsNone(iso_8601_duration_to_timedelta(''))
+        self.assertIsNone(iso_8601_period_to_timedelta('P6Yasdf'))
+        self.assertIsNone(iso_8601_period_to_timedelta('7432891'))
+        self.assertIsNone(iso_8601_period_to_timedelta('asdf'))
+        self.assertIsNone(iso_8601_period_to_timedelta('23P7DT5H'))
+        self.assertIsNone(iso_8601_period_to_timedelta(''))
+
+    def test_validate_iso_8601_period(self):
+        self.assertTrue(validate_iso_8601_period('P3Y6M4W7DT12H30M5S'))
+        self.assertTrue(validate_iso_8601_period('P6M4DT12H30M15S'))
+        self.assertTrue(validate_iso_8601_period('P6M1DT'))
+        self.assertTrue(validate_iso_8601_period('P6W'))
+        self.assertTrue(validate_iso_8601_period('P5M3DT5S'))
+        self.assertTrue(validate_iso_8601_period('P3Y4DT12H5S'))
+        self.assertTrue(validate_iso_8601_period('P3Y4DT12H30M0.5005S'))
+        self.assertTrue(validate_iso_8601_period('PT.5005S'))
+        self.assertFalse(validate_iso_8601_period('P6Yasdf'))
+        self.assertFalse(validate_iso_8601_period('7432891'))
+        self.assertFalse(validate_iso_8601_period('asdf'))
+        self.assertFalse(validate_iso_8601_period('23P7DT5H'))
+        self.assertFalse(validate_iso_8601_period(''))
 
     def test_haiku(self):
         h = haiku()

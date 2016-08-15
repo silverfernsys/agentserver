@@ -16,7 +16,8 @@ from kafka import KafkaProducer
 
 from passlib.apps import custom_app_context as pwd_context
 
-from utils import uuid
+from utils import (uuid, validate_iso_8601_period,
+    validate_iso_8601_interval)
 
 
 Base = declarative_base()
@@ -280,8 +281,28 @@ class PyDruidMock(object):
             body = '[]'
         return PyDruidResultMock(body)
 
+    def timeseries(self, datasource, granularity, descending, intervals,
+        aggregations, context, filter):
+        f = Filter.build_filter(filter)
+        body = '[]'
+        return PyDruidResultMock(body)
+
+    def select(self, datasource, granularity, intervals, descending,
+        dimensions, metrics, filter, paging_spec):
+        f = Filter.build_filter(filter)
+        body = '[]'
+        return PyDruidResultMock(body)
+
 
 class DruidAccessLayer(object):
+    timeseries_granularities = ['none', 'second', 'minute',
+        'fifteen_minute', 'thirty_minute','hour', 'day',
+        'week', 'month', 'quarter', 'year']
+
+    select_granularities = ['all', 'second', 'minute',
+        'fifteen_minute', 'thirty_minute','hour', 'day',
+        'week', 'month', 'quarter', 'year']
+
     def __init__(self):
         self.connection = None
 
@@ -290,6 +311,61 @@ class DruidAccessLayer(object):
             self.connection = PyDruidMock()
         else:
             self.connection = PyDruid('http://{0}'.format(uri), 'druid/v2/')
+
+    def __longmax__(self, raw_metric):
+        return {"type": "longMax", "fieldName": raw_metric} 
+
+    def __doublemax__(self, raw_metric):
+        return {"type": "doubleMax", "fieldName": raw_metric}
+
+    def __validate_granularity__(self, granularity, supported_granularities):
+        if granularity in self.timeseries_granularities:
+            query_granularity = granularity
+        elif validate_iso_8601_period(granularity):
+            query_granularity = {'type': 'period', 'period': granularity}
+        else:
+            raise ValueError('Unsupported granularity "{0}"'.format(granularity))
+        return query_granularity
+
+    def __validate_intervals__(self, intervals):
+        if not validate_iso_8601_interval(intervals):
+            raise ValueError('Unsupported interval "{0}"'.format(intervals))
+        return intervals
+
+    def timeseries(self, agent_id, process_name, granularity='none',
+            intervals='P6W', descending=False):
+        query_granularity = self.__validate_granularity__(granularity,
+            self.timeseries_granularities)
+        intervals = self.__validate_intervals__(intervals)
+
+        return self.connection.timeseries(
+            datasource='supervisor',
+            granularity=query_granularity,
+            descending= descending,
+            intervals=intervals,
+            aggregations={'cpu': self.__doublemax__('cpu'),
+                'mem': self.__longmax__('mem')},
+            context={'skipEmptyBuckets': 'true'},
+            filter=(Dimension('agent_id') == agent_id) &
+                (Dimension('process_name') == process_name))
+
+    def select(self, agent_id, process_name, granularity='all',
+            intervals='P6W', descending=True):
+        query_granularity = self.__validate_granularity__(granularity,
+            self.select_granularities)
+        intervals = self.__validate_intervals__(intervals)
+
+        return self.connection.select(
+            datasource='supervisor',
+            granularity=query_granularity,
+            intervals=intervals,
+            descending= descending,
+            dimensions=['process_name'],
+            metrics=['cpu', 'mem'],
+            filter=(Dimension('agent_id') == agent_id) &
+                (Dimension('process_name') == process_name),
+            paging_spec={'pagingIdentifiers': {}, "threshold":1}
+        )
 
 dral = DruidAccessLayer()
 
@@ -318,5 +394,11 @@ class PlyQLAccessLayer(object):
             return json.dumps({'error': err.strip()})
         else:
             return out
+
+    def processes(self, agent_id, period='P6W'):
+        return self.query('SELECT process_name AS process, ' \
+            'COUNT() AS count, MAX(__time) AS time FROM supervisor ' \
+            'WHERE agent_id = "{0}" GROUP BY process_name;'
+            .format(agent_id), period)
 
 pal = PlyQLAccessLayer()
