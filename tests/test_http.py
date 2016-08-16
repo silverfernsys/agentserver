@@ -102,14 +102,14 @@ class TestHTTP(AsyncHTTPTestCase):
         self.assertEqual(response.code, 200)
 
     def test_http_token_handler_success(self):
-        headers = {'username':type(self).EMAIL, 'password':type(self).PASSWORD}
+        headers = {'username':self.EMAIL, 'password':self.PASSWORD}
     	response = self.fetch('/token/', method='GET', headers=headers)
         response_data = json.loads(response.body)
         self.assertEqual(response.code, 200)
-        self.assertEqual(type(self).TOKEN, response_data['token'])
+        self.assertEqual(self.TOKEN, response_data['token'])
 
     def test_http_token_handler_failure(self):
-        headers = {'username':type(self).EMAIL, 'password':'gibberish'}
+        headers = {'username':self.EMAIL, 'password':'gibberish'}
         response = self.fetch('/token/', method='GET', headers=headers)
         response_data = json.loads(response.body)
         self.assertEqual(response.code, 400)
@@ -128,7 +128,7 @@ class TestHTTP(AsyncHTTPTestCase):
         self.assertEqual(response_data['error'], 'invalid username/password')
 
     def test_http_status_handler(self):
-        headers = {'authorization':type(self).TOKEN}
+        headers = {'authorization':self.TOKEN}
         response = self.fetch('/status/', method='GET', headers=headers)
         response_data = json.loads(response.body)
         # print('response_data: %s' % response_data)
@@ -136,7 +136,7 @@ class TestHTTP(AsyncHTTPTestCase):
         self.assertEqual(response.code, 200)
 
     def test_http_list_handler(self):
-        headers = {'authorization':type(self).TOKEN}
+        headers = {'authorization':self.TOKEN}
         response = self.fetch('/list/', method='GET', headers=headers)
         response_data = json.loads(response.body)
         print('response_data: %s' % response_data)
@@ -144,7 +144,7 @@ class TestHTTP(AsyncHTTPTestCase):
         self.assertEqual(len(response_data), dal.session.query(Agent).count())
 
     def test_http_detail_handler_success(self):
-        headers = {'authorization':type(self).TOKEN}
+        headers = {'authorization':self.TOKEN}
         body = json.dumps({'id': 1})
         response = self.fetch('/detail/', method='POST', headers=headers, body=body)
         response_data = json.loads(response.body)
@@ -159,7 +159,7 @@ class TestHTTP(AsyncHTTPTestCase):
         self.assertEqual(response.code, 200)
 
     def test_http_detail_handler_failure(self):
-        headers = {'authorization':type(self).TOKEN}
+        headers = {'authorization':self.TOKEN}
         body = json.dumps({'id': 4})
         response = self.fetch('/detail/', method='POST', headers=headers, body=body)
         response_data = json.loads(response.body)
@@ -177,7 +177,7 @@ class TestHTTP(AsyncHTTPTestCase):
         dist_name = 'Ubuntu_update'
         dist_version = '15.04_update'
 
-        headers = {'authorization':type(self).AGENT_TOKEN_0}
+        headers = {'authorization':self.AGENT_TOKEN_0}
         body = json.dumps({
             'hostname': hostname,
             'processor': processor,
@@ -192,7 +192,7 @@ class TestHTTP(AsyncHTTPTestCase):
         self.assertIn('status', response_data)
         self.assertEqual(response_data['status'], 'success')
 
-        token = dal.Session().query(AgentAuthToken).filter(AgentAuthToken.uuid == type(self).AGENT_TOKEN_0).one()
+        token = dal.Session().query(AgentAuthToken).filter(AgentAuthToken.uuid == self.AGENT_TOKEN_0).one()
         detail = token.agent.details
 
         self.assertEqual(detail.hostname, hostname)
@@ -213,7 +213,7 @@ class TestHTTP(AsyncHTTPTestCase):
         dist_name = 'Ubuntu_update'
         dist_version = '15.04_update'
 
-        headers = {'authorization':type(self).AGENT_TOKEN_0}
+        headers = {'authorization':self.AGENT_TOKEN_0}
         body = json.dumps({
             'hostname': hostname,
             'processor': processor,
@@ -241,7 +241,7 @@ class TestHTTP(AsyncHTTPTestCase):
         dist_name = 'Ubuntu'
         dist_version = '14.04'
 
-        headers = {'authorization':type(self).AGENT_TOKEN_1}
+        headers = {'authorization':self.AGENT_TOKEN_1}
         body = json.dumps({
             'hostname': hostname,
             'processor': processor,
@@ -256,7 +256,7 @@ class TestHTTP(AsyncHTTPTestCase):
         self.assertIn('status', response_data)
         self.assertEqual(response_data['status'], 'success')
 
-        token = dal.Session().query(AgentAuthToken).filter(AgentAuthToken.uuid == type(self).AGENT_TOKEN_1).one()
+        token = dal.Session().query(AgentAuthToken).filter(AgentAuthToken.uuid == self.AGENT_TOKEN_1).one()
         detail = token.agent.details
 
         self.assertEqual(detail.hostname, hostname)
@@ -277,7 +277,7 @@ class TestHTTP(AsyncHTTPTestCase):
         dist_name = 'Ubuntu'
         dist_version = '14.04'
 
-        headers = {'authorization':type(self).AGENT_TOKEN_2}
+        headers = {'authorization':self.AGENT_TOKEN_2}
         body = json.dumps({
             'hostname': hostname,
             'processor': processor,
@@ -305,7 +305,7 @@ class TestHTTP(AsyncHTTPTestCase):
         dist_name = 'Ubuntu'
         dist_version = '14.04'
 
-        headers = {'authorization':type(self).AGENT_TOKEN_2}
+        headers = {'authorization':self.AGENT_TOKEN_2}
         body = json.dumps({
             'hostname': hostname,
             'processor': processor,
@@ -326,7 +326,7 @@ class TestHTTP(AsyncHTTPTestCase):
         self.assertEqual(count_before, count_after)
 
     def test_http_agent_update_handler(self):
-        headers = {'authorization': type(self).AGENT_TOKEN_0}
+        headers = {'authorization': self.AGENT_TOKEN_0}
         body = open(os.path.join(FIXTURES_DIR, 'snapshot0.json')).read()
         response = self.fetch('/agent/update/', method='POST', headers=headers, body=body)
         response_data = json.loads(response.body)

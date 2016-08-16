@@ -25,5 +25,3 @@ $ cd /opt/druid
 $ sudo rm -r log var
 $ sudo bin/init
 
-1470558509.893
-1470684878.733821

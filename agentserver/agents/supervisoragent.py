@@ -84,15 +84,3 @@ class SupervisorAgent(object):
         except Exception as e:
             # print(e)
             self.ws.write_message(json.dumps({'status': 'error', 'type': 'unknown message type'}))
-
-    # def add(self, proc):
-    #     if proc.group not in self.processes:
-    #         self.processes[proc.group] = {}
-    #     self.processes[proc.group][proc.name] = proc
-
-    # # A class method generator that yields the contents of the 'processes' dictionary
-    # def all(self):
-    #     for group in self.processes:
-    #         for name in self.processes[group]:
-    #             yield self.processes[group][name]
-    #     raise StopIteration()
