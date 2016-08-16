@@ -1,0 +1,31 @@
+Warning: unable to import Pandas. The export_pandas method will not work.
+[
+  {
+    "timestamp": "2016-08-07T08:25:00.000Z", 
+    "result": {
+      "mem": 4760761, 
+      "cpu": 0.7633769512176514
+    }
+  }, 
+  {
+    "timestamp": "2016-08-07T08:26:00.000Z", 
+    "result": {
+      "mem": 8925984, 
+      "cpu": 0.2875424325466156
+    }
+  }, 
+  {
+    "timestamp": "2016-08-07T08:28:00.000Z", 
+    "result": {
+      "mem": 5347558, 
+      "cpu": 0.31463924050331116
+    }
+  }, 
+  {
+    "timestamp": "2016-08-08T21:59:00.000Z", 
+    "result": {
+      "mem": 3009524, 
+      "cpu": 0.6485667824745178
+    }
+  }
+]

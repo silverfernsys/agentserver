@@ -120,6 +120,14 @@ def datetime_from_dict(dict, prefix=''):
         microsecond=dict.get(prefix + 'microsecond', 0))
 
 
+def validate_timestamp(timestamp):
+    try:
+        datetime.strptime(timestamp, '%Y-%m-%dT%H:%M:%S.%fZ')
+        return True
+    except:
+        return False
+
+
 def uuid():
     return binascii.hexlify(os.urandom(20)).decode()
 

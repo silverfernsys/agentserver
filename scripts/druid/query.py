@@ -18,7 +18,8 @@ if __name__ == '__main__':
 
     timeseries = query.timeseries(
         datasource='supervisor',
-        granularity='none',
+        granularity='minute',
+        # granularity='none',
         # granularity='hour',
         # granularity={'type': 'period', 'period': 'PT2H'},
         descending= False,
@@ -27,18 +28,18 @@ if __name__ == '__main__':
         context={'skipEmptyBuckets': 'true'},
         filter=(Dimension('agent_id') == 1) & (Dimension('process_name') == 'process_1')
     )
-
+    print(type(timeseries.result))
     print(json.dumps(timeseries.result, indent=2))
 
-    select = query.select(
-        datasource='supervisor',
-        granularity='all',
-        intervals=intervals,
-        descending= True,
-        dimensions=['process_name'],
-        metrics=['cpu', 'mem'],
-        filter=(Dimension('agent_id') == 1) & (Dimension('process_name') == 'process_1'),
-        paging_spec={'pagingIdentifiers': {}, "threshold":1}
-    )
+    # select = query.select(
+    #     datasource='supervisor',
+    #     granularity='all',
+    #     intervals=intervals,
+    #     descending= True,
+    #     dimensions=['process_name'],
+    #     metrics=['cpu', 'mem'],
+    #     filter=(Dimension('agent_id') == 1) & (Dimension('process_name') == 'process_1'),
+    #     paging_spec={'pagingIdentifiers': {}, "threshold":5}
+    # )
 
-    print(json.dumps(select.result, indent=2))
+    # print(json.dumps(select.result, indent=2))

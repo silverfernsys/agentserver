@@ -17,7 +17,10 @@ from kafka import KafkaProducer
 from passlib.apps import custom_app_context as pwd_context
 
 from utils import (uuid, validate_iso_8601_period,
-    validate_iso_8601_interval)
+    validate_iso_8601_interval, iso_8601_interval_to_datetimes,
+    iso_8601_period_to_timedelta)
+
+import random
 
 
 Base = declarative_base()
@@ -263,8 +266,8 @@ kal = KafkaAccessLayer()
 
 
 class PyDruidResultMock(object):
-    def __init__(self, result_json):
-        self.result_json = result_json
+    def __init__(self, result):
+        self.result = result
 
 
 class PyDruidMock(object):
@@ -281,15 +284,65 @@ class PyDruidMock(object):
             body = '[]'
         return PyDruidResultMock(body)
 
+    def __granularity_to_timedelta__(self, granularity):
+        if granularity == 'none' or granularity == 'second':
+            return timedelta(seconds=1)
+        elif granularity == 'minute':
+            return timedelta(minutes=1)
+        elif granularity == 'fifteen_minute':
+            return timedelta(minutes=15)
+        elif granularity == 'thirty_minute':
+            return timedelta(minutes=30)
+        elif granularity == 'hour':
+            return timedelta(hours=1)
+        elif granularity == 'day':
+            return timedelta(days=1)
+        elif granularity == 'week':
+            return timedelta(weeks=1)
+        elif granularity == 'month':
+            return timedelta(days=30)
+        elif granularity == 'quarter':
+            return timedelta(days=30 * 4)
+        elif granularity == 'year':
+            return timedelta(days=365)
+        else:
+            return timedelta(hours=1)
+
     def timeseries(self, datasource, granularity, descending, intervals,
         aggregations, context, filter):
         f = Filter.build_filter(filter)
-        body = '[]'
+        if f['type'] == 'and' and f['fields'][0]['type'] == 'selector' and \
+            f['fields'][0]['dimension'] == 'agent_id' and \
+            f['fields'][1]['type'] == 'selector' and \
+            f['fields'][1]['dimension'] == 'process_name':
+            agent_id = f['fields'][0]['value']
+            process_name = f['fields'][1]['value']
+
+            (interval_start, interval_end) = iso_8601_interval_to_datetimes(intervals)
+            if interval_end is None:
+                interval_end = datetime.now()
+
+            if granularity in DruidAccessLayer.timeseries_granularities:
+                query_granularity = self.__granularity_to_timedelta__(granularity)
+            else:
+                query_granularity = iso_8601_period_to_timedelta(granularity['period'])
+
+            body = []
+            curr_time = interval_start
+
+            while curr_time < interval_end:
+                body.append({'timestamp': curr_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                    'result': {'cpu': random.uniform(0, 1),
+                    'mem': random.randint(1, 10000000)}})
+                curr_time += query_granularity
+        else:
+            body = []
         return PyDruidResultMock(body)
 
     def select(self, datasource, granularity, intervals, descending,
         dimensions, metrics, filter, paging_spec):
         f = Filter.build_filter(filter)
+        print('f: %s' % f)
         body = '[]'
         return PyDruidResultMock(body)
 

@@ -46,9 +46,8 @@ class SupervisorProcess(object):
             self.updated = updated
         if state in type(self).States:
             self.state = state
+            data = {'state_update': self.__json__()}
             for client in self.subscribers:
-                data = self.__json__()
-                data.update(id=self.id)
                 client.ws.write_message(json.dumps(data))
 
     def __repr__(self):
@@ -63,7 +62,8 @@ class SupervisorProcess(object):
         else:
             started = type(self).UNKNOWN
 
-        return {'name': self.name, 'updated': self.updated.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+        return {'id': self.id, 'name': self.name,
+            'updated': self.updated.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
             'started': started, 'state': self.state}    
 
 
@@ -115,11 +115,11 @@ class SupervisorClientCoordinator(object):
     def update(self, id, process, started, state, updated=None):
         self.agents[id].processes[process].update(started, state, updated)
 
-    def subscribe(self, client, id, process, granularity='hour', interval='P6W'):
+    def subscribe(self, client, id, process, granularity='P3D', intervals='P6W'):
         dral.__validate_granularity__(granularity, dral.timeseries_granularities)
-        dral.__validate_intervals__(interval)
+        dral.__validate_intervals__(intervals)
 
-        (start, end) = iso_8601_interval_to_datetimes(interval)
+        (start, end) = iso_8601_interval_to_datetimes(intervals)
 
         self.agents[id].processes[process].subscribe(client)
 
@@ -130,10 +130,15 @@ class SupervisorClientCoordinator(object):
                 while client in self.clients:
                     for (id, process) in self.clients[client]:
                         (granularity, (start, end)) = self.updates[(client, id, process)]
-                        dral.timeseries(id, process)
+                        result = dral.timeseries(id, process, granularity=granularity,
+                            intervals=intervals).result
+                        body = {'snapshot_update': {'id': id, 'process': process,
+                            'stats': map(lambda x: {'timestamp': x['timestamp'],
+                            'cpu': x['result']['cpu'], 'mem': x['result']['mem']}, result)}}
+                        client.ws.write_message(json.dumps(body))
+                        # print('result: %s' % result)
                         # Note: when end != None and start > end, remove key from self.updates
-                        print('push_stats')
-                    sleep(1.0)
+                        sleep(1.0)   
                 print('DONE WITH THREAD!')
             thread = threading.Thread(target=push_stats)
             thread.start()

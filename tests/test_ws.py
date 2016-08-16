@@ -30,6 +30,7 @@ except ImportError:
 from ws_helpers import websocket_connect
 from ws import SupervisorAgentHandler, SupervisorClientHandler
 from db import dal, kal, dral, pal, User, UserAuthToken, Agent, AgentAuthToken
+from utils import validate_timestamp
 from clients.supervisorclientcoordinator import scc
 
 
@@ -370,6 +371,15 @@ class SupervisorClientHandlerTest(WebSocketBaseTestCase):
         self.assertEqual(data['status'], 'success')
         self.assertEqual(data['type'], 'command sub accepted')
 
+        response = yield ws_client.read_message()
+        data = json.loads(response)['snapshot_update']
+        self.assertEqual(data['process'], 'process_0')
+        self.assertEqual(data['id'], self.AGENT_ID)
+        for stat in data['stats']:
+            self.assertTrue(validate_timestamp(stat['timestamp']))
+            self.assertTrue(type(stat['cpu']) == float)
+            self.assertTrue(type(stat['mem']) == int)
+
         yield ws_client.write_message(json.dumps({'cmd': 'restart', 'id': self.AGENT_ID, 'process': 'process_0'}))
         response = yield ws_client.read_message()
         data = json.loads(response)
@@ -391,13 +401,22 @@ class SupervisorClientHandlerTest(WebSocketBaseTestCase):
 
         for state in state_0:
             response = yield ws_client.read_message()
-            data = json.loads(response)
-            state_data = json.loads(state)
-            self.assertEqual(data['name'], state_data['state_update']['name'])
-            self.assertEqual(data['state'], state_data['state_update']['statename'])
-            self.assertEqual(data['started'],
-                datetime.utcfromtimestamp(state_data['state_update']['start']). \
-                strftime("%Y-%m-%dT%H:%M:%S.%fZ"))
+            data = json.loads(response)['state_update']
+            sent_data = json.loads(state)['state_update']
+            self.assertEqual(sent_data['name'], data['name'])
+            self.assertEqual(sent_data['statename'], data['state'])
+            self.assertEqual(datetime.utcfromtimestamp(sent_data['start']). \
+                strftime("%Y-%m-%dT%H:%M:%S.%fZ"), data['started'])
+
+        # Wait for another message sent from scc to the client
+        response = yield ws_client.read_message()
+        data = json.loads(response)['snapshot_update']
+        self.assertEqual(data['process'], 'process_0')
+        self.assertEqual(data['id'], self.AGENT_ID)
+        for stat in data['stats']:
+            self.assertTrue(validate_timestamp(stat['timestamp']))
+            self.assertTrue(type(stat['cpu']) == float)
+            self.assertTrue(type(stat['mem']) == int)
 
         ws_client.write_message(json.dumps({'cmd': 'unsub', 'id': self.AGENT_ID, 'process': 'process_0'}))
         response = yield ws_client.read_message()
@@ -410,6 +429,15 @@ class SupervisorClientHandlerTest(WebSocketBaseTestCase):
         data = json.loads(response)
         self.assertEqual(data['status'], 'success')
         self.assertEqual(data['type'], 'command sub accepted')
+
+        response = yield ws_client.read_message()
+        data = json.loads(response)['snapshot_update']
+        self.assertEqual(data['process'], 'process_1')
+        self.assertEqual(data['id'], self.AGENT_ID)
+        for stat in data['stats']:
+            self.assertTrue(validate_timestamp(stat['timestamp']))
+            self.assertTrue(type(stat['cpu']) == float)
+            self.assertTrue(type(stat['mem']) == int)
 
         yield ws_client.write_message(json.dumps({'cmd': 'restart', 'id': self.AGENT_ID, 'process': 'process_1'}))
         response = yield ws_client.read_message()
@@ -432,13 +460,12 @@ class SupervisorClientHandlerTest(WebSocketBaseTestCase):
 
         for state in state_1:
             response = yield ws_client.read_message()
-            data = json.loads(response)
-            state_data = json.loads(state)
-            self.assertEqual(data['name'], state_data['state_update']['name'])
-            self.assertEqual(data['state'], state_data['state_update']['statename'])
-            self.assertEqual(data['started'],
-                datetime.utcfromtimestamp(state_data['state_update']['start']). \
-                strftime("%Y-%m-%dT%H:%M:%S.%fZ"))
+            data = json.loads(response)['state_update']
+            sent_data = json.loads(state)['state_update']
+            self.assertEqual(sent_data['name'], data['name'])
+            self.assertEqual(sent_data['statename'], data['state'])
+            self.assertEqual(datetime.utcfromtimestamp(sent_data['start']). \
+                strftime("%Y-%m-%dT%H:%M:%S.%fZ"), data['started'])
 
         ws_client.close()
         yield self.close_future
