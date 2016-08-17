@@ -5,6 +5,7 @@ from tornado.web import RequestHandler, Finish
 from datetime import datetime
 from sqlalchemy.orm.exc import NoResultFound
 from db import dal, kal, User, UserAuthToken, Agent, AgentDetail, AgentAuthToken
+from clients.supervisorclientcoordinator import scc
 
 SERVER_VERSION = '0.0.1a'
 
@@ -20,33 +21,9 @@ class HTTPVersionHandler(RequestHandler):
 class HTTPCommandHandler(RequestHandler):
     @tornado.web.addslash
     def post(self):
-        print('self.request: %s' % dir(self.request))
+        print('******self.request: %s' % dir(self.request))
         self.set_header('Content-Type', 'application/json')
         self.write(json.dumps({'status': 'success'}))
-
-
-class HTTPStatusHandler(RequestHandler):
-    @tornado.web.addslash
-    def get(self):
-        try:
-            auth_token = self.request.headers.get('authorization')
-            token = dal.Session().query(UserAuthToken).filter(UserAuthToken.uuid == auth_token).one()
-            data = []
-            # for agent in dal.Session().query(Agent):
-            #     if agent.ip in AgentWSHandler.IPs():
-            #         data.append({'agent': agent.ip, 'status': 'online'})
-            #     else:
-            #         data.append({'agent': agent.ip, 'status': 'offline'})
-        except Exception as e:
-            print('Error: %s' % e)
-            try:
-                logger = logging.getLogger('Web Server')
-                logger.error(e)
-            except:
-                pass
-            data = {'error': 'not authorized'}
-        self.set_header('Content-Type', 'application/json')
-        self.write(json.dumps(data))
 
 
 class HTTPListHandler(RequestHandler):
@@ -55,11 +32,6 @@ class HTTPListHandler(RequestHandler):
         try:
             auth_token = self.request.headers.get('authorization')
             token = dal.Session().query(UserAuthToken).filter(UserAuthToken.uuid == auth_token).one()
-            data = []
-
-            for agent in dal.Session().query(Agent):
-                data.append({'id': agent.id, 'name': agent.name,
-                    'created': agent.created_on.strftime("%Y-%m-%dT%H:%M:%SZ")})
         except Exception as e:
             try:
                 logger = logging.getLogger('Web Server')
@@ -68,7 +40,7 @@ class HTTPListHandler(RequestHandler):
                 pass
             data = {'error': 'not authorized'}
         self.set_header('Content-Type', 'application/json')
-        self.write(json.dumps(data))
+        self.write(json.dumps(scc))
 
 
 class HTTPDetailHandler(RequestHandler):
@@ -95,8 +67,8 @@ class HTTPDetailHandler(RequestHandler):
                 'memory': detail.memory,
                 'dist_name': detail.dist_name,
                 'dist_version': detail.dist_version,
-                'updated': detail.updated_on.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                'created': detail.created_on.strftime("%Y-%m-%dT%H:%M:%SZ")}
+                'updated': detail.updated_on.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                'created': detail.created_on.strftime("%Y-%m-%dT%H:%M:%S.%fZ")}
             status = 200
         except Exception as e:
             try:

@@ -8,6 +8,7 @@ from agents.supervisoragent import SupervisorAgent
 from clients.supervisorclient import SupervisorClient
 from clients.supervisorclientcoordinator import scc
 
+
 class SupervisorAgentHandler(tornado.websocket.WebSocketHandler):
     Connections = {}
     IDs = {}

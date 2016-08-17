@@ -4,9 +4,9 @@ import json, mock, os, re, tempfile, time
 from tornado.testing import AsyncHTTPTestCase
 from tornado.web import Application, RequestHandler, url
 
-from http import (HTTPVersionHandler, HTTPStatusHandler,
-    HTTPTokenHandler, HTTPListHandler, HTTPDetailHandler,
-    HTTPDetailCreateUpdateHandler, HTTPAgentUpdateHandler)
+from http import (HTTPVersionHandler, HTTPTokenHandler,
+    HTTPDetailHandler, HTTPCommandHandler, HTTPListHandler,
+    HTTPAgentUpdateHandler, HTTPDetailCreateUpdateHandler)
 
 from db import dal, kal, dral, pal, User, UserAuthToken, Agent, AgentAuthToken, AgentDetail
 from clients.supervisorclientcoordinator import scc
@@ -87,7 +87,7 @@ class TestHTTP(AsyncHTTPTestCase):
     def get_app(self):
         return Application([
             url(r'/', HTTPVersionHandler),
-            url(r'/status/', HTTPStatusHandler),
+            url(r'/command/', HTTPCommandHandler),
             url(r'/token/', HTTPTokenHandler),
             url(r'/list/', HTTPListHandler),
             url(r'/detail/', HTTPDetailHandler),
@@ -127,19 +127,15 @@ class TestHTTP(AsyncHTTPTestCase):
         self.assertEqual(response.code, 400)
         self.assertEqual(response_data['error'], 'invalid username/password')
 
-    def test_http_status_handler(self):
-        headers = {'authorization':self.TOKEN}
-        response = self.fetch('/status/', method='GET', headers=headers)
-        response_data = json.loads(response.body)
-        # print('response_data: %s' % response_data)
-        # self.assertEqual(len(response_data), 3)
-        self.assertEqual(response.code, 200)
-
     def test_http_list_handler(self):
         headers = {'authorization':self.TOKEN}
         response = self.fetch('/list/', method='GET', headers=headers)
         response_data = json.loads(response.body)
-        print('response_data: %s' % response_data)
+        for item in response_data:
+            self.assertTrue('id' in item)
+            self.assertTrue('processes' in item)
+            self.assertTrue('state' in item)
+            self.assertTrue('name' in item)
         self.assertEqual(response.code, 200)
         self.assertEqual(len(response_data), dal.session.query(Agent).count())
 
@@ -147,16 +143,19 @@ class TestHTTP(AsyncHTTPTestCase):
         headers = {'authorization':self.TOKEN}
         body = json.dumps({'id': 1})
         response = self.fetch('/detail/', method='POST', headers=headers, body=body)
-        response_data = json.loads(response.body)
-        self.assertIn('hostname', response_data)
-        self.assertIn('processor', response_data)
-        self.assertIn('num_cores', response_data)
-        self.assertIn('memory', response_data)
-        self.assertIn('dist_name', response_data)
-        self.assertIn('dist_version', response_data)
-        self.assertIn('updated', response_data)
-        self.assertIn('created', response_data)
+        detail = dal.Session().query(AgentAuthToken) \
+            .filter(AgentAuthToken.uuid == self.AGENT_TOKEN_0) \
+            .one().agent.details
+        data = json.loads(response.body)
         self.assertEqual(response.code, 200)
+        self.assertEqual(data['hostname'], detail.hostname)
+        self.assertEqual(data['processor'], detail.processor)
+        self.assertEqual(data['num_cores'], detail.num_cores)
+        self.assertEqual(data['memory'], detail.memory)
+        self.assertEqual(data['dist_name'], detail.dist_name)
+        self.assertEqual(data['dist_version'], detail.dist_version)
+        self.assertEqual(data['updated'], detail.updated_on.strftime('%Y-%m-%dT%H:%M:%S.%fZ'))
+        self.assertEqual(data['created'], detail.created_on.strftime('%Y-%m-%dT%H:%M:%S.%fZ'))
 
     def test_http_detail_handler_failure(self):
         headers = {'authorization':self.TOKEN}
@@ -187,20 +186,21 @@ class TestHTTP(AsyncHTTPTestCase):
             'dist_version': dist_version
         })
         response = self.fetch('/detail/update/', method='POST', headers=headers, body=body)
-        response_data = json.loads(response.body)
+        data = json.loads(response.body)
         self.assertEqual(response.code, 200)
-        self.assertIn('status', response_data)
-        self.assertEqual(response_data['status'], 'success')
+        self.assertEqual(data['status'], 'success')
 
         token = dal.Session().query(AgentAuthToken).filter(AgentAuthToken.uuid == self.AGENT_TOKEN_0).one()
         detail = token.agent.details
 
-        self.assertEqual(detail.hostname, hostname)
-        self.assertEqual(detail.processor, processor)
-        self.assertEqual(detail.num_cores, num_cores)
-        self.assertEqual(detail.memory, memory)
-        self.assertEqual(detail.dist_name, dist_name)
-        self.assertEqual(detail.dist_version, dist_version)
+        self.assertEqual(hostname, detail.hostname)
+        self.assertEqual(processor, detail.processor)
+        self.assertEqual(num_cores, detail.num_cores)
+        self.assertEqual(memory, detail.memory)
+        self.assertEqual(dist_name, detail.dist_name)
+        self.assertEqual(dist_version, detail.dist_version)
+        # self.assertEqual(data['updated'], detail.updated_on.strftime('%Y-%m-%dT%H:%M:%S.%fZ'))
+        # self.assertEqual(data['created'], detail.created_on.strftime('%Y-%m-%dT%H:%M:%S.%fZ'))
 
         count_after = dal.Session().query(AgentDetail).count()
         self.assertEqual(count_before, count_after)
@@ -223,7 +223,6 @@ class TestHTTP(AsyncHTTPTestCase):
         response = self.fetch('/detail/update/', method='POST', headers=headers, body=body)
         response_data = json.loads(response.body)
         self.assertEqual(response.code, 400)
-        self.assertIn('status', response_data)
         self.assertEqual(response_data['status'], 'error')
         self.assertEqual(response_data['error_type'], 'missing value')
         self.assertIn('value', response_data)
