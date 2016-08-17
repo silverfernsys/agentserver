@@ -6,7 +6,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, backref, sessionmaker, validates
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.event import listen
-import enum, os, subprocess, json
+import os, subprocess, json
 
 from pydruid.client import PyDruid
 from pydruid.utils.aggregators import doublesum
@@ -24,92 +24,6 @@ import random
 
 
 Base = declarative_base()
-
-
-class ProcessDetail(Base):
-    __tablename__ = 'processdetails'
-
-    id = Column(Integer(), primary_key=True)
-    agent_id = Column(Integer(), ForeignKey('agents.id'))
-    name = Column(String(), nullable=False)
-    start = Column(DateTime())
-
-    created_on = Column(DateTime(), default=datetime.now)
-
-    agent = relationship("Agent", backref=backref('processdetails'))
-
-    def __repr__(self):
-        return "<ProcessDetail(id='{self.id}', " \
-            "name='{self.name}', " \
-            "agent='{self.agent.name}', " \
-            "start='{self.start}', " \
-            "created_on='{self.created_on}')>".format(self=self)
-
-    @classmethod
-    def update_or_create(self, name, agent_id, start, session=None):
-        if session is None:
-            session = dal.session
-        try:
-            detail = session.query(ProcessDetail) \
-            .filter(ProcessDetail.agent_id == agent_id,
-                    ProcessDetail.name == name).one()
-            if detail.start != start:
-                detail.start = start
-                session.commit()
-        except NoResultFound:
-            detail = ProcessDetail(name=name,
-                agent_id=agent_id, start=start)
-            session.add(detail)
-            session.commit()
-        return detail
-
-    @classmethod
-    def started_from(self, agent_id, start, session=None):
-        if session is None:
-            session = dal.session
-        details = session.query(ProcessDetail) \
-        .filter(ProcessDetail.agent_id == agent_id,
-                ProcessDetail.start >= start)
-        return details
-
-
-class StateEnum(enum.Enum):
-    STOPPED = 'STOPPED'
-    STARTING = 'STARTING'
-    RUNNING = 'RUNNING'
-    BACKOFF = 'BACKOFF'
-    STOPPING = 'STOPPING'
-    EXITED = 'EXITED'
-    FATAL = 'FATAL'
-    UNKNOWN = 'UNKNOWN' 
-
-
-class ProcessState(Base):
-    __tablename__ = 'processstates'
-
-    id = Column(Integer(), primary_key=True)
-    detail_id = Column(Integer(), ForeignKey('processdetails.id'))
-    name = Column(Enum(StateEnum), nullable=False)
-    created_on = Column(DateTime(), default=datetime.now)
-
-    detail = relationship("ProcessDetail", backref=backref('processstates', order_by=desc(created_on)))
-
-    def __repr__(self):
-        return "<ProcessState(id='{self.id}', " \
-            "name='{self.name}', " \
-            "detail='{self.detail.name}', " \
-            "created_on='{self.created_on}')>".format(self=self)
-
-    # @classmethod
-    # def latest(self, detail, session=None):
-    #     if session is None:
-    #         session = dal.session
-    #     try:
-    #         return session.query(ProcessState) \
-    #         .filter(ProcessState.detail_id == detail.id) \
-    #         .order_by(desc(ProcessState.created_on)).one()
-    #     except NoResultFound:
-    #         return None
 
 
 class Agent(Base):

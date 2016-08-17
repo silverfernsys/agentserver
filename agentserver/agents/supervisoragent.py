@@ -3,16 +3,8 @@ from time import time
 from datetime import datetime
 import json
 from sqlalchemy.orm.exc import NoResultFound
-from db import dal, kal, ProcessDetail, ProcessState
+from db import dal, kal
 from clients.supervisorclientcoordinator import scc
-
-
-class ProcessInfo(object):
-    def __init__(self, id, name, start, state):
-        self.id = id
-        self.name = name
-        self.start = start
-        self.state = state
 
 
 class SupervisorAgent(object):
@@ -21,7 +13,6 @@ class SupervisorAgent(object):
         self.ip = self.get_ip(ws.request)
         self.ws = ws
         self.session = dal.Session()
-        self.processes = {}
 
     def get_ip(self, request):
         return request.headers.get("X-Real-IP") or request.remote_ip
@@ -37,25 +28,14 @@ class SupervisorAgent(object):
                 for row in update:
                     name = row['name']
                     start = datetime.utcfromtimestamp(row['start'])
-                    if name in self.processes:
-                        process = self.processes['name']
-                        if process.start != start:
-                            process.start = start
-                            ProcessDetail.update_or_create(name, self.id, start, self.session)
-                    else:
-                        detail = ProcessDetail.update_or_create(name, self.id, start, self.session)
-                        state = ProcessState(detail_id=detail.id, name=row['statename'])
-                        self.session.add(state)
-                        self.session.commit()
-                        process = ProcessInfo(detail.id, name, start, row['statename'])
-                        self.processes['name'] = process
+                    state = row['statename']
+                    scc.update(self.id, name, start, row['statename'],
+                        datetime.utcfromtimestamp(row['stats'][-1][0]))
                     for stat in row['stats']:
-                        msg = {'agent_id': self.id, 'process_id': process.id,
+                        msg = {'agent_id': self.id, 'process_name': name,
                             'timestamp': datetime.utcfromtimestamp(stat[0]).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
                             'cpu': stat[1], 'mem': stat[2]}
                         kal.connection.send('supervisor', msg)
-                    scc.update(self.id, name, start, row['statename'],
-                        datetime.utcfromtimestamp(row['stats'][-1][0]))
                 kal.connection.flush()
                 self.ws.write_message(json.dumps({'status': 'success', 'type': 'snapshot updated'}))
             elif 'state_update' in data:
@@ -63,18 +43,7 @@ class SupervisorAgent(object):
                 name = update['name']
                 state = update['statename']
                 start = datetime.utcfromtimestamp(update['start'])
-                if update['name'] in self.processes:
-                    process = self.processes[name]
-                    process.state = state
-                    process.start = start
-                    ProcessDetail.update_or_create(name, self.id, start, self.session)
-                else:
-                    detail = ProcessDetail.update_or_create(name, self.id, start, self.session)
-                    process = ProcessInfo(detail.id, name, start, state)
-                    state = ProcessState(detail_id=detail.id, name=state)
-                    self.session.add(state)
-                    self.session.commit()
-                scc.update(self.id, name, start, update['statename'], None)
+                scc.update(self.id, name, start, update['statename'], datetime.utcnow())
                 self.ws.write_message(json.dumps({'status': 'success', 'type': 'state updated'}))
             else:
                 self.ws.write_message(json.dumps({'status': 'error', 'type': 'unknown message type'}))

@@ -4,7 +4,7 @@ import tornado.httpserver
 from tornado.web import RequestHandler, Finish
 from datetime import datetime
 from sqlalchemy.orm.exc import NoResultFound
-from db import dal, kal, User, UserAuthToken, Agent, AgentDetail, AgentAuthToken, ProcessDetail
+from db import dal, kal, User, UserAuthToken, Agent, AgentDetail, AgentAuthToken
 
 SERVER_VERSION = '0.0.1a'
 
@@ -191,11 +191,10 @@ class HTTPAgentUpdateHandler(RequestHandler):
         data = tornado.escape.json_decode(self.request.body)['snapshot_update']
         for row in data:
             name = row['name']
-            start = datetime.fromtimestamp(row['start'])
-            process_detail = ProcessDetail.update_or_create(name, self.agent_id, start, self.session)
+            start = datetime.utcfromtimestamp(row['start'])
             for stat in row['stats']:
-                msg = {'agent_id': self.agent_id, 'process_id': process_detail.id,
-                    'timestamp': datetime.fromtimestamp(stat[0]).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                msg = {'agent_id': self.agent_id, 'process_name': name,
+                    'timestamp': datetime.utcfromtimestamp(stat[0]).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
                     'cpu': stat[1], 'mem': stat[2]}
                 kal.connection.send('supervisor', msg)
         kal.connection.flush()
