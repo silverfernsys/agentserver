@@ -74,6 +74,7 @@ class TestHTTP(AsyncHTTPTestCase):
         # print(json.dumps(scc, indent=2))
 
         cls.TOKEN = user.token.uuid
+        cls.AGENT_ID_0 = agent_0.id
         cls.AGENT_TOKEN_0 = agent_0.token.uuid
         cls.AGENT_TOKEN_1 = agent_1.token.uuid
         cls.AGENT_TOKEN_2 = agent_2.token.uuid
@@ -138,6 +139,14 @@ class TestHTTP(AsyncHTTPTestCase):
             self.assertTrue('name' in item)
         self.assertEqual(response.code, 200)
         self.assertEqual(len(response_data), dal.session.query(Agent).count())
+
+    def test_http_command_handler(self):
+        headers = {'authorization':self.TOKEN}
+        body = json.dumps({'cmd': 'restart', 'id': self.AGENT_ID_0,
+            'process': 'process_0'})
+        response = self.fetch('/command/', method='POST', headers=headers, body=body)
+        data = json.loads(response.body)
+        print('test_http_command_handler: %s' % data)
 
     def test_http_detail_handler_success(self):
         headers = {'authorization':self.TOKEN}

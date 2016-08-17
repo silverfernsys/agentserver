@@ -34,7 +34,7 @@ class UserRequestHandler(RequestHandler):
 class HTTPCommandHandler(UserRequestHandler):
     @tornado.web.addslash
     def post(self):
-        print('******self.request: %s' % dir(self.request))
+        print('******self.request.body: %s' % self.request.body)
         self.set_header('Content-Type', 'application/json')
         self.write(json.dumps({'status': 'success'}))
 

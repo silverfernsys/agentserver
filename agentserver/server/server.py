@@ -10,8 +10,10 @@ import tornado.httpserver
 from termcolor import colored, cprint
 from config import config
 from db import dal, kal, dral, pal
-from http import HTTPVersionHandler, HTTPCommandHandler, HTTPStatusHandler, HTTPTokenHandler
-from ws import SupervisorAgentHandler, SupervisorCommandHandler, SupervisorStatusHandler
+from http import (HTTPVersionHandler, HTTPTokenHandler,
+    HTTPDetailHandler, HTTPCommandHandler, HTTPListHandler,
+    HTTPAgentUpdateHandler, HTTPAgentDetailHandler)
+from ws import SupervisorAgentHandler, SupervisorClientHandler
 
 from pyfiglet import figlet_format
 
@@ -34,14 +36,14 @@ class Server():
 
         application = tornado.web.Application([
             (r'/', HTTPVersionHandler),
-            (r'/cmd/', HTTPCommandHandler),
-            (r'/status/', HTTPStatusHandler),
             (r'/token/', HTTPTokenHandler),
-            # Commands and Status handlers
-            (r'/cmd/supervisor/', SupervisorCommandHandler),
-            (r'/status/supervisor/', SupervisorStatusHandler),
-            # Agents
+            (r'/list/', HTTPListHandler),
+            (r'/command/', HTTPCommandHandler),
+            (r'/detail/', HTTPDetailHandler),
+            (r'/agent/update/', HTTPAgentUpdateHandler),
+            (r'/agent/detail/', HTTPAgentDetailHandler),
             (r'/supervisor/', SupervisorAgentHandler),
+            (r'/client/supervisor', SupervisorClientHandler),
         ])
 
         self.max_wait_seconds_before_shutdown = int(config.max_wait_seconds_before_shutdown)
