@@ -129,10 +129,6 @@ class SupervisorAgentHandlerTest(WebSocketBaseTestCase):
         return Application([
             ('/supervisor/', MockSupervisorAgentHandler,
                 dict(close_future=self.close_future)),
-            # ('/cmd/supervisor/', MockSupervisorCommandHandler,
-            #     dict(close_future=self.close_future)),
-            # ('/status/supervisor/', MockSupervisorStatusHandler,
-            #  dict(close_future=self.close_future)),
         ])  
 
     @gen_test

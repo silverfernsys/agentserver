@@ -1,10 +1,11 @@
 #!/usr/bin/env python
-import json, logging
+import json, logging #, ws
 import tornado.httpserver
 from tornado.web import RequestHandler, Finish
 from datetime import datetime
 from sqlalchemy.orm.exc import NoResultFound
 from db import dal, kal, User, UserAuthToken, Agent, AgentDetail, AgentAuthToken
+from ws import SupervisorAgentHandler
 from clients.supervisorclientcoordinator import scc
 
 SERVER_VERSION = '0.0.1a'
@@ -32,11 +33,41 @@ class UserRequestHandler(RequestHandler):
 
 
 class HTTPCommandHandler(UserRequestHandler):
+    SUPERVISOR_COMMANDS = ['start', 'stop', 'restart']
     @tornado.web.addslash
     def post(self):
-        print('******self.request.body: %s' % self.request.body)
+        try:
+            data = json.loads(self.request.body)
+            # print('***data: %s' % data)
+            cmd = data['cmd']
+            agent_id = data['id']
+            process = data['process']
+            if cmd in self.SUPERVISOR_COMMANDS:
+                try:
+                    agent = SupervisorAgentHandler.IDs[agent_id]
+                    agent.command(json.dumps({'cmd': '{0} {1}'.format(cmd, process)}))
+                    data = {'status': 'success', 'type': 'command {cmd} accepted'.format(cmd=cmd)}
+                    status = 200
+                except Exception as e:
+                    # print('***ERROR1')
+                    data = {'status': 'error', 'type': 'agent not connected'}
+                    status = 400
+            else:
+                # print('***ELSE')
+                data = {'status': 'error', 'type': 'unknown command'}
+                status = 400
+        except KeyError as e:
+            data = {'status': 'error', 'type': 'missing argument: {0}'.format(e.message)}
+            status = 400
+        except Exception as e:
+            # print(type(e))
+            # print('***ERROR2')
+            data = {'status': 'error', 'type': 'unknown error'}
+            status = 400
+        # print('!!!WRITE! status: %s, data: %s' % (status, data))
+        self.set_status(status)
         self.set_header('Content-Type', 'application/json')
-        self.write(json.dumps({'status': 'success'}))
+        self.write(json.dumps(data))
 
 
 class HTTPListHandler(UserRequestHandler):

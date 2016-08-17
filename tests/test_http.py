@@ -1,12 +1,17 @@
 # Adapted from https://github.com/tornadoweb/tornado/blob/master/tornado/test/httpclient_test.py
 import json, mock, os, re, tempfile, time
 
-from tornado.testing import AsyncHTTPTestCase
+from tornado.concurrent import Future
+from tornado.testing import AsyncHTTPTestCase, gen_test
 from tornado.web import Application, RequestHandler, url
+from tornado import gen
 
 from http import (HTTPVersionHandler, HTTPTokenHandler,
     HTTPDetailHandler, HTTPCommandHandler, HTTPListHandler,
     HTTPAgentUpdateHandler, HTTPAgentDetailHandler)
+
+from ws_helpers import websocket_connect
+from test_ws import MockSupervisorAgentHandler
 
 from db import dal, kal, dral, pal, User, UserAuthToken, Agent, AgentAuthToken, AgentDetail
 from clients.supervisorclientcoordinator import scc
@@ -75,6 +80,7 @@ class TestHTTP(AsyncHTTPTestCase):
 
         cls.TOKEN = user.token.uuid
         cls.AGENT_ID_0 = agent_0.id
+        cls.AGENT_ID_1 = agent_1.id
         cls.AGENT_TOKEN_0 = agent_0.token.uuid
         cls.AGENT_TOKEN_1 = agent_1.token.uuid
         cls.AGENT_TOKEN_2 = agent_2.token.uuid
@@ -86,6 +92,7 @@ class TestHTTP(AsyncHTTPTestCase):
         dal.session.close()
 
     def get_app(self):
+        self.close_future = Future()
         return Application([
             url(r'/', HTTPVersionHandler),
             url(r'/token/', HTTPTokenHandler),
@@ -94,7 +101,24 @@ class TestHTTP(AsyncHTTPTestCase):
             url(r'/detail/', HTTPDetailHandler),
             url(r'/agent/update/', HTTPAgentUpdateHandler),
             url(r'/agent/detail/', HTTPAgentDetailHandler),
+            ('/supervisor/', MockSupervisorAgentHandler,
+                dict(close_future=self.close_future)),
         ])
+
+    @gen.coroutine
+    def ws_connect(self, path, headers=None, compression_options=None):
+        ws = yield websocket_connect(
+            'ws://127.0.0.1:%d%s' % (self.get_http_port(), path), headers=headers,
+            compression_options=compression_options)
+        raise gen.Return(ws)
+
+    @gen.coroutine
+    def close(self, ws):
+        """Close a websocket connection and wait for the server side.
+        If we don't wait here, there are sometimes leak warnings in the
+        tests."""
+        ws.close()
+        yield self.close_future
 
     def test_http_handler(self):
         response = self.fetch('/', method='GET')
@@ -104,7 +128,7 @@ class TestHTTP(AsyncHTTPTestCase):
 
     def test_http_token_handler_success(self):
         headers = {'username':self.EMAIL, 'password':self.PASSWORD}
-    	response = self.fetch('/token/', method='GET', headers=headers)
+        response = self.fetch('/token/', method='GET', headers=headers)
         response_data = json.loads(response.body)
         self.assertEqual(response.code, 200)
         self.assertEqual(self.TOKEN, response_data['token'])
@@ -140,13 +164,64 @@ class TestHTTP(AsyncHTTPTestCase):
         self.assertEqual(response.code, 200)
         self.assertEqual(len(response_data), dal.session.query(Agent).count())
 
+    def test_http_command_bad_args_handler(self):
+        headers = {'authorization':self.TOKEN}
+        body = json.dumps({'cmd': 'restart', 'id': self.AGENT_ID_1,
+            'process': 'process_0'})
+        response = self.fetch('/command/',
+            method='POST', headers=headers, body=body)
+        data = json.loads(response.body)
+        self.assertEqual(response.code, 400)
+        self.assertEqual(data['status'], 'error')
+        self.assertEqual(data['type'], 'agent not connected')
+
+        body = json.dumps({'cmd': 'unknown', 'id': self.AGENT_ID_1,
+            'process': 'process_0'})
+        response = self.fetch('/command/',
+            method='POST', headers=headers, body=body)
+        data = json.loads(response.body)
+        self.assertEqual(response.code, 400)
+        self.assertEqual(data['status'], 'error')
+        self.assertEqual(data['type'], 'unknown command')
+
+        body = json.dumps({'cmd': 'unknown', 'id': self.AGENT_ID_1})
+        response = self.fetch('/command/',
+            method='POST', headers=headers, body=body)
+        data = json.loads(response.body)
+        self.assertEqual(response.code, 400)
+        self.assertEqual(data['status'], 'error')
+        self.assertEqual(data['type'], 'missing argument: process')
+
+        body = 'junk'
+        response = self.fetch('/command/',
+            method='POST', headers=headers, body=body)
+        data = json.loads(response.body)
+        self.assertEqual(response.code, 400)
+        self.assertEqual(data['status'], 'error')
+        self.assertEqual(data['type'], 'unknown error')
+
+         
+    @gen_test
     def test_http_command_handler(self):
+        ws_agent = yield self.ws_connect('/supervisor/',
+            headers={'authorization': self.AGENT_TOKEN_0})
+
         headers = {'authorization':self.TOKEN}
         body = json.dumps({'cmd': 'restart', 'id': self.AGENT_ID_0,
             'process': 'process_0'})
-        response = self.fetch('/command/', method='POST', headers=headers, body=body)
+        response = yield self.http_client.fetch(self.get_url('/command/'),
+            method='POST', headers=headers, body=body)
         data = json.loads(response.body)
-        print('test_http_command_handler: %s' % data)
+        self.assertEqual(response.code, 200)
+        self.assertEqual(data['status'], 'success')
+        self.assertEqual(data['type'], 'command restart accepted')
+
+        response = yield ws_agent.read_message()
+        response_data = json.loads(response)
+        self.assertEqual(response_data['cmd'], 'restart process_0')
+
+        ws_agent.close()
+        yield self.close_future
 
     def test_http_detail_handler_success(self):
         headers = {'authorization':self.TOKEN}
