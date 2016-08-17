@@ -38,7 +38,6 @@ class HTTPCommandHandler(UserRequestHandler):
     def post(self):
         try:
             data = json.loads(self.request.body)
-            # print('***data: %s' % data)
             cmd = data['cmd']
             agent_id = data['id']
             process = data['process']
@@ -49,22 +48,17 @@ class HTTPCommandHandler(UserRequestHandler):
                     data = {'status': 'success', 'type': 'command {cmd} accepted'.format(cmd=cmd)}
                     status = 200
                 except Exception as e:
-                    # print('***ERROR1')
                     data = {'status': 'error', 'type': 'agent not connected'}
                     status = 400
             else:
-                # print('***ELSE')
                 data = {'status': 'error', 'type': 'unknown command'}
                 status = 400
         except KeyError as e:
             data = {'status': 'error', 'type': 'missing argument: {0}'.format(e.message)}
             status = 400
         except Exception as e:
-            # print(type(e))
-            # print('***ERROR2')
             data = {'status': 'error', 'type': 'unknown error'}
             status = 400
-        # print('!!!WRITE! status: %s, data: %s' % (status, data))
         self.set_status(status)
         self.set_header('Content-Type', 'application/json')
         self.write(json.dumps(data))
