@@ -6,7 +6,7 @@ from tornado.web import Application, RequestHandler, url
 
 from http import (HTTPVersionHandler, HTTPTokenHandler,
     HTTPDetailHandler, HTTPCommandHandler, HTTPListHandler,
-    HTTPAgentUpdateHandler, HTTPDetailCreateUpdateHandler)
+    HTTPAgentUpdateHandler, HTTPAgentDetailHandler)
 
 from db import dal, kal, dral, pal, User, UserAuthToken, Agent, AgentAuthToken, AgentDetail
 from clients.supervisorclientcoordinator import scc
@@ -87,12 +87,12 @@ class TestHTTP(AsyncHTTPTestCase):
     def get_app(self):
         return Application([
             url(r'/', HTTPVersionHandler),
-            url(r'/command/', HTTPCommandHandler),
             url(r'/token/', HTTPTokenHandler),
             url(r'/list/', HTTPListHandler),
+            url(r'/command/', HTTPCommandHandler),
             url(r'/detail/', HTTPDetailHandler),
-            url(r'/detail/update/', HTTPDetailCreateUpdateHandler),
             url(r'/agent/update/', HTTPAgentUpdateHandler),
+            url(r'/agent/detail/', HTTPAgentDetailHandler),
         ])
 
     def test_http_handler(self):
@@ -166,7 +166,7 @@ class TestHTTP(AsyncHTTPTestCase):
         self.assertEqual(response_data['error'], 'invalid id')
         self.assertEqual(response.code, 400)
 
-    def test_http_detail_update_handler(self):
+    def test_http_agent_detail_handler(self):
         count_before = dal.Session().query(AgentDetail).count()
 
         hostname = 'agent_1_update'
@@ -185,7 +185,7 @@ class TestHTTP(AsyncHTTPTestCase):
             'dist_name': dist_name,
             'dist_version': dist_version
         })
-        response = self.fetch('/detail/update/', method='POST', headers=headers, body=body)
+        response = self.fetch('/agent/detail/', method='POST', headers=headers, body=body)
         data = json.loads(response.body)
         self.assertEqual(response.code, 200)
         self.assertEqual(data['status'], 'success')
@@ -205,7 +205,7 @@ class TestHTTP(AsyncHTTPTestCase):
         count_after = dal.Session().query(AgentDetail).count()
         self.assertEqual(count_before, count_after)
 
-    def test_http_detail_update_handler_missing_params(self):
+    def test_http_agent_detail_handler_missing_params(self):
         count_before = dal.Session().query(AgentDetail).count()
 
         hostname = 'agent_1_update'
@@ -220,7 +220,7 @@ class TestHTTP(AsyncHTTPTestCase):
             'dist_name': dist_name,
             'dist_version': dist_version
         })
-        response = self.fetch('/detail/update/', method='POST', headers=headers, body=body)
+        response = self.fetch('/agent/detail/', method='POST', headers=headers, body=body)
         response_data = json.loads(response.body)
         self.assertEqual(response.code, 400)
         self.assertEqual(response_data['status'], 'error')
@@ -230,7 +230,7 @@ class TestHTTP(AsyncHTTPTestCase):
         count_after = dal.Session().query(AgentDetail).count()
         self.assertEqual(count_before, count_after)
 
-    def test_http_detail_create_handler(self):
+    def test_http_agent_detail_handler(self):
         count_before = dal.Session().query(AgentDetail).count()
 
         hostname = 'agent_2'
@@ -249,7 +249,7 @@ class TestHTTP(AsyncHTTPTestCase):
             'dist_name': dist_name,
             'dist_version': dist_version
         })
-        response = self.fetch('/detail/update/', method='POST', headers=headers, body=body)
+        response = self.fetch('/agent/detail/', method='POST', headers=headers, body=body)
         response_data = json.loads(response.body)
         self.assertEqual(response.code, 201)
         self.assertIn('status', response_data)
@@ -268,7 +268,7 @@ class TestHTTP(AsyncHTTPTestCase):
         count_after = dal.Session().query(AgentDetail).count()
         self.assertEqual(count_before + 1, count_after)
 
-    def test_http_detail_create_handler_missing_params(self):
+    def test_http_agent_detail_handler_missing_params(self):
         count_before = dal.Session().query(AgentDetail).count()
 
         hostname = 'agent_2'
@@ -283,7 +283,7 @@ class TestHTTP(AsyncHTTPTestCase):
             'dist_name': dist_name,
             'dist_version': dist_version
         })
-        response = self.fetch('/detail/update/', method='POST', headers=headers, body=body)
+        response = self.fetch('/agent/detail/', method='POST', headers=headers, body=body)
         response_data = json.loads(response.body)
         self.assertEqual(response.code, 400)
         self.assertIn('status', response_data)
@@ -294,7 +294,7 @@ class TestHTTP(AsyncHTTPTestCase):
         count_after = dal.Session().query(AgentDetail).count()
         self.assertEqual(count_before, count_after)
 
-    def test_http_detail_create_handler_incorrect_params(self):
+    def test_http_agent_detail_handler_incorrect_params(self):
         count_before = dal.Session().query(AgentDetail).count()
 
         hostname = 'agent_2'
@@ -313,7 +313,7 @@ class TestHTTP(AsyncHTTPTestCase):
             'dist_name': dist_name,
             'dist_version': dist_version
         })
-        response = self.fetch('/detail/update/', method='POST', headers=headers, body=body)
+        response = self.fetch('/agent/detail/', method='POST', headers=headers, body=body)
         response_data = json.loads(response.body)
         self.assertEqual(response.code, 400)
         self.assertIn('status', response_data)

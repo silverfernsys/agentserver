@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import json
+import json, logging
 import tornado.httpserver
 from tornado.web import RequestHandler, Finish
 from datetime import datetime
@@ -13,12 +13,25 @@ SERVER_VERSION = '0.0.1a'
 class HTTPVersionHandler(RequestHandler):
     @tornado.web.addslash
     def get(self):
-        data = {'version': SERVER_VERSION}
         self.set_header('Content-Type', 'application/json')
-        self.write(json.dumps(data))
+        self.write(json.dumps({'version': SERVER_VERSION}))
 
 
-class HTTPCommandHandler(RequestHandler):
+class UserRequestHandler(RequestHandler):
+    @tornado.web.addslash
+    def prepare(self):
+        try:
+            auth_token = self.request.headers.get('authorization')
+            dal.Session().query(UserAuthToken).filter(UserAuthToken.uuid == auth_token).one()
+        except Exception as e:
+            logging.getLogger('Web Server').error(e)
+            self.set_status(401)
+            self.set_header('Content-Type', 'application/json')
+            self.write(json.dumps({'error': 'not authorized'}))
+            raise Finish()
+
+
+class HTTPCommandHandler(UserRequestHandler):
     @tornado.web.addslash
     def post(self):
         print('******self.request: %s' % dir(self.request))
@@ -26,82 +39,48 @@ class HTTPCommandHandler(RequestHandler):
         self.write(json.dumps({'status': 'success'}))
 
 
-class HTTPListHandler(RequestHandler):
+class HTTPListHandler(UserRequestHandler):
     @tornado.web.addslash
     def get(self):
-        try:
-            auth_token = self.request.headers.get('authorization')
-            token = dal.Session().query(UserAuthToken).filter(UserAuthToken.uuid == auth_token).one()
-        except Exception as e:
-            try:
-                logger = logging.getLogger('Web Server')
-                logger.error(e)
-            except:
-                pass
-            data = {'error': 'not authorized'}
         self.set_header('Content-Type', 'application/json')
         self.write(json.dumps(scc))
 
 
-class HTTPDetailHandler(RequestHandler):
+class HTTPDetailHandler(UserRequestHandler):
     @tornado.web.addslash
     def post(self):
-        try:
-            auth_token = self.request.headers.get('authorization')
-            token = dal.Session().query(UserAuthToken).filter(UserAuthToken.uuid == auth_token).one()
-        except Exception as e:
-            try:
-                logger = logging.getLogger('Web Server')
-                logger.error(e)
-            except:
-                pass
-            data = {'error': 'not authorized'}
-            status = 403
-        try:
-            print('REQUEST.BODY: %s' % self.request.body)
-            agent_id = tornado.escape.json_decode(self.request.body)['id']
-            detail = dal.Session().query(AgentDetail).filter(AgentDetail.agent_id == agent_id).one()
-            data = {'hostname': detail.hostname,
-                'processor': detail.processor,
-                'num_cores': detail.num_cores,
-                'memory': detail.memory,
-                'dist_name': detail.dist_name,
-                'dist_version': detail.dist_version,
-                'updated': detail.updated_on.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
-                'created': detail.created_on.strftime("%Y-%m-%dT%H:%M:%S.%fZ")}
-            status = 200
-        except Exception as e:
-            try:
-                logger = logging.getLogger('Web Server')
-                logger.error(e)
-            except:
-                pass
-            data = {'error': 'invalid id'}
-            status = 400
-        self.set_status(status)
         self.set_header('Content-Type', 'application/json')
-        self.write(json.dumps(data))
+        try:
+            agent_id = tornado.escape.json_decode(self.request.body)['id']
+            detail = AgentDetail.detail_for_agent_id(agent_id)
+            self.write(json.dumps(detail))
+        except Exception as e:
+            logging.getLogger('Web Server').error(e)
+            self.set_status(400)
+            self.write(json.dumps({'error': 'invalid id'}))
 
 
-class HTTPDetailCreateUpdateHandler(RequestHandler):
+class HTTPAgentHandler(RequestHandler):
     @tornado.web.addslash
-    def post(self):
-        session = dal.Session()
+    def prepare(self):
+        self.session = dal.Session()
         try:
             auth_token = self.request.headers.get('authorization')
-            token = session.query(AgentAuthToken).filter(AgentAuthToken.uuid == auth_token).one()
+            self.agent = Agent.authorize(auth_token, self.session)
         except Exception as e:
-            print('EXCEPTION: %s' % e)
-            try:
-                logger = logging.getLogger('Web Server')
-                logger.error(e)
-            except:
-                pass
-            data = {'status': 'error', 'error_type': 'not authorized'}
-            status = 401
+            logging.getLogger('Web Server').error(e)
+            self.set_status(401)
+            self.set_header('Content-Type', 'application/json')
+            self.write(json.dumps({'status': 'error', 'error_type': 'not authorized'}))
+            raise Finish()
+
+
+class HTTPAgentDetailHandler(HTTPAgentHandler):
+    @tornado.web.addslash
+    def post(self):
         try:
             data = tornado.escape.json_decode(self.request.body)
-            detail = token.agent.details
+            detail = self.agent.details
             if detail:
                 detail.hostname = data['hostname']
                 detail.processor = data['processor']
@@ -111,16 +90,16 @@ class HTTPDetailCreateUpdateHandler(RequestHandler):
                 detail.dist_version = data['dist_version']
                 status = 200
             else:
-                detail = AgentDetail(agent=token.agent,
+                detail = AgentDetail(agent=self.agent,
                     hostname=data['hostname'],
                     processor=data['processor'],
                     num_cores=int(data['num_cores']),
                     memory=int(data['memory']),
                     dist_name=data['dist_name'],
                     dist_version=data['dist_version'])
-                session.add(detail)
+                self.session.add(detail)
                 status = 201
-            session.commit()
+            self.session.commit()
             data = {'status': 'success'}
         except KeyError as e:
             status = 400
@@ -136,61 +115,39 @@ class HTTPDetailCreateUpdateHandler(RequestHandler):
         self.write(json.dumps(data))
 
 
-class HTTPAgentUpdateHandler(RequestHandler):
+class HTTPAgentUpdateHandler(HTTPAgentHandler):
     @tornado.web.addslash
-    def prepare(self):
-        self.session = dal.Session()
-        try:
-            auth_token = self.request.headers.get('authorization')
-            self.token = self.session.query(AgentAuthToken) \
-            .filter(AgentAuthToken.uuid == auth_token).one()
-            self.agent_id = self.token.agent.id
-        except Exception as e:
-            print('EXCEPTION: %s' % e)
-            try:
-                logger = logging.getLogger('Web Server')
-                logger.error(e)
-            except:
-                pass
-            data = {'status': 'error', 'error_type': 'not authorized'}
-            status = 401
-            self.set_status(status)
-            self.set_header('Content-Type', 'application/json')
-            self.write(json.dumps(data))
-            raise Finish()
-
     def post(self):
         data = tornado.escape.json_decode(self.request.body)['snapshot_update']
         for row in data:
             name = row['name']
             start = datetime.utcfromtimestamp(row['start'])
             for stat in row['stats']:
-                msg = {'agent_id': self.agent_id, 'process_name': name,
+                msg = {'agent_id': self.agent.id, 'process_name': name,
                     'timestamp': datetime.utcfromtimestamp(stat[0]).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
                     'cpu': stat[1], 'mem': stat[2]}
                 kal.connection.send('supervisor', msg)
         kal.connection.flush()
-        data = {'status': 'success'}
-        status = 200
-        self.set_status(status)
+        self.set_status(200)
         self.set_header('Content-Type', 'application/json')
-        self.write(json.dumps(data))
+        self.write(json.dumps({'status': 'success'}))
 
 
 class HTTPTokenHandler(RequestHandler):
     @tornado.web.addslash
     def get(self):
         try:
+            session = dal.Session()
             username = self.request.headers.get('username')
             password = self.request.headers.get('password')
-            user = dal.Session().query(User).filter(User.email == username).one()
+            user = session.query(User).filter(User.email == username).one()
             if user.authenticates(password):
                 try:
-                    token = dal.Session().query(UserAuthToken).filter(UserAuthToken.user == user).one()
+                    token = session.query(UserAuthToken).filter(UserAuthToken.user == user).one()
                 except:
                     token = UserAuthToken(user=user)
-                    dal.session.add(token)
-                    dal.session.commit()
+                    session.add(token)
+                    session.commit()
                 data = {'token': token.uuid}
                 status = 200
             else:

@@ -33,18 +33,18 @@ class Agent(Base):
     name = Column(String(), nullable=False)
     created_on = Column(DateTime(), default=datetime.now)
 
+    @classmethod
+    def authorize(cls, authorization_token, session=None):
+        if not session:
+            session = dal.Session()
+        return session.query(AgentAuthToken) \
+            .filter(AgentAuthToken.uuid == authorization_token) \
+            .one().agent
+
     def __repr__(self):
         return "<Agent(id='{self.id}', " \
             "name='{self.name}', " \
             "created_on='{self.created_on}')>".format(self=self)
-
-    def process_states(self, delta=timedelta(weeks=6), session=None):
-        if session is None:
-            session = dal.session
-        details = session.query(ProcessDetail) \
-                    .filter(ProcessDetail.agent_id == self.id) \
-                    .all()
-        return details
 
 
 class AgentDetail(Base):
@@ -63,6 +63,11 @@ class AgentDetail(Base):
 
     agent = relationship("Agent", backref=backref('details', uselist=False))
 
+    @classmethod
+    def detail_for_agent_id(cls, id):
+        return dal.Session().query(AgentDetail) \
+            .filter(AgentDetail.agent_id == id).one()
+
     def __repr__(self):
         return "<AgentDetail(id='{self.id}', " \
             "agent_id='{self.agent_id}', " \
@@ -74,6 +79,16 @@ class AgentDetail(Base):
             "dist_version='{self.dist_version}', " \
             "updated_on='{self.updated_on}, '" \
             "created_on='{self.created_on}')>".format(self=self)
+
+    def __json__(self):
+        return {'hostname': self.hostname,
+            'processor': self.processor,
+            'num_cores': self.num_cores,
+            'memory': self.memory,
+            'dist_name': self.dist_name,
+            'dist_version': self.dist_version,
+            'updated': self.updated_on.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+            'created': self.created_on.strftime("%Y-%m-%dT%H:%M:%S.%fZ")}
 
 
 class AgentAuthToken(Base):
