@@ -25,9 +25,6 @@ class TestApp(unittest.TestCase):
         config.resolveArgs(MockArgs(cls.tmp_file))
         cls.admin = Admin()
 
-    def setUp(self):
-        dal.session = dal.Session()
-
     def tearDown(self):
         try:
             dal.session.query(User).delete()

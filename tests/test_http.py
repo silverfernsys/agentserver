@@ -32,7 +32,6 @@ class TestHTTP(AsyncHTTPTestCase):
     @mock.patch('db.pal.query', side_effect=pal_mock_query)
     def setUpClass(cls, mock_query):
         dal.connect('sqlite:///:memory:')
-        dal.session = dal.Session()
         kal.connect('debug')
         dral.connect('debug')
         pal.connect('debug')
@@ -166,6 +165,7 @@ class TestHTTP(AsyncHTTPTestCase):
 
     def test_http_command_bad_args_handler(self):
         headers = {'authorization':self.TOKEN}
+        # Unconnected agent
         body = json.dumps({'cmd': 'restart', 'id': self.AGENT_ID_1,
             'process': 'process_0'})
         response = self.fetch('/command/',
@@ -175,6 +175,7 @@ class TestHTTP(AsyncHTTPTestCase):
         self.assertEqual(data['status'], 'error')
         self.assertEqual(data['type'], 'agent not connected')
 
+        # Unknown command
         body = json.dumps({'cmd': 'unknown', 'id': self.AGENT_ID_1,
             'process': 'process_0'})
         response = self.fetch('/command/',
@@ -184,7 +185,8 @@ class TestHTTP(AsyncHTTPTestCase):
         self.assertEqual(data['status'], 'error')
         self.assertEqual(data['type'], 'unknown command')
 
-        body = json.dumps({'cmd': 'unknown', 'id': self.AGENT_ID_1})
+        # Missing argument
+        body = json.dumps({'cmd': 'restart', 'id': self.AGENT_ID_1})
         response = self.fetch('/command/',
             method='POST', headers=headers, body=body)
         data = json.loads(response.body)
@@ -192,6 +194,7 @@ class TestHTTP(AsyncHTTPTestCase):
         self.assertEqual(data['status'], 'error')
         self.assertEqual(data['type'], 'missing argument: process')
 
+        # Bad json
         body = 'junk'
         response = self.fetch('/command/',
             method='POST', headers=headers, body=body)
@@ -199,8 +202,7 @@ class TestHTTP(AsyncHTTPTestCase):
         self.assertEqual(response.code, 400)
         self.assertEqual(data['status'], 'error')
         self.assertEqual(data['type'], 'unknown error')
-
-         
+      
     @gen_test
     def test_http_command_handler(self):
         ws_agent = yield self.ws_connect('/supervisor/',

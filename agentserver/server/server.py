@@ -14,6 +14,7 @@ from http import (HTTPVersionHandler, HTTPTokenHandler,
     HTTPDetailHandler, HTTPCommandHandler, HTTPListHandler,
     HTTPAgentUpdateHandler, HTTPAgentDetailHandler)
 from ws import SupervisorAgentHandler, SupervisorClientHandler
+from clients.supervisorclientcoordinator import scc
 
 from pyfiglet import figlet_format
 
@@ -33,6 +34,7 @@ class Server():
         pal.connect(config.druid)
     	self.session = dal.Session()
         self.logger = logging.getLogger('Web Server')
+        scc.initialize()
 
         application = tornado.web.Application([
             (r'/', HTTPVersionHandler),

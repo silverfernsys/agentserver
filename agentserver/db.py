@@ -160,6 +160,7 @@ class DataAccessLayer:
         self.engine = None
         self.Session = None
         self.conn_string = None
+        self.session = None
 
     def connect(self, conn_string=None):
         self.conn_string = conn_string
@@ -167,6 +168,7 @@ class DataAccessLayer:
             self.engine = create_engine(self.conn_string)
             Base.metadata.create_all(self.engine)
             self.Session = sessionmaker(bind=self.engine)
+            self.session = self.Session()
 
 dal = DataAccessLayer()
 

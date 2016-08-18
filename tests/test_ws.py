@@ -65,7 +65,6 @@ class WebSocketBaseTestCase(AsyncHTTPTestCase):
     @classmethod
     def setUpClass(cls):
         dal.connect('sqlite:///:memory:')
-        dal.session = dal.Session()
         kal.connect('debug')
 
     @classmethod

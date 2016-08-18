@@ -9,7 +9,6 @@ class TestDb(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         dal.connect('sqlite:///:memory:')
-        dal.session = dal.Session()
 
     @classmethod
     def tearDownClass(cls):

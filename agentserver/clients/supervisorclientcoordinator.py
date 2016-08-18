@@ -21,15 +21,15 @@ class SupervisorProcess(object):
     States = set([STOPPED, STARTING, RUNNING, BACKOFF,
         STOPPING, EXITED, FATAL, UNKNOWN])
 
-    def __init__(self, id, name, updated, state=None):
+    def __init__(self, id, name, started, updated, state=None):
         self.id = id
         self.name = name
-        self.started = None
+        self.started = started
         self.updated = updated
         if state:
             self.state = state
         else:
-            self.state = SupervisorProcess.UNKNOWN
+            self.state = self.UNKNOWN
         self.subscribers = []
 
     def subscribe(self, client):
@@ -44,7 +44,7 @@ class SupervisorProcess(object):
         self.started = started
         if updated:
             self.updated = updated
-        if state in type(self).States:
+        if state in self.States:
             self.state = state
             data = {'state_update': self.__json__()}
             for client in self.subscribers:
@@ -60,10 +60,14 @@ class SupervisorProcess(object):
         if self.started:
             started = self.started.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
         else:
-            started = type(self).UNKNOWN
+            started = self.UNKNOWN
 
-        return {'id': self.id, 'name': self.name,
-            'updated': self.updated.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+        if self.updated:
+            updated = self.updated.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        else:
+            updated = self.UNKNOWN
+
+        return {'id': self.id, 'name': self.name, 'updated': updated,
             'started': started, 'state': self.state}    
 
 
@@ -105,7 +109,7 @@ class SupervisorClientCoordinator(object):
             info = AgentInfo(agent)
             result = pal.processes(agent.id, 'P6W')
             for row in json.loads(result):
-                info.add(SupervisorProcess(info.id, row['process'],
+                info.add(SupervisorProcess(info.id, row['process'], None,
                     datetime.utcfromtimestamp(float(row['time'])/1000.0)))
             self.agents[info.id] = info
 
@@ -113,7 +117,10 @@ class SupervisorClientCoordinator(object):
         print('SupervisorClientCoordinator.destroy()')
 
     def update(self, id, process, started, state, updated=None):
-        self.agents[id].processes[process].update(started, state, updated)
+        if process not in self.agents[id].processes:
+            self.agents[id].add(SupervisorProcess(id, process, started, state, updated))
+        else:
+            self.agents[id].processes[process].update(started, state, updated)
 
     def subscribe(self, client, id, process, granularity='P3D', intervals='P6W'):
         dral.__validate_granularity__(granularity, dral.timeseries_granularities)

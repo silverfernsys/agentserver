@@ -24,5 +24,6 @@ supervisor> reload
 Now create a new administrative user (don't forget to select 'Y' when prompted make user administrator), then add agents and agent tokens so that agents can connect to the server. Consult agentserveradmin.py --help for more information on commands.
 
 TODOs:
-Add SupervisorClientCoordinator code to HTTP methods.
-
+Add tests to add process to SupervisorClientCoordinator that doesn't exist when scc is initialized.
+Add test to save system stats via websocket.
+Fix exception when scc.update called when len(row['stats']) == 0 in SupervisorAgent.
