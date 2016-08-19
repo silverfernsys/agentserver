@@ -3,7 +3,7 @@ import json, logging
 from time import time
 from datetime import datetime
 from sqlalchemy.orm.exc import NoResultFound
-from db import dal, kal
+from db import dal, kal, AgentDetail
 from clients.supervisorclientcoordinator import scc
 
 
@@ -53,12 +53,13 @@ class SupervisorAgent(object):
                 self.ws.write_message(json.dumps({'status': 'success', 'type': 'state updated'}))
             elif 'system_stats' in data:
                 system_stats = data['system_stats']
-                print('SYSTEM_STATS: %s' % system_stats)
+                created = AgentDetail.update_or_create(self.id, **system_stats)
+                self.ws.write_message(json.dumps({'status': 'success', 'type': 'system stats updated'}))
             else:
                 self.ws.write_message(json.dumps({'status': 'error', 'type': 'unknown message type'}))
         except ValueError as e:
-            print('**ValueError: %s' % e)
+            # print('**ValueError: %s' % e)
             self.ws.write_message(json.dumps({'status': 'error', 'type': 'unknown message type'}))
         except Exception as e:
-            print('**Exception: %s' % e)
+            # print('**Exception: %s, type: %s, dir: %s' % (e, type(e), dir(e)))
             self.ws.write_message(json.dumps({'status': 'error', 'type': 'unknown message type'}))

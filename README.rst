@@ -25,5 +25,3 @@ Now create a new administrative user (don't forget to select 'Y' when prompted m
 
 TODOs:
 Add tests to add process to SupervisorClientCoordinator that doesn't exist when scc is initialized.
-Add test to save system stats via websocket.
-Fix exception when scc.update called when len(row['stats']) == 0 in SupervisorAgent.

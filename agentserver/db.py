@@ -68,6 +68,30 @@ class AgentDetail(Base):
         return dal.Session().query(AgentDetail) \
             .filter(AgentDetail.agent_id == id).one()
 
+    @classmethod
+    def update_or_create(cls, id, dist_name, dist_version,
+        hostname, num_cores, memory, processor, session=None):
+        if not session:
+            session = dal.session
+        try:
+            detail = session.query(AgentDetail) \
+                .filter(AgentDetail.agent_id == id).one()
+            detail.hostname=hostname
+            detail.processor=processor
+            detail.num_cores=num_cores
+            detail.memory=memory
+            detail.dist_name=dist_name
+            detail.dist_version=dist_version
+            session.commit()
+            return False
+        except NoResultFound:
+            session.add(AgentDetail(agent_id = id,
+                hostname=hostname, processor=processor,
+                num_cores=num_cores, memory=memory,
+                dist_name=dist_name, dist_version=dist_version))
+            session.commit()
+            return True
+
     def __repr__(self):
         return "<AgentDetail(id='{self.id}', " \
             "agent_id='{self.agent_id}', " \
@@ -274,7 +298,7 @@ class PyDruidMock(object):
         dimensions, metrics, filter, paging_spec):
         f = Filter.build_filter(filter)
         print('f: %s' % f)
-        body = '[]'
+        body = []
         return PyDruidResultMock(body)
 
 

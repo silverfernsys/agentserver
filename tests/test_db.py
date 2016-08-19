@@ -2,7 +2,8 @@
 import unittest
 from datetime import datetime
 from sqlalchemy.exc import IntegrityError
-from db import dal, User, UserAuthToken, Agent, AgentAuthToken
+from db import (dal, User, UserAuthToken, Agent,
+    AgentAuthToken, AgentDetail)
 
 
 class TestDb(unittest.TestCase):
@@ -53,6 +54,8 @@ class TestDb(unittest.TestCase):
 
     def test_agents_and_agent_tokens(self):
         # Generate agents and tokens
+        agents_before = dal.session.query(Agent).count()
+        agent_tokens_before = dal.session.query(AgentAuthToken).count()
         agent = Agent(name='Agent 0')
 
         dal.session.add_all([
@@ -61,11 +64,35 @@ class TestDb(unittest.TestCase):
             AgentAuthToken(agent=Agent(name='Agent 2'))])
         dal.session.commit()
 
-        self.assertEqual(dal.session.query(Agent).count(), 3)
-        self.assertEqual(dal.session.query(AgentAuthToken).count(), 3)
+        self.assertEqual(dal.session.query(Agent).count(),
+            agents_before + 3)
+        self.assertEqual(dal.session.query(AgentAuthToken).count(),
+            agent_tokens_before + 3)
 
         dal.session.delete(dal.session.query(Agent).get(agent.id))
         dal.session.commit()
 
-        self.assertEqual(dal.session.query(Agent).count(), 2)
-        self.assertEqual(dal.session.query(AgentAuthToken).count(), 2)
+        self.assertEqual(dal.session.query(Agent).count(),
+            agents_before + 2)
+        self.assertEqual(dal.session.query(AgentAuthToken).count(),
+            agent_tokens_before + 2)
+
+    def test_agent_detail(self):
+        agent = Agent(name='Agent')
+        dal.session.add(agent)
+        dal.session.commit()
+
+        self.assertEqual(dal.session.query(AgentDetail).count(), 0)
+        args = {'dist_name': 'Ubuntu', 'dist_version': '15.10',
+            'hostname': 'client', 'num_cores': 3,
+            'memory': 1040834560, 'processor': 'x86_64'}
+        created = AgentDetail.update_or_create(agent.id, **args)
+        self.assertTrue(created)
+        self.assertEqual(dal.session.query(AgentDetail).count(), 1)
+
+        args = {'dist_name': 'Debian', 'dist_version': '7.0',
+            'hostname': 'client2', 'num_cores': 6,
+            'memory': 8888888, 'processor': 'amd64'}
+        created = AgentDetail.update_or_create(agent.id, **args)
+        self.assertFalse(created)
+        self.assertEqual(dal.session.query(AgentDetail).count(), 1)

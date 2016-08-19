@@ -26,7 +26,6 @@ class SupervisorAgentHandler(tornado.websocket.WebSocketHandler):
                     supervisor_agent = SupervisorAgent(agent.id, self)
                     self.IDs[agent.id] = supervisor_agent
                     self.Connections[self] = supervisor_agent
-                    print('AGENT CONNECTED!')
                 else:
                     self.close()
             except NoResultFound:

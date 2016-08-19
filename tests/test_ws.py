@@ -29,7 +29,7 @@ except ImportError:
 
 from ws_helpers import websocket_connect
 from ws import SupervisorAgentHandler, SupervisorClientHandler
-from db import dal, kal, dral, pal, User, UserAuthToken, Agent, AgentAuthToken
+from db import dal, kal, dral, pal, User, UserAuthToken, Agent, AgentDetail, AgentAuthToken
 from utils import validate_timestamp
 from clients.supervisorclientcoordinator import scc
 
@@ -246,7 +246,8 @@ class SupervisorAgentHandlerTest(WebSocketBaseTestCase):
 
     @gen_test
     def test_state_update_missing_values(self):
-        state = json.dumps({"state_update":{"group": "celery", "statename": "STOPPING", "pid": "8593", "start": 1460513750, "state": 40}})
+        state = json.dumps({"state_update":{"group": "celery", "statename": "STOPPING",
+            "pid": "8593", "start": 1460513750, "state": 40}})
 
         client = yield self.ws_connect('/supervisor/',
             headers={'authorization': self.AGENT_TOKEN})
@@ -262,6 +263,34 @@ class SupervisorAgentHandlerTest(WebSocketBaseTestCase):
 
         self.assertEqual(len(SupervisorAgentHandler.Connections.keys()), 0, "0 websocket connections.")
         self.assertEqual(len(SupervisorAgentHandler.IDs.keys()), 0, "0 websocket connections.")
+
+    @gen_test
+    def test_system_stats(self):
+        stats = json.dumps({'system_stats': {'dist_name': 'Ubuntu',
+            'dist_version': '15.10', 'hostname': 'client', 'num_cores': 3,
+            'memory': 1040834560, 'processor': 'x86_64'}})
+
+        agent = yield self.ws_connect('/supervisor/',
+            headers={'authorization': self.AGENT_TOKEN})
+
+        agent.write_message(stats)
+        response = yield agent.read_message()
+        data = json.loads(response)
+        self.assertEqual(data['status'], 'success')
+        self.assertEqual(data['type'], 'system stats updated')
+
+        # missing num_cores
+        incomplete_stats = json.dumps({'system_stats': {'dist_name': 'Ubuntu',
+            'dist_version': '15.10', 'hostname': 'client',
+            'memory': 1040834560, 'processor': 'x86_64'}})
+        agent.write_message(incomplete_stats)
+        response = yield agent.read_message()
+        data = json.loads(response)
+        self.assertEqual(data['status'], 'error')
+        self.assertEqual(data['type'], 'unknown message type')
+
+        agent.close()
+        yield self.close_future
 
 
 class SupervisorAgentMock(object):
