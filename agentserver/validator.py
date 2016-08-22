@@ -1,4 +1,14 @@
 from cerberus import Validator
+from clients.constants import *
+# from clients.supervisorclient import (SUPERVISOR_COMMANDS,
+# 	SUBSCRIBE_COMMAND, UNSUBSCRIBE_COMMAND)
+
+# from clients.supervisorclient import SupervisorClient
+# import clients.supervisorclient
+# from clients import supervisorclient
+# from clients import (supervisorclient.SUPERVISOR_COMMANDS as SUPERVISOR_COMMANDS,
+# 	supervisorclient.SUBSCRIBE_COMMAND as SUBSCRIBE_COMMAND,
+# 	supervisorclient.UNSUBSCRIBE_COMMAND as UNSUBSCRIBE_COMMAND)
 
 system_stats_schema = {
 	'dist_name': {'type': 'string', 'required': True},
@@ -45,3 +55,13 @@ snapshot_schema = {
 }
 
 snapshot_validator = Validator(snapshot_schema)
+
+
+cmd_schema = {
+    'cmd': {'type': 'string', 'required': True,
+        'allowed': SUPERVISOR_COMMANDS + [SUBSCRIBE_COMMAND] + [UNSUBSCRIBE_COMMAND]},
+    'id': {'type': 'integer', 'required': True},
+    'process': {'type': 'string', 'required': True}
+}
+
+cmd_validator = Validator(cmd_schema)

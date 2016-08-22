@@ -171,19 +171,22 @@ class TestHTTP(AsyncHTTPTestCase):
         response = self.fetch('/command/',
             method='POST', headers=headers, body=body)
         data = json.loads(response.body)
+        expected_data = {'status': 'error', 'errors':
+            [{'arg': self.AGENT_ID_1, 'details': 'agent not connected'}]}
         self.assertEqual(response.code, 400)
-        self.assertEqual(data['status'], 'error')
-        self.assertEqual(data['type'], 'agent not connected')
+        self.assertEqual(data, expected_data)
 
-        # Unknown command
-        body = json.dumps({'cmd': 'unknown', 'id': self.AGENT_ID_1,
-            'process': 'process_0'})
+        # Unknown command and missing argument
+        body = json.dumps({'cmd': 'unknown', 'id': self.AGENT_ID_1})
         response = self.fetch('/command/',
             method='POST', headers=headers, body=body)
         data = json.loads(response.body)
         self.assertEqual(response.code, 400)
         self.assertEqual(data['status'], 'error')
-        self.assertEqual(data['type'], 'unknown command')
+        errors = [{'details': 'unallowed value unknown', 'arg': 'cmd'},
+            {'details': 'required field', 'arg': 'process'}]
+        self.assertEqual(sorted(data['errors'], key=lambda x: x['arg']),
+            sorted(errors, key=lambda x: x['arg']))
 
         # Missing argument
         body = json.dumps({'cmd': 'restart', 'id': self.AGENT_ID_1})
@@ -192,7 +195,8 @@ class TestHTTP(AsyncHTTPTestCase):
         data = json.loads(response.body)
         self.assertEqual(response.code, 400)
         self.assertEqual(data['status'], 'error')
-        self.assertEqual(data['type'], 'missing argument: process')
+        errors = [{'details': 'required field', 'arg': 'process'}]
+        self.assertEqual(data['errors'], errors)
 
         # Bad json
         body = 'junk'
@@ -201,7 +205,7 @@ class TestHTTP(AsyncHTTPTestCase):
         data = json.loads(response.body)
         self.assertEqual(response.code, 400)
         self.assertEqual(data['status'], 'error')
-        self.assertEqual(data['type'], 'unknown error')
+        self.assertEqual(data['errors'], [{'details': 'invalid json'}])
       
     @gen_test
     def test_http_command_handler(self):
@@ -216,7 +220,7 @@ class TestHTTP(AsyncHTTPTestCase):
         data = json.loads(response.body)
         self.assertEqual(response.code, 200)
         self.assertEqual(data['status'], 'success')
-        self.assertEqual(data['type'], 'command restart accepted')
+        self.assertEqual(data['details'], 'command restart accepted')
 
         response = yield ws_agent.read_message()
         response_data = json.loads(response)

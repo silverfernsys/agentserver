@@ -18,8 +18,9 @@ class SupervisorAgent(object):
     def get_ip(self, request):
         return request.headers.get("X-Real-IP") or request.remote_ip
 
-    def command(self, message):
-        self.ws.write_message(message)
+    def command(self, cmd, process):
+        # message = {'cmd': 'restart web'}
+        self.ws.write_message(json.dumps({'cmd': '{0} {1}'.format(cmd, process)}))
 
     def update(self, message):
         try:

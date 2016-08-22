@@ -7,6 +7,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from db import dal, kal, User, UserAuthToken, Agent, AgentDetail, AgentAuthToken
 from ws import SupervisorAgentHandler
 from clients.supervisorclientcoordinator import scc
+from validator import cmd_validator
 
 SERVER_VERSION = '0.0.1a'
 
@@ -33,31 +34,24 @@ class UserRequestHandler(RequestHandler):
 
 
 class HTTPCommandHandler(UserRequestHandler):
-    SUPERVISOR_COMMANDS = ['start', 'stop', 'restart']
     @tornado.web.addslash
     def post(self):
         try:
             data = json.loads(self.request.body)
-            cmd = data['cmd']
-            agent_id = data['id']
-            process = data['process']
-            if cmd in self.SUPERVISOR_COMMANDS:
-                try:
-                    agent = SupervisorAgentHandler.IDs[agent_id]
-                    agent.command(json.dumps({'cmd': '{0} {1}'.format(cmd, process)}))
-                    data = {'status': 'success', 'type': 'command {cmd} accepted'.format(cmd=cmd)}
+            if cmd_validator.validate(data):
+                if SupervisorAgentHandler.command(**data):
+                    data = {'status': 'success', 'details': 'command {cmd} accepted'.format(cmd=data['cmd'])}
                     status = 200
-                except Exception as e:
-                    data = {'status': 'error', 'type': 'agent not connected'}
+                else:
+                    data = {'status': 'error', 'errors':
+                        [{'arg': data['id'], 'details': 'agent not connected'}]}
                     status = 400
             else:
-                data = {'status': 'error', 'type': 'unknown command'}
+                errors = [{'arg': k, 'details': v} for k, v in cmd_validator.errors.items()]
+                data = {'status': 'error', 'errors': errors}
                 status = 400
-        except KeyError as e:
-            data = {'status': 'error', 'type': 'missing argument: {0}'.format(e.message)}
-            status = 400
-        except Exception as e:
-            data = {'status': 'error', 'type': 'unknown error'}
+        except ValueError as e:
+            data = {'status': 'error', 'errors': [{'details': 'invalid json'}]}
             status = 400
         self.set_status(status)
         self.set_header('Content-Type', 'application/json')

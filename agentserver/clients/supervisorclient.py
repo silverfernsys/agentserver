@@ -4,13 +4,12 @@ from datetime import datetime
 import json
 from db import dral
 from supervisorclientcoordinator import scc
+from constants import *
+from validator import cmd_validator
 import ws
 
-class SupervisorClient(object):
-    SUPERVISOR_COMMANDS = ['start', 'stop', 'restart']
-    SUBSCRIBE_COMMAND = 'sub'
-    UNSUBSCRIBE_COMMAND = 'unsub'
 
+class SupervisorClient(object):
     def __init__(self, id, ws):
         self.id = id
         self.ip = self.get_ip(ws.request)
@@ -22,24 +21,19 @@ class SupervisorClient(object):
     def update(self, message):
         try:
             data = json.loads(message)
-            if 'cmd' in data:
+            if cmd_validator.validate(data):
                 cmd = data['cmd']
-                agent_id = data['id']
-                process = data['process'] #.split(' ')
-                if cmd in type(self).SUPERVISOR_COMMANDS:
-                    try:
-                        agent = ws.SupervisorAgentHandler.IDs[agent_id]
-                        # message = {'cmd': 'restart web'}
-                        agent.command(json.dumps({'cmd': '{0} {1}'.format(cmd, process)}))
+                if cmd in SUPERVISOR_COMMANDS:
+                    if ws.SupervisorAgentHandler.command(**data):
                         self.ws.write_message(json.dumps({'status': 'success', 'type': 'command {cmd} accepted'.format(cmd=cmd)}))
-                    except Exception as e:
+                    else:
                         self.ws.write_message(json.dumps({'status': 'error', 'type': 'agent not connected'}))
-                elif cmd == type(self).SUBSCRIBE_COMMAND:
+                elif cmd == SUBSCRIBE_COMMAND:
                     self.ws.write_message(json.dumps({'status': 'success', 'type': 'command {cmd} accepted'.format(cmd=cmd)}))
-                    scc.subscribe(self, agent_id, process)
-                elif cmd == type(self).UNSUBSCRIBE_COMMAND:
+                    scc.subscribe(self, **data)
+                elif cmd == UNSUBSCRIBE_COMMAND:
                     self.ws.write_message(json.dumps({'status': 'success', 'type': 'command {cmd} accepted'.format(cmd=cmd)}))
-                    scc.unsubscribe(self, agent_id, process)
+                    scc.unsubscribe(self, **data)
                 else:
                     self.ws.write_message(json.dumps({'status': 'error', 'type': 'unknown command'}))
             else:

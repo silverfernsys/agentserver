@@ -13,6 +13,13 @@ class SupervisorAgentHandler(tornado.websocket.WebSocketHandler):
     Connections = {}
     IDs = {}
 
+    @classmethod
+    def command(cls, id, cmd, process, **kwargs):
+        if id in cls.IDs:
+            cls.IDs[id].command(cmd, process)
+            return True
+        return False
+
     @tornado.web.addslash
     def open(self):
         uuid = self.request.headers.get('authorization')

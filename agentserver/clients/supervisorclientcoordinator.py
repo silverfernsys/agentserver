@@ -122,7 +122,7 @@ class SupervisorClientCoordinator(object):
         else:
             self.agents[id].processes[process].update(started, state, updated)
 
-    def subscribe(self, client, id, process, granularity='P3D', intervals='P6W'):
+    def subscribe(self, client, id, process, granularity='P3D', intervals='P6W', **kwargs):
         dral.__validate_granularity__(granularity, dral.timeseries_granularities)
         dral.__validate_intervals__(intervals)
 
@@ -154,7 +154,7 @@ class SupervisorClientCoordinator(object):
         # Create a new key if it doesn't exist, or update value if it does.
         self.updates[(client, id, process)] = (granularity, (start, end))
 
-    def unsubscribe(self, client, id, process):
+    def unsubscribe(self, client, id, process, **kwargs):
         self.agents[id].processes[process].unsubscribe(client)
 
         if client in self.clients and (id, process) in self.clients[client]:
