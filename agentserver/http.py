@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import json, logging #, ws
+import json, logging
 import tornado.httpserver
 from tornado.web import RequestHandler, Finish
 from datetime import datetime

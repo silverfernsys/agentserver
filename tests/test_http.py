@@ -21,7 +21,7 @@ FIXTURES_DIR =  os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fixtur
 def pal_mock_query(q, interval=None):
     try:
         agent_id = re.search(r'agent_id = "(.+?)"', q).group(1)
-        data = open(os.path.join(FIXTURES_DIR, 'plyql{0}.json'.format(agent_id))).read()
+        data = open(os.path.join(FIXTURES_DIR, 'plyql', 'result_{0}.json'.format(agent_id))).read()
         return data
     except (AttributeError, IOError):
         return '[]'
@@ -412,13 +412,13 @@ class TestHTTP(AsyncHTTPTestCase):
 
     def test_http_agent_update_handler(self):
         headers = {'authorization': self.AGENT_TOKEN_0}
-        body = open(os.path.join(FIXTURES_DIR, 'snapshot0.json')).read()
+        body = open(os.path.join(FIXTURES_DIR, 'snapshots', 'valid_0.json')).read()
         response = self.fetch('/agent/update/', method='POST', headers=headers, body=body)
         response_data = json.loads(response.body)
         self.assertEqual(response.code, 200)
         self.assertEqual(response_data['status'], 'success')
 
-        body = open(os.path.join(FIXTURES_DIR, 'snapshot1.json')).read()
+        body = open(os.path.join(FIXTURES_DIR, 'snapshots', 'valid_1.json')).read()
         response = self.fetch('/agent/update/', method='POST', headers=headers, body=body)
         response_data = json.loads(response.body)
         self.assertEqual(response.code, 200)
@@ -426,7 +426,7 @@ class TestHTTP(AsyncHTTPTestCase):
 
     def test_http_agent_update_handler_bad_auth(self):
         headers = {'authorization': 'gibberish'}
-        body = open(os.path.join(FIXTURES_DIR, 'snapshot0.json')).read()
+        body = open(os.path.join(FIXTURES_DIR, 'snapshots', 'valid_0.json')).read()
         response = self.fetch('/agent/update/', method='POST', headers=headers, body=body)
         response_data = json.loads(response.body)
         self.assertEqual(response.code, 401)

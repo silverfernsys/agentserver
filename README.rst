@@ -25,3 +25,4 @@ Now create a new administrative user (don't forget to select 'Y' when prompted m
 
 TODOs:
 Add tests to add process to SupervisorClientCoordinator that doesn't exist when scc is initialized.
+Make sure that state_update() method on agent returns pid as an integer in json.
