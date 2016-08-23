@@ -1,5 +1,5 @@
 {
-    "snapshot_update": [{
+    "snapshot": [{
         "group": "process_0",
         "name": "process_0",
         "statename": "RUNNING",

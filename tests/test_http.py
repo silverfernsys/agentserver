@@ -10,21 +10,12 @@ from http import (HTTPVersionHandler, HTTPTokenHandler,
     HTTPDetailHandler, HTTPCommandHandler, HTTPListHandler,
     HTTPAgentUpdateHandler, HTTPAgentDetailHandler)
 
+from mocks import pal_mock_query, FIXTURES_DIR
 from ws_helpers import websocket_connect
 from test_ws import MockSupervisorAgentHandler
 
 from db import dal, kal, dral, pal, User, UserAuthToken, Agent, AgentAuthToken, AgentDetail
 from clients.supervisorclientcoordinator import scc
-
-FIXTURES_DIR =  os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fixtures')
-
-def pal_mock_query(q, interval=None):
-    try:
-        agent_id = re.search(r'agent_id = "(.+?)"', q).group(1)
-        data = open(os.path.join(FIXTURES_DIR, 'plyql', 'result_{0}.json'.format(agent_id))).read()
-        return data
-    except (AttributeError, IOError):
-        return '[]'
 
 
 class TestHTTP(AsyncHTTPTestCase):

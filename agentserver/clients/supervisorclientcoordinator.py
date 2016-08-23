@@ -46,7 +46,7 @@ class SupervisorProcess(object):
             self.updated = updated
         if state in self.States:
             self.state = state
-            data = {'state_update': self.__json__()}
+            data = {'state': self.__json__()}
             for client in self.subscribers:
                 client.ws.write_message(json.dumps(data))
 
@@ -114,13 +114,21 @@ class SupervisorClientCoordinator(object):
             self.agents[info.id] = info
 
     def destroy(self):
-        print('SupervisorClientCoordinator.destroy()')
+        pass
 
-    def update(self, id, process, started, state, updated=None):
-        if process not in self.agents[id].processes:
-            self.agents[id].add(SupervisorProcess(id, process, started, state, updated))
+    def update(self, id, name, start, statename, **kwargs):
+        stats = kwargs.get('stats', None)
+        if stats and len(stats) > 0:
+            updated = datetime.utcfromtimestamp(stats[-1][0])
         else:
-            self.agents[id].processes[process].update(started, state, updated)
+            updated = datetime.utcnow()
+
+        started = datetime.utcfromtimestamp(start)
+
+        if name not in self.agents[id].processes:
+            self.agents[id].add(SupervisorProcess(id, name, started, statename, updated))
+        else:
+            self.agents[id].processes[name].update(started, statename, updated)
 
     def subscribe(self, client, id, process, granularity='P3D', intervals='P6W', **kwargs):
         dral.__validate_granularity__(granularity, dral.timeseries_granularities)
@@ -139,7 +147,7 @@ class SupervisorClientCoordinator(object):
                         (granularity, (start, end)) = self.updates[(client, id, process)]
                         result = dral.timeseries(id, process, granularity=granularity,
                             intervals=intervals).result
-                        body = {'snapshot_update': {'id': id, 'process': process,
+                        body = {'snapshot': {'id': id, 'process': process,
                             'stats': map(lambda x: {'timestamp': x['timestamp'],
                             'cpu': x['result']['cpu'], 'mem': x['result']['mem']}, result)}}
                         client.ws.write_message(json.dumps(body))

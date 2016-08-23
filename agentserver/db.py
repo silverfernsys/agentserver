@@ -217,6 +217,14 @@ class KafkaAccessLayer(object):
             self.connection = KafkaProducer(bootstrap_servers=uri,
                 value_serializer=lambda v: json.dumps(v).encode('utf-8'))
 
+    def write_stats(self, id, name, stats, **kwargs):
+        for stat in stats:
+            msg = {'agent_id': id, 'process_name': name,
+                'timestamp': datetime.utcfromtimestamp(stat[0]).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                'cpu': stat[1], 'mem': stat[2]}
+            self.connection.send('supervisor', msg)
+        self.connection.flush()
+
 kal = KafkaAccessLayer()
 
 

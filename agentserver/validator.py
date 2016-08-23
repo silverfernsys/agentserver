@@ -1,14 +1,6 @@
 from cerberus import Validator
 from clients.constants import *
-# from clients.supervisorclient import (SUPERVISOR_COMMANDS,
-# 	SUBSCRIBE_COMMAND, UNSUBSCRIBE_COMMAND)
 
-# from clients.supervisorclient import SupervisorClient
-# import clients.supervisorclient
-# from clients import supervisorclient
-# from clients import (supervisorclient.SUPERVISOR_COMMANDS as SUPERVISOR_COMMANDS,
-# 	supervisorclient.SUBSCRIBE_COMMAND as SUBSCRIBE_COMMAND,
-# 	supervisorclient.UNSUBSCRIBE_COMMAND as UNSUBSCRIBE_COMMAND)
 
 system_stats_schema = {
 	'dist_name': {'type': 'string', 'required': True},
@@ -39,19 +31,23 @@ states_validator = Validator(states_schema)
 
 
 snapshot_schema = {
-	'group': {'type': 'string', 'required': True},
-	'name': {'type': 'string', 'required': True},
-	'statename': {'type': 'string', 'required': True,
-		'allowed': ['STOPPED', 'STARTING', 'RUNNING',
-					'BACKOFF', 'STOPPING', 'EXITED',
-					'FATAL', 'UNKNOWN']},
-	'pid': {'type': 'integer', 'required': True, 'nullable': True},
-	'start': {'type': 'integer', 'required': True},
-	'state': {'type': 'integer', 'required': True,
-		'allowed': [0, 10, 20, 30, 40, 100, 200, 1000]},
-	'stats': {'type': 'list', 'required': True, 'schema':
-		{'type': 'list', 'items': [{'type': 'float'}, {'type': 'float'},
-			{'type': 'integer'}]}}	
+	'snapshot': {'type': 'list', 'required': True,
+		'items': {
+			'group': {'type': 'string', 'required': True},
+			'name': {'type': 'string', 'required': True},
+			'statename': {'type': 'string', 'required': True,
+				'allowed': ['STOPPED', 'STARTING', 'RUNNING',
+							'BACKOFF', 'STOPPING', 'EXITED',
+							'FATAL', 'UNKNOWN']},
+			'pid': {'type': 'integer', 'required': True, 'nullable': True},
+			'start': {'type': 'integer', 'required': True},
+			'state': {'type': 'integer', 'required': True,
+				'allowed': [0, 10, 20, 30, 40, 100, 200, 1000]},
+			'stats': {'type': 'list', 'required': True,
+				'schema': {'type': 'list', 'items':
+					[{'type': 'float'}, {'type': 'float'}, {'type': 'integer'}]}}
+		}
+	}
 }
 
 snapshot_validator = Validator(snapshot_schema)

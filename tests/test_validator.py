@@ -15,15 +15,15 @@ class TestSchema(unittest.TestCase):
 
     def test_system_stats(self):
         text = open(os.path.join(FIXTURES_DIR, 'system_stats', 'valid_0.json')).read()
-        stats = json.loads(text)['system_stats']
+        stats = json.loads(text)['system']
         self.assertTrue(system_stats_validator.validate(stats))
 
         text = open(os.path.join(FIXTURES_DIR, 'system_stats', 'valid_1.json')).read()
-        stats = json.loads(text)['system_stats']
+        stats = json.loads(text)['system']
         self.assertTrue(system_stats_validator.validate(stats))
 
         text = open(os.path.join(FIXTURES_DIR, 'system_stats', 'invalid_0.json')).read()
-        stats = json.loads(text)['system_stats']
+        stats = json.loads(text)['system']
         self.assertFalse(system_stats_validator.validate(stats))
         errors = system_stats_validator.errors
         self.assertEqual(errors['dist_name'], 'required field')
@@ -32,7 +32,7 @@ class TestSchema(unittest.TestCase):
         self.assertEqual(errors['memory'], 'must be of integer type')
 
         text = open(os.path.join(FIXTURES_DIR, 'system_stats', 'invalid_1.json')).read()
-        stats = json.loads(text)['system_stats']
+        stats = json.loads(text)['system']
         self.assertFalse(system_stats_validator.validate(stats))
         errors = system_stats_validator.errors
         self.assertEqual(errors['dist_version'], 'required field')
@@ -42,39 +42,37 @@ class TestSchema(unittest.TestCase):
     def test_states(self):
         text = open(os.path.join(FIXTURES_DIR, 'states', 'valid_0.json')).read().split('\n')
         for line in text:
-            state = json.loads(line)['state_update']
+            state = json.loads(line)['state']
             self.assertTrue(states_validator.validate(state))
 
         text = open(os.path.join(FIXTURES_DIR, 'states', 'valid_1.json')).read().split('\n')
         for line in text:
-            state = json.loads(line)['state_update']
+            state = json.loads(line)['state']
             self.assertTrue(states_validator.validate(state))
 
         # text = open(os.path.join(FIXTURES_DIR, 'states', 'invalid_0.json')).read().split('\n')
         # for line in text:
-        #     state = json.loads(line)['state_update']
+        #     state = json.loads(line)['state']
         #     self.assertTrue(states_validator.validate(state))
 
         # text = open(os.path.join(FIXTURES_DIR, 'states', 'invalid_1.json')).read().split('\n')
         # for line in text:
-        #     state = json.loads(line)['state_update']
+        #     state = json.loads(line)['state']
         #     self.assertTrue(states_validator.validate(state))
 
     def test_snapshots(self):
         text = open(os.path.join(FIXTURES_DIR, 'snapshots', 'valid_0.json')).read()
-        for snapshot in json.loads(text)['snapshot_update']:
-            self.assertTrue(snapshot_validator(snapshot))
+        self.assertTrue(snapshot_validator.validate(json.loads(text)))
 
         text = open(os.path.join(FIXTURES_DIR, 'snapshots', 'valid_1.json')).read()
-        for snapshot in json.loads(text)['snapshot_update']:
-            self.assertTrue(snapshot_validator(snapshot))
+        self.assertTrue(snapshot_validator.validate(json.loads(text)))
 
         # text = open(os.path.join(FIXTURES_DIR, 'snapshots', 'invalid_0.json')).read()
         # for line in text:
-        #     state = json.loads(line)['snapshot_update']
+        #     state = json.loads(line)['snapshot']
         #     self.assertTrue(states_validator.validate(state))
 
         # text = open(os.path.join(FIXTURES_DIR, 'snapshots', 'invalid_1.json')).read()
         # for line in text:
-        #     state = json.loads(line)['snapshot_update']
+        #     state = json.loads(line)['snapshot']
         #     self.assertTrue(states_validator.validate(state))

@@ -27,12 +27,14 @@ try:
 except ImportError:
     speedups = None
 
+from mocks import pal_mock_query, FIXTURES_DIR
 from ws_helpers import websocket_connect
 from ws import SupervisorAgentHandler, SupervisorClientHandler
 from db import dal, kal, dral, pal, User, UserAuthToken, Agent, AgentDetail, AgentAuthToken
 from utils import validate_timestamp
+from clients.supervisorclient import SupervisorClient
 from clients.supervisorclientcoordinator import scc
-
+from agents.supervisoragent import SupervisorAgent
 
 class TestWebSocketHandler(WebSocketHandler):
     """Base class for testing handlers that exposes the on_close event.
@@ -86,18 +88,6 @@ class WebSocketBaseTestCase(AsyncHTTPTestCase):
         tests."""
         ws.close()
         yield self.close_future
-
-
-FIXTURES_DIR =  os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fixtures')
-
-
-def pal_mock_query(q, interval=None):
-    try:
-        agent_id = re.search(r'agent_id = "(.+?)"', q).group(1)
-        data = open(os.path.join(FIXTURES_DIR, 'plyql', 'result_{0}.json'.format(agent_id))).read()
-        return data
-    except (AttributeError, IOError):
-        return '[]'
 
 
 class SupervisorAgentHandlerTest(WebSocketBaseTestCase):
@@ -175,21 +165,18 @@ class SupervisorAgentHandlerTest(WebSocketBaseTestCase):
             headers={'authorization': self.AGENT_TOKEN})
         client.write_message(update_0)
         response = yield client.read_message()
-        data = json.loads(response)
-        self.assertEqual(data['status'], 'success')
-        self.assertEqual(data['type'], 'snapshot updated')
+        self.assertEqual(json.loads(response),
+            json.loads(SupervisorAgent.snapshot_update_success))
 
         client.write_message(update_1)
         response = yield client.read_message()
-        data = json.loads(response)
-        self.assertEqual(data['status'], 'success')
-        self.assertEqual(data['type'], 'snapshot updated')
+        self.assertEqual(json.loads(response),
+            json.loads(SupervisorAgent.snapshot_update_success))
 
         client.write_message('malformed json')
         response = yield client.read_message()
-        data = json.loads(response)
-        self.assertEqual(data['status'], 'error')
-        self.assertEqual(data['type'], 'unknown message type')
+        self.assertEqual(json.loads(response),
+            json.loads(SupervisorAgent.invalid_json_error))
 
         client.close()
         yield self.close_future
@@ -208,16 +195,14 @@ class SupervisorAgentHandlerTest(WebSocketBaseTestCase):
         for state in state_0:
             client.write_message(state)
             response = yield client.read_message()
-            data = json.loads(response)
-            self.assertEqual(data['status'], 'success')
-            self.assertEqual(data['type'], 'state updated')
+            self.assertEqual(json.loads(response),
+                json.loads(SupervisorAgent.state_update_success))
 
         for state in state_1:
             client.write_message(state)
             response = yield client.read_message()
-            data = json.loads(response)
-            self.assertEqual(data['status'], 'success')
-            self.assertEqual(data['type'], 'state updated')
+            self.assertEqual(json.loads(response),
+                json.loads(SupervisorAgent.state_update_success))
 
         client.close()
         yield self.close_future
@@ -226,17 +211,18 @@ class SupervisorAgentHandlerTest(WebSocketBaseTestCase):
         self.assertEqual(len(SupervisorAgentHandler.IDs.keys()), 0, "0 websocket connections.")
 
     @gen_test
-    def test_state_update_bad_start_value(self):
-        state = json.dumps({"state_update":{"group": "celery", "name": "celery", "statename": "STOPPING", "pid": "8593", "start": 'asdf', "state": 40}})
+    def test_state_update_bad_start_pid_value(self):
+        state = json.dumps({"state":{"group": "celery", "name": "celery", "statename": "STOPPING", "pid": "8593", "start": 'asdf', "state": 40}})
 
         client = yield self.ws_connect('/supervisor/',
             headers={'authorization': self.AGENT_TOKEN})
 
         client.write_message(state)
         response = yield client.read_message()
-        data = json.loads(response)
-        self.assertEqual(data['status'], 'error')
-        self.assertEqual(data['type'], 'unknown message type')
+        expected_error = {'status': 'error', 'errors':
+            [{'details': 'must be of integer type', 'arg': 'start'},
+            {'details': 'must be of integer type', 'arg': 'pid'}]}
+        self.assertEqual(json.loads(response), expected_error)
 
         client.close()
         yield self.close_future
@@ -246,17 +232,16 @@ class SupervisorAgentHandlerTest(WebSocketBaseTestCase):
 
     @gen_test
     def test_state_update_missing_values(self):
-        state = json.dumps({"state_update":{"group": "celery", "statename": "STOPPING",
-            "pid": "8593", "start": 1460513750, "state": 40}})
+        state = json.dumps({"state":{"group": "celery", "statename": "STOPPING",
+            "pid": 8593, "start": 1460513750, "state": 40}})
 
         client = yield self.ws_connect('/supervisor/',
             headers={'authorization': self.AGENT_TOKEN})
 
         client.write_message(state)
         response = yield client.read_message()
-        data = json.loads(response)
-        self.assertEqual(data['status'], 'error')
-        self.assertEqual(data['type'], 'unknown message type')
+        expected_error = {'status': 'error', 'errors': [{'details': 'required field', 'arg': 'name'}]}
+        self.assertEqual(json.loads(response), expected_error)
 
         client.close()
         yield self.close_future
@@ -266,7 +251,7 @@ class SupervisorAgentHandlerTest(WebSocketBaseTestCase):
 
     @gen_test
     def test_system_stats(self):
-        stats = json.dumps({'system_stats': {'dist_name': 'Ubuntu',
+        stats = json.dumps({'system': {'dist_name': 'Ubuntu',
             'dist_version': '15.10', 'hostname': 'client', 'num_cores': 3,
             'memory': 1040834560, 'processor': 'x86_64'}})
 
@@ -275,19 +260,16 @@ class SupervisorAgentHandlerTest(WebSocketBaseTestCase):
 
         agent.write_message(stats)
         response = yield agent.read_message()
-        data = json.loads(response)
-        self.assertEqual(data['status'], 'success')
-        self.assertEqual(data['type'], 'system stats updated')
+        self.assertEqual(json.loads(response), json.loads(SupervisorAgent.system_stats_update_success))
 
         # missing num_cores
-        incomplete_stats = json.dumps({'system_stats': {'dist_name': 'Ubuntu',
+        incomplete_stats = json.dumps({'system': {'dist_name': 'Ubuntu',
             'dist_version': '15.10', 'hostname': 'client',
             'memory': 1040834560, 'processor': 'x86_64'}})
         agent.write_message(incomplete_stats)
         response = yield agent.read_message()
-        data = json.loads(response)
-        self.assertEqual(data['status'], 'error')
-        self.assertEqual(data['type'], 'unknown message type')
+        expected_error = {'status': 'error', 'errors': [{'details': 'required field', 'arg': 'num_cores'}]}
+        self.assertEqual(json.loads(response), expected_error)
 
         agent.close()
         yield self.close_future
@@ -330,7 +312,6 @@ class SupervisorClientHandlerTest(WebSocketBaseTestCase):
         dral.connect('debug')
         pal.connect('debug')
         scc.initialize()
-        print(scc)
 
         cls.AGENT_TOKEN = agent.token.uuid
         cls.AGENT_ID = agent.id
@@ -391,12 +372,10 @@ class SupervisorClientHandlerTest(WebSocketBaseTestCase):
 
         ws_client.write_message(json.dumps({'cmd': 'sub', 'id': self.AGENT_ID, 'process': 'process_0'}))
         response = yield ws_client.read_message()
-        data = json.loads(response)
-        self.assertEqual(data['status'], 'success')
-        self.assertEqual(data['type'], 'command sub accepted')
+        self.assertEqual(json.loads(response), json.loads(SupervisorClient.cmd_success_message('sub')))
 
         response = yield ws_client.read_message()
-        data = json.loads(response)['snapshot_update']
+        data = json.loads(response)['snapshot']
         self.assertEqual(data['process'], 'process_0')
         self.assertEqual(data['id'], self.AGENT_ID)
         for stat in data['stats']:
@@ -406,27 +385,22 @@ class SupervisorClientHandlerTest(WebSocketBaseTestCase):
 
         yield ws_client.write_message(json.dumps({'cmd': 'restart', 'id': self.AGENT_ID, 'process': 'process_0'}))
         response = yield ws_client.read_message()
-        data = json.loads(response)
-        self.assertEqual(data['status'], 'success')
-        self.assertEqual(data['type'], 'command restart accepted')
+        self.assertEqual(json.loads(response), json.loads(SupervisorClient.cmd_success_message('restart')))
 
         response = yield ws_agent.read_message()
-        data = json.loads(response)
-        self.assertEqual(data['cmd'], 'restart process_0')
+        self.assertEqual(json.loads(response), {'cmd':'restart process_0'})
 
         state_0 = open(os.path.join(FIXTURES_DIR, 'states', 'valid_0.json')).read().split('\n')
 
         for state in state_0:
             ws_agent.write_message(state)
             response = yield ws_agent.read_message()
-            data = json.loads(response)
-            self.assertEqual(data['status'], 'success')
-            self.assertEqual(data['type'], 'state updated')
+            self.assertEqual(json.loads(response), json.loads(SupervisorAgent.state_update_success))
 
         for state in state_0:
             response = yield ws_client.read_message()
-            data = json.loads(response)['state_update']
-            sent_data = json.loads(state)['state_update']
+            data = json.loads(response)['state']
+            sent_data = json.loads(state)['state']
             self.assertEqual(sent_data['name'], data['name'])
             self.assertEqual(sent_data['statename'], data['state'])
             self.assertEqual(datetime.utcfromtimestamp(sent_data['start']). \
@@ -434,7 +408,7 @@ class SupervisorClientHandlerTest(WebSocketBaseTestCase):
 
         # Wait for another message sent from scc to the client
         response = yield ws_client.read_message()
-        data = json.loads(response)['snapshot_update']
+        data = json.loads(response)['snapshot']
         self.assertEqual(data['process'], 'process_0')
         self.assertEqual(data['id'], self.AGENT_ID)
         for stat in data['stats']:
@@ -444,18 +418,14 @@ class SupervisorClientHandlerTest(WebSocketBaseTestCase):
 
         ws_client.write_message(json.dumps({'cmd': 'unsub', 'id': self.AGENT_ID, 'process': 'process_0'}))
         response = yield ws_client.read_message()
-        data = json.loads(response)
-        self.assertEqual(data['status'], 'success')
-        self.assertEqual(data['type'], 'command unsub accepted')
+        self.assertEqual(json.loads(response), json.loads(SupervisorClient.cmd_success_message('unsub')))
 
         ws_client.write_message(json.dumps({'cmd': 'sub', 'id': self.AGENT_ID, 'process': 'process_1'}))
         response = yield ws_client.read_message()
-        data = json.loads(response)
-        self.assertEqual(data['status'], 'success')
-        self.assertEqual(data['type'], 'command sub accepted')
+        self.assertEqual(json.loads(response), json.loads(SupervisorClient.cmd_success_message('sub')))
 
         response = yield ws_client.read_message()
-        data = json.loads(response)['snapshot_update']
+        data = json.loads(response)['snapshot']
         self.assertEqual(data['process'], 'process_1')
         self.assertEqual(data['id'], self.AGENT_ID)
         for stat in data['stats']:
@@ -465,27 +435,22 @@ class SupervisorClientHandlerTest(WebSocketBaseTestCase):
 
         yield ws_client.write_message(json.dumps({'cmd': 'restart', 'id': self.AGENT_ID, 'process': 'process_1'}))
         response = yield ws_client.read_message()
-        data = json.loads(response)
-        self.assertEqual(data['status'], 'success')
-        self.assertEqual(data['type'], 'command restart accepted')
+        self.assertEqual(json.loads(response), json.loads(SupervisorClient.cmd_success_message('restart')))
 
         response = yield ws_agent.read_message()
-        data = json.loads(response)
-        self.assertEqual(data['cmd'], 'restart process_1')
+        self.assertEqual(json.loads(response), {'cmd':'restart process_1'})
 
         state_1 = open(os.path.join(FIXTURES_DIR, 'states', 'valid_1.json')).read().split('\n')
 
         for state in state_1:
             ws_agent.write_message(state)
             response = yield ws_agent.read_message()
-            data = json.loads(response)
-            self.assertEqual(data['status'], 'success')
-            self.assertEqual(data['type'], 'state updated')
+            self.assertEqual(json.loads(response), json.loads(SupervisorAgent.state_update_success))
 
         for state in state_1:
             response = yield ws_client.read_message()
-            data = json.loads(response)['state_update']
-            sent_data = json.loads(state)['state_update']
+            data = json.loads(response)['state']
+            sent_data = json.loads(state)['state']
             self.assertEqual(sent_data['name'], data['name'])
             self.assertEqual(sent_data['statename'], data['state'])
             self.assertEqual(datetime.utcfromtimestamp(sent_data['start']). \
@@ -508,33 +473,35 @@ class SupervisorClientHandlerTest(WebSocketBaseTestCase):
 
         ws_client.write_message(json.dumps({'cmd': 'restart', 'id': 100, 'process': 'web'}))
         response = yield ws_client.read_message()
-        data = json.loads(response)
-        self.assertEqual(data['status'], 'error')
-        self.assertEqual(data['type'], 'agent not connected')
+        self.assertEqual(json.loads(response), json.loads(SupervisorClient.agent_not_connected_error))
 
         ws_client.write_message(json.dumps({'id': self.AGENT_ID, 'process': 'web'}))
         response = yield ws_client.read_message()
-        data = json.loads(response)
-        self.assertEqual(data['status'], 'error')
-        self.assertEqual(data['type'], 'unknown message type')
+        expected_error = {'status':'error', 'errors': [{'details':'required field', 'arg':'cmd'}]}
+        self.assertEqual(json.loads(response), expected_error)
 
         ws_client.write_message(json.dumps({'cmd': 'restart', 'process': 'web'}))
         response = yield ws_client.read_message()
-        data = json.loads(response)
-        self.assertEqual(data['status'], 'error')
-        self.assertEqual(data['type'], 'unknown message type')
+        expected_error = {'status':'error', 'errors': [{'details':'required field', 'arg':'id'}]}
+        self.assertEqual(json.loads(response), expected_error)
 
         ws_client.write_message(json.dumps({'cmd': 'restart', 'id': self.AGENT_ID}))
         response = yield ws_client.read_message()
-        data = json.loads(response)
-        self.assertEqual(data['status'], 'error')
-        self.assertEqual(data['type'], 'unknown message type')
+        expected_error = {'status':'error', 'errors': [{'details':'required field', 'arg':'process'}]}
+        self.assertEqual(json.loads(response), expected_error)
 
         ws_client.write_message(json.dumps({'cmd': 'unknown', 'id': self.AGENT_ID, 'process': 'web'}))
         response = yield ws_client.read_message()
-        data = json.loads(response)
-        self.assertEqual(data['status'], 'error')
-        # self.assertEqual(data['type'], 'unknown command')
+        expected_error = {'status':'error', 'errors': [{'details':'unallowed value unknown', 'arg':'cmd'}]}
+        self.assertEqual(json.loads(response), expected_error)
+
+        ws_client.write_message('invalid json')
+        response = yield ws_client.read_message()
+        self.assertEqual(json.loads(response), json.loads(SupervisorClient.invalid_json_error))
+
+        ws_client.write_message('')
+        response = yield ws_client.read_message()
+        self.assertEqual(json.loads(response), json.loads(SupervisorClient.invalid_json_error))
 
         ws_client.close()
         yield self.close_future

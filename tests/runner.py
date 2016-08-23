@@ -8,8 +8,8 @@ testmodules = [
     # 'test_admin',
     # 'test_db',
     'test_http',
-    'test_validator',
-    'test_ws',
+    # 'test_validator',
+    # 'test_ws',
     # 'test_utils',
     ]
 

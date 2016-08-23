@@ -137,7 +137,7 @@ class HTTPAgentDetailHandler(HTTPAgentHandler):
 class HTTPAgentUpdateHandler(HTTPAgentHandler):
     @tornado.web.addslash
     def post(self):
-        data = tornado.escape.json_decode(self.request.body)['snapshot_update']
+        data = tornado.escape.json_decode(self.request.body)['snapshot']
         for row in data:
             name = row['name']
             start = datetime.utcfromtimestamp(row['start'])
