@@ -1,3 +1,2 @@
-{"system": {"dist_name": 4,
-	"hostname": "client", "num_cores": 3,
-	"processor": "x86_64"}}
+{"system": {"dist_name": 4, "hostname": "client",
+	"num_cores": 3, "processor": "x86_64"}}

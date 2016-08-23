@@ -1,5 +1,5 @@
 #! /usr/bin/env python
-import json, logging
+import json
 from time import time
 from datetime import datetime
 from sqlalchemy.orm.exc import NoResultFound
@@ -8,6 +8,7 @@ from db import dal, kal, AgentDetail
 from clients.supervisorclientcoordinator import scc
 from validator import (system_stats_validator,
     states_validator, snapshot_validator)
+from utils import get_ip
 
 SNAPSHOT = 'snapshot'
 STATE = 'state'
@@ -22,13 +23,9 @@ class SupervisorAgent(object):
 
     def __init__(self, id, ws):
         self.id = id
-        self.ip = self.get_ip(ws.request)
+        self.ip = get_ip(ws.request)
         self.ws = ws
         self.session = dal.Session()
-        # self.logger = logging.getLogger('SupervisorAgent')
-
-    def get_ip(self, request):
-        return request.headers.get("X-Real-IP") or request.remote_ip
 
     def command(self, cmd, process):
         # message = {'cmd': 'restart web'}

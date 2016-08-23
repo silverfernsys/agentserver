@@ -195,7 +195,7 @@ def haiku_permute(id, separator='-'):
 
 
 def get_ip(request):
-        return request.headers.get("X-Real-IP") or request.remote_ip
+    return request.headers.get("X-Real-IP") or request.remote_ip
 
 
 def validate_ip(ip):

@@ -23,45 +23,70 @@ class HTTPVersionHandler(RequestHandler):
         self.write(self.response)
 
 
-class UserRequestHandler(RequestHandler):
-    error_response = json.dumps({'error': 'not authorized'})
+class BadTokenLogger(object):
+    def log(self, auth_token):
+        if auth_token:
+            logging.getLogger(self.__class__.__name__).error('Request with invalid token "{0}" ' \
+                'from {1}'.format(auth_token, get_ip(self.request)))
+        else:
+            logging.getLogger(self.__class__.__name__).error('Request with missing token ' \
+                'from {0}'.format(get_ip(self.request)))
+
+
+class CommonRequestHandler(RequestHandler):
+    not_authorized_error = json.dumps({'status': 'error', 'errors': [{'details': 'not authorized'}]})
+    invalid_json_error = json.dumps({'status': 'error', 'errors': [{'details': 'invalid json'}]})
+
+    def error_message(self, errors):
+        errors = [{'arg': k, 'details': v} for k, v in errors.items()]
+        return json.dumps({'status': 'error', 'errors': errors})
+
+
+class UserRequestHandler(CommonRequestHandler, BadTokenLogger):
     @tornado.web.addslash
     def prepare(self):
         try:
             auth_token = self.request.headers.get('authorization')
             dal.Session().query(UserAuthToken).filter(UserAuthToken.uuid == auth_token).one()
-        except Exception as e:
-            print('UserRequestHandler.Exception: %s' % e)
-            logging.getLogger('Web Server').error(e)
+        except NoResultFound:
+            self.log(auth_token)
             self.set_status(401)
             self.set_header('Content-Type', 'application/json')
-            self.write(self.error_response)
+            self.write(self.not_authorized_error)
             raise Finish()
 
 
 class HTTPCommandHandler(UserRequestHandler):
+    @classmethod
+    def cmd_success(cls, cmd):
+        return json.dumps({'status': 'success',
+            'details': 'command {0} accepted'.format(cmd)})
+
+    @classmethod
+    def cmd_error(cls, id):
+        return json.dumps({'status': 'error', 'errors':
+            [{'arg': id, 'details': 'agent not connected'}]})
+
     @tornado.web.addslash
     def post(self):
         try:
             data = json.loads(self.request.body)
             if cmd_validator.validate(data):
                 if SupervisorAgentHandler.command(**data):
-                    data = {'status': 'success', 'details': 'command {cmd} accepted'.format(cmd=data['cmd'])}
+                    data = self.cmd_success(data['cmd'])
                     status = 200
                 else:
-                    data = {'status': 'error', 'errors':
-                        [{'arg': data['id'], 'details': 'agent not connected'}]}
+                    data = self.cmd_error(data['id'])
                     status = 400
             else:
-                errors = [{'arg': k, 'details': v} for k, v in cmd_validator.errors.items()]
-                data = {'status': 'error', 'errors': errors}
+                data = self.error_message(cmd_validator.errors)
                 status = 400
         except ValueError as e:
-            data = {'status': 'error', 'errors': [{'details': 'invalid json'}]}
+            data = self.invalid_json_error
             status = 400
         self.set_status(status)
         self.set_header('Content-Type', 'application/json')
-        self.write(json.dumps(data))
+        self.write(data)
 
 
 class HTTPListHandler(UserRequestHandler):
@@ -72,27 +97,27 @@ class HTTPListHandler(UserRequestHandler):
 
 
 class HTTPDetailHandler(UserRequestHandler):
+    invalid_id_error = json.dumps({'status': 'error', 'errors': [{'details': 'invalid id'}]})
+
     @tornado.web.addslash
     def post(self):
-        self.set_header('Content-Type', 'application/json')
         try:
-            agent_id = tornado.escape.json_decode(self.request.body)['id']
+            agent_id = json.loads(self.request.body)['id']
             detail = AgentDetail.detail_for_agent_id(agent_id)
-            self.write(json.dumps(detail))
-        except Exception as e:
-            logging.getLogger('Web Server').error(e)
-            self.set_status(400)
-            self.write(json.dumps({'error': 'invalid id'}))
+            status = 200
+            data = json.dumps(detail)
+        except NoResultFound as e:
+            status = 400
+            data = self.invalid_id_error
+        except ValueError:
+            status = 400
+            data = self.invalid_json_error
+        self.set_header('Content-Type', 'application/json')
+        self.set_status(status)
+        self.write(data)
 
 
-class HTTPAgentHandler(RequestHandler):
-    not_authorized_error = json.dumps({'status': 'error', 'errors': [{'details': 'not authorized'}]})
-    invalid_json_error = json.dumps({'status': 'error', 'errors': [{'details': 'invalid json'}]})
-
-    def error_message(self, errors):
-        errors = [{'arg': k, 'details': v} for k, v in errors.items()]
-        return json.dumps({'status': 'error', 'errors': errors})
-
+class HTTPAgentHandler(CommonRequestHandler, BadTokenLogger):
     @tornado.web.addslash
     def prepare(self):
         self.session = dal.Session()
@@ -100,7 +125,7 @@ class HTTPAgentHandler(RequestHandler):
             auth_token = self.request.headers.get('authorization')
             self.agent = Agent.authorize(auth_token, self.session)
         except Exception as e:
-            logging.getLogger('Web Server').error(e)
+            self.log(auth_token)
             self.set_status(401)
             self.set_header('Content-Type', 'application/json')
             self.write(self.not_authorized_error)
@@ -108,7 +133,9 @@ class HTTPAgentHandler(RequestHandler):
 
 
 class HTTPAgentDetailHandler(HTTPAgentHandler):
-    success_response = json.dumps({'status': 'success'})
+    success_response_created = json.dumps({'status': 'success', 'details': 'detail created'})
+    success_response_updated = json.dumps({'status': 'success', 'details': 'detail updated'})
+
     @tornado.web.addslash
     def post(self):
         try:
@@ -117,9 +144,10 @@ class HTTPAgentDetailHandler(HTTPAgentHandler):
                 created = AgentDetail.update_or_create(self.agent.id, **data)
                 if created:
                     status = 201
+                    data = self.success_response_created
                 else:
                     status = 200
-                data = self.success_response
+                    data = self.success_response_updated
             else:
                 status = 400
                 data = self.error_message(system_stats_validator.errors)
