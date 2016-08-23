@@ -26,7 +26,15 @@ import random
 Base = declarative_base()
 
 
-class Agent(Base):
+class Countable(object):
+    @classmethod
+    def count(cls, session=None):
+        if not session:
+            session = dal.session
+        return session.query(cls).count()
+
+
+class Agent(Base, Countable):
     __tablename__ = 'agents'
 
     id = Column(Integer(), primary_key=True)
@@ -47,7 +55,7 @@ class Agent(Base):
             "created_on='{self.created_on}')>".format(self=self)
 
 
-class AgentDetail(Base):
+class AgentDetail(Base, Countable):
     __tablename__ = 'agentdetails'
 
     id = Column(Integer(), primary_key=True)
@@ -115,7 +123,7 @@ class AgentDetail(Base):
             'created': self.created_on.strftime("%Y-%m-%dT%H:%M:%S.%fZ")}
 
 
-class AgentAuthToken(Base):
+class AgentAuthToken(Base, Countable):
     __tablename__ = 'agentauthtokens'
 
     uuid = Column(String(), primary_key=True, default=uuid)
@@ -131,7 +139,7 @@ class AgentAuthToken(Base):
             "created_on='{self.created_on}')>".format(self=self)
 
 
-class User(Base):
+class User(Base, Countable):
     __tablename__ = 'users'
 
     id = Column(Integer(), primary_key=True)
@@ -161,7 +169,7 @@ def hash_password(target, value, oldvalue, initiator):
 listen(User.password, 'set', hash_password, retval=True)
 
 
-class UserAuthToken(Base):
+class UserAuthToken(Base, Countable):
     __tablename__ = 'userauthtokens'
 
     uuid = Column(String(), primary_key=True, default=uuid)

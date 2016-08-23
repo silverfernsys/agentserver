@@ -150,7 +150,7 @@ class TestHTTP(AsyncHTTPTestCase):
             self.assertTrue('state' in item)
             self.assertTrue('name' in item)
         self.assertEqual(response.code, 200)
-        self.assertEqual(len(response_data), dal.session.query(Agent).count())
+        self.assertEqual(len(response_data), Agent.count())
 
         headers = {'authorization':'bad token'}
         response = self.fetch('/list/', method='GET', headers=headers)
@@ -245,7 +245,7 @@ class TestHTTP(AsyncHTTPTestCase):
         self.assertEqual(response.code, 400)
 
     def test_http_agent_detail_update_handler(self):
-        count_before = dal.Session().query(AgentDetail).count()
+        count_before = AgentDetail.count()
 
         hostname = 'agent_1_update'
         processor = 'x86_64_update'
@@ -280,11 +280,10 @@ class TestHTTP(AsyncHTTPTestCase):
         # self.assertEqual(data['updated'], detail.updated_on.strftime('%Y-%m-%dT%H:%M:%S.%fZ'))
         # self.assertEqual(data['created'], detail.created_on.strftime('%Y-%m-%dT%H:%M:%S.%fZ'))
 
-        count_after = dal.Session().query(AgentDetail).count()
-        self.assertEqual(count_before, count_after)
+        self.assertEqual(count_before, AgentDetail.count())
 
     def test_http_agent_detail_create_handler(self):
-        count_before = dal.Session().query(AgentDetail).count()
+        count_before = AgentDetail.count()
 
         hostname = 'agent_2'
         processor = 'amd64'
@@ -317,11 +316,10 @@ class TestHTTP(AsyncHTTPTestCase):
         self.assertEqual(detail.dist_name, dist_name)
         self.assertEqual(detail.dist_version, dist_version)
 
-        count_after = dal.Session().query(AgentDetail).count()
-        self.assertEqual(count_before + 1, count_after)
+        self.assertEqual(count_before + 1, AgentDetail.count())
 
     def test_http_agent_detail_handler_missing_params(self):
-        count_before = dal.Session().query(AgentDetail).count()
+        count_before = AgentDetail.count()
 
         headers = {'authorization':self.AGENT_TOKEN_2}
         data = json.loads(open(os.path.join(FIXTURES_DIR, 'system_stats',
@@ -335,11 +333,10 @@ class TestHTTP(AsyncHTTPTestCase):
         self.assertEqual(json.loads(response.body), expected_error)
         self.assertEqual(response.code, 400)
 
-        count_after = dal.Session().query(AgentDetail).count()
-        self.assertEqual(count_before, count_after)
+        self.assertEqual(count_before, AgentDetail.count())
 
     def test_http_agent_detail_handler_incorrect_params(self):
-        count_before = dal.Session().query(AgentDetail).count()
+        count_before = AgentDetail.count()
 
         headers = {'authorization':self.AGENT_TOKEN_2}
         data = json.loads(open(os.path.join(FIXTURES_DIR, 'system_stats',
@@ -353,18 +350,16 @@ class TestHTTP(AsyncHTTPTestCase):
         self.assertEqual(json.loads(response.body), expected_error)
         self.assertEqual(response.code, 400)
 
-        count_after = dal.Session().query(AgentDetail).count()
-        self.assertEqual(count_before, count_after)
+        self.assertEqual(count_before, AgentDetail.count())
 
     def test_http_agent_detail_handler_invalid_json(self):
-        count_before = dal.Session().query(AgentDetail).count()
+        count_before = AgentDetail.count()
         headers = {'authorization':self.AGENT_TOKEN_2}
         response = self.fetch('/agent/detail/', method='POST', headers=headers, body='invalid json')
         self.assertEqual(json.loads(response.body), json.loads(HTTPAgentDetailHandler.invalid_json_error))
         self.assertEqual(response.code, 400)
 
-        count_after = dal.Session().query(AgentDetail).count()
-        self.assertEqual(count_before, count_after)
+        self.assertEqual(count_before, AgentDetail.count())
 
     def test_http_agent_update_handler(self):
         headers = {'authorization': self.AGENT_TOKEN_0}

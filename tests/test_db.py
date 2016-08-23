@@ -43,19 +43,19 @@ class TestDb(unittest.TestCase):
 
         dal.session.rollback()
 
-        self.assertEqual(dal.session.query(User).count(), 3)
-        self.assertEqual(dal.session.query(UserAuthToken).count(), 3)
+        self.assertEqual(User.count(), 3)
+        self.assertEqual(UserAuthToken.count(), 3)
 
         dal.session.delete(dal.session.query(User).filter(User.email == 'user_a@example.com').one())
         dal.session.commit()
 
-        self.assertEqual(dal.session.query(User).count(), 2)
-        self.assertEqual(dal.session.query(UserAuthToken).count(), 2)
+        self.assertEqual(User.count(), 2)
+        self.assertEqual(UserAuthToken.count(), 2)
 
     def test_agents_and_agent_tokens(self):
         # Generate agents and tokens
-        agents_before = dal.session.query(Agent).count()
-        agent_tokens_before = dal.session.query(AgentAuthToken).count()
+        agents_before = Agent.count()
+        agent_tokens_before = AgentAuthToken.count()
         agent = Agent(name='Agent 0')
 
         dal.session.add_all([
@@ -64,17 +64,17 @@ class TestDb(unittest.TestCase):
             AgentAuthToken(agent=Agent(name='Agent 2'))])
         dal.session.commit()
 
-        self.assertEqual(dal.session.query(Agent).count(),
+        self.assertEqual(Agent.count(),
             agents_before + 3)
-        self.assertEqual(dal.session.query(AgentAuthToken).count(),
+        self.assertEqual(AgentAuthToken.count(),
             agent_tokens_before + 3)
 
         dal.session.delete(dal.session.query(Agent).get(agent.id))
         dal.session.commit()
 
-        self.assertEqual(dal.session.query(Agent).count(),
+        self.assertEqual(Agent.count(),
             agents_before + 2)
-        self.assertEqual(dal.session.query(AgentAuthToken).count(),
+        self.assertEqual(AgentAuthToken.count(),
             agent_tokens_before + 2)
 
     def test_agent_detail(self):
@@ -82,17 +82,17 @@ class TestDb(unittest.TestCase):
         dal.session.add(agent)
         dal.session.commit()
 
-        self.assertEqual(dal.session.query(AgentDetail).count(), 0)
+        self.assertEqual(AgentDetail.count(), 0)
         args = {'dist_name': 'Ubuntu', 'dist_version': '15.10',
             'hostname': 'client', 'num_cores': 3,
             'memory': 1040834560, 'processor': 'x86_64'}
         created = AgentDetail.update_or_create(agent.id, **args)
         self.assertTrue(created)
-        self.assertEqual(dal.session.query(AgentDetail).count(), 1)
+        self.assertEqual(AgentDetail.count(), 1)
 
         args = {'dist_name': 'Debian', 'dist_version': '7.0',
             'hostname': 'client2', 'num_cores': 6,
             'memory': 8888888, 'processor': 'amd64'}
         created = AgentDetail.update_or_create(agent.id, **args)
         self.assertFalse(created)
-        self.assertEqual(dal.session.query(AgentDetail).count(), 1)
+        self.assertEqual(AgentDetail.count(), 1)
