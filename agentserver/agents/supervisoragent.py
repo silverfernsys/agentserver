@@ -3,6 +3,7 @@ import json, logging
 from time import time
 from datetime import datetime
 from sqlalchemy.orm.exc import NoResultFound
+from log import log_kafka
 from db import dal, kal, AgentDetail
 from clients.supervisorclientcoordinator import scc
 from validator import (system_stats_validator,
@@ -24,7 +25,7 @@ class SupervisorAgent(object):
         self.ip = self.get_ip(ws.request)
         self.ws = ws
         self.session = dal.Session()
-        self.logger = logging.getLogger('SupervisorAgent')
+        # self.logger = logging.getLogger('SupervisorAgent')
 
     def get_ip(self, request):
         return request.headers.get("X-Real-IP") or request.remote_ip
@@ -36,17 +37,13 @@ class SupervisorAgent(object):
     def error_message(self, errors):
         errors = [{'arg': k, 'details': v} for k, v in errors.items()]
         return json.dumps({'status': 'error', 'errors': errors})
-
-    def log(self, id, name, stats, **kwargs):
-        self.logger.debug('Flushed {0} stats for agent.id = {1}, process = {2} to Kafka.'
-            .format(len(stats), self.id, name))
     
     def snapshot_update(self, data):
         if snapshot_validator.validate(data):
             for row in data[SNAPSHOT]:
                 scc.update(self.id, **row)
                 kal.write_stats(self.id, **row)
-                self.log(self.id, **row)
+                log_kafka(self.id, 'SupervisorAgent', **row)
             self.ws.write_message(self.snapshot_update_success)
         else:
             self.ws.write_message(self.error_message(snapshot_validator.errors))

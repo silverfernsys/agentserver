@@ -66,7 +66,6 @@ class TestHTTP(AsyncHTTPTestCase):
 
         dal.session.commit()
         scc.initialize()
-        # print(json.dumps(scc, indent=2))
 
         cls.TOKEN = user.token.uuid
         cls.AGENT_ID_0 = agent_0.id
@@ -112,35 +111,30 @@ class TestHTTP(AsyncHTTPTestCase):
 
     def test_http_handler(self):
         response = self.fetch('/', method='GET')
-        response_data = json.loads(response.body)
-        self.assertTrue('version' in response_data)
+        self.assertEqual(json.loads(response.body), json.loads(HTTPVersionHandler.response))
         self.assertEqual(response.code, 200)
 
     def test_http_token_handler_success(self):
         headers = {'username':self.EMAIL, 'password':self.PASSWORD}
         response = self.fetch('/token/', method='GET', headers=headers)
-        response_data = json.loads(response.body)
+        self.assertTrue('token' in json.loads(response.body))
         self.assertEqual(response.code, 200)
-        self.assertEqual(self.TOKEN, response_data['token'])
 
     def test_http_token_handler_failure(self):
         headers = {'username':self.EMAIL, 'password':'gibberish'}
         response = self.fetch('/token/', method='GET', headers=headers)
-        response_data = json.loads(response.body)
+        self.assertEqual(json.loads(response.body), json.loads(HTTPTokenHandler.authentication_error))
         self.assertEqual(response.code, 400)
-        self.assertEqual(response_data['error'], 'invalid username/password')
 
         headers = {'username':'asdf', 'password':'gibberish'}
         response = self.fetch('/token/', method='GET', headers=headers)
-        response_data = json.loads(response.body)
+        self.assertEqual(json.loads(response.body), json.loads(HTTPTokenHandler.authentication_error))
         self.assertEqual(response.code, 400)
-        self.assertEqual(response_data['error'], 'invalid username/password')
 
         headers = {'gibberish':'gibberish'}
         response = self.fetch('/token/', method='GET', headers=headers)
-        response_data = json.loads(response.body)
+        self.assertEqual(json.loads(response.body), json.loads(HTTPTokenHandler.authentication_error))
         self.assertEqual(response.code, 400)
-        self.assertEqual(response_data['error'], 'invalid username/password')
 
     def test_http_list_handler(self):
         headers = {'authorization':self.TOKEN}
@@ -286,31 +280,6 @@ class TestHTTP(AsyncHTTPTestCase):
         count_after = dal.Session().query(AgentDetail).count()
         self.assertEqual(count_before, count_after)
 
-    def test_http_agent_detail_handler_missing_params(self):
-        count_before = dal.Session().query(AgentDetail).count()
-
-        hostname = 'agent_1_update'
-        processor = 'x86_64_update'
-        dist_name = 'Ubuntu_update'
-        dist_version = '15.04_update'
-
-        headers = {'authorization':self.AGENT_TOKEN_0}
-        body = json.dumps({
-            'hostname': hostname,
-            'processor': processor,
-            'dist_name': dist_name,
-            'dist_version': dist_version
-        })
-        response = self.fetch('/agent/detail/', method='POST', headers=headers, body=body)
-        response_data = json.loads(response.body)
-        self.assertEqual(response.code, 400)
-        self.assertEqual(response_data['status'], 'error')
-        self.assertEqual(response_data['error_type'], 'missing value')
-        self.assertIn('value', response_data)
-
-        count_after = dal.Session().query(AgentDetail).count()
-        self.assertEqual(count_before, count_after)
-
     def test_http_agent_detail_handler(self):
         count_before = dal.Session().query(AgentDetail).count()
 
@@ -365,12 +334,11 @@ class TestHTTP(AsyncHTTPTestCase):
             'dist_version': dist_version
         })
         response = self.fetch('/agent/detail/', method='POST', headers=headers, body=body)
-        response_data = json.loads(response.body)
+        expected_error = {'status': 'error', 'errors':
+            [{'details': 'required field', 'arg': 'num_cores'},
+            {'details': 'required field', 'arg': 'memory'}]}
+        self.assertEqual(json.loads(response.body), expected_error)
         self.assertEqual(response.code, 400)
-        self.assertIn('status', response_data)
-        self.assertEqual(response_data['status'], 'error')
-        self.assertEqual(response_data['error_type'], 'missing value')
-        self.assertIn('value', response_data)
 
         count_after = dal.Session().query(AgentDetail).count()
         self.assertEqual(count_before, count_after)
@@ -395,12 +363,21 @@ class TestHTTP(AsyncHTTPTestCase):
             'dist_version': dist_version
         })
         response = self.fetch('/agent/detail/', method='POST', headers=headers, body=body)
-        response_data = json.loads(response.body)
+        expected_error = {'status': 'error', 'errors':
+            [{'details': 'must be of integer type', 'arg': 'num_cores'},
+            {'details': 'must be of integer type', 'arg': 'memory'}]}
+        self.assertEqual(json.loads(response.body), expected_error)
         self.assertEqual(response.code, 400)
-        self.assertIn('status', response_data)
-        self.assertEqual(response_data['status'], 'error')
-        self.assertEqual(response_data['error_type'], 'value error')
-        self.assertIn('value', response_data)
+
+        count_after = dal.Session().query(AgentDetail).count()
+        self.assertEqual(count_before, count_after)
+
+    def test_http_agent_detail_handler_invalid_json(self):
+        count_before = dal.Session().query(AgentDetail).count()
+        headers = {'authorization':self.AGENT_TOKEN_2}
+        response = self.fetch('/agent/detail/', method='POST', headers=headers, body='gibberish')
+        self.assertEqual(json.loads(response.body), json.loads(HTTPAgentDetailHandler.invalid_json_error))
+        self.assertEqual(response.code, 400)
 
         count_after = dal.Session().query(AgentDetail).count()
         self.assertEqual(count_before, count_after)
@@ -409,22 +386,32 @@ class TestHTTP(AsyncHTTPTestCase):
         headers = {'authorization': self.AGENT_TOKEN_0}
         body = open(os.path.join(FIXTURES_DIR, 'snapshots', 'valid_0.json')).read()
         response = self.fetch('/agent/update/', method='POST', headers=headers, body=body)
-        response_data = json.loads(response.body)
         self.assertEqual(response.code, 200)
-        self.assertEqual(response_data['status'], 'success')
+        self.assertEqual(json.loads(response.body), json.loads(HTTPAgentUpdateHandler.snapshot_update_success))
 
         body = open(os.path.join(FIXTURES_DIR, 'snapshots', 'valid_1.json')).read()
         response = self.fetch('/agent/update/', method='POST', headers=headers, body=body)
-        response_data = json.loads(response.body)
         self.assertEqual(response.code, 200)
-        self.assertEqual(response_data['status'], 'success')
+        self.assertEqual(json.loads(response.body), json.loads(HTTPAgentUpdateHandler.snapshot_update_success))
+
+    def test_http_agent_update_handler_invalid_json(self):
+        headers = {'authorization': self.AGENT_TOKEN_0}
+        body = 'invalid json'
+        response = self.fetch('/agent/update/', method='POST', headers=headers, body=body)
+        self.assertEqual(response.code, 400)
+        self.assertEqual(json.loads(response.body), json.loads(HTTPAgentUpdateHandler.invalid_json_error))
+
+        body = open(os.path.join(FIXTURES_DIR, 'snapshots', 'invalid_0.json')).read()
+        response = self.fetch('/agent/update/', method='POST', headers=headers, body=body)
+        expected_error = {'status': 'error', 'errors':
+            [{'details': 'must be of integer type', 'arg': 'pid'},
+            {'details': {'0': {'0': 'must be of float type'}}, 'arg': 'stats'}]}
+        self.assertEqual(response.code, 400)
+        self.assertEqual(json.loads(response.body), expected_error)
 
     def test_http_agent_update_handler_bad_auth(self):
         headers = {'authorization': 'gibberish'}
         body = open(os.path.join(FIXTURES_DIR, 'snapshots', 'valid_0.json')).read()
         response = self.fetch('/agent/update/', method='POST', headers=headers, body=body)
-        response_data = json.loads(response.body)
         self.assertEqual(response.code, 401)
-        self.assertEqual(response_data['status'], 'error')
-        self.assertEqual(response_data['error_type'], 'not authorized')
-
+        self.assertEqual(json.loads(response.body), json.loads(HTTPAgentUpdateHandler.not_authorized_error))

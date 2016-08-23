@@ -194,6 +194,10 @@ def haiku_permute(id, separator='-'):
         p=str(permute(id)).rjust(4,'0'))
 
 
+def get_ip(request):
+        return request.headers.get("X-Real-IP") or request.remote_ip
+
+
 def validate_ip(ip):
     """
     Validates an IPv4 or IPv6 IP address
