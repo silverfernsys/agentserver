@@ -44,7 +44,7 @@ class Agent(Base, Countable):
     @classmethod
     def authorize(cls, authorization_token, session=None):
         if not session:
-            session = dal.Session()
+            session = dal.session
         return session.query(AgentAuthToken) \
             .filter(AgentAuthToken.uuid == authorization_token) \
             .one().agent
@@ -139,6 +139,17 @@ class AgentAuthToken(Base, Countable):
             "created_on='{self.created_on}')>".format(self=self)
 
 
+class UserAuthenticationException(Exception):
+    def __init__(self, message, username, password):
+        self.message = message
+        self.username = username
+        self.password = password
+
+    def __repr__(self):
+        return 'Authentication failed for username: {self.username}, ' \
+            'password: {self.password}. Reason: {self.message}.'.format(self=self)
+
+
 class User(Base, Countable):
     __tablename__ = 'users'
 
@@ -149,6 +160,25 @@ class User(Base, Countable):
     is_admin = Column(Boolean(), default=False)
     created_on = Column(DateTime(), default=datetime.now)
     updated_on = Column(DateTime(), default=datetime.now, onupdate=datetime.now)
+
+    @classmethod
+    def authenticate(cls, username, password, session=None):
+        if session is None:
+            session = dal.session
+        try:
+            user = session.query(User).filter(User.email == username).one()
+            if user.authenticates(password):
+                try:
+                    token = session.query(UserAuthToken).filter(UserAuthToken.user == user).one()
+                except NoResultFound:
+                    token = UserAuthToken(user=user)
+                    session.add(token)
+                    session.commit()
+                return token.uuid
+            else:
+                raise UserAuthenticationException('incorrect password for', username, password)
+        except NoResultFound:
+            raise UserAuthenticationException('unknown username', username, password)
 
     def authenticates(self, other_password):
         try:
@@ -179,6 +209,14 @@ class UserAuthToken(Base, Countable):
     user = relationship("User",
         backref=backref('token', cascade='all,delete,delete-orphan', uselist=False),
         single_parent=True)
+
+    @classmethod
+    def authorize(cls, authorization_token, session=None):
+        if not session:
+            session = dal.session
+        return session.query(UserAuthToken) \
+            .filter(UserAuthToken.uuid == authorization_token) \
+            .one().user
 
     def __repr__(self):
         return "<UserAuthToken(uuid='{self.uuid}', " \
