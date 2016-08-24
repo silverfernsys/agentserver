@@ -247,75 +247,42 @@ class TestHTTP(AsyncHTTPTestCase):
     def test_http_agent_detail_update_handler(self):
         count_before = AgentDetail.count()
 
-        hostname = 'agent_1_update'
-        processor = 'x86_64_update'
-        num_cores = 3
-        memory = 9999999
-        dist_name = 'Ubuntu_update'
-        dist_version = '15.04_update'
-
+        data = json.loads(open(os.path.join(FIXTURES_DIR,
+            'system_stats', 'valid_2.json')).read())['system']
         headers = {'authorization':self.AGENT_TOKEN_0}
-        body = json.dumps({
-            'hostname': hostname,
-            'processor': processor,
-            'num_cores': num_cores,
-            'memory': memory,
-            'dist_name': dist_name,
-            'dist_version': dist_version
-        })
+        body = json.dumps(data)
+
         response = self.fetch('/agent/detail/', method='POST', headers=headers, body=body)
+
         self.assertEqual(response.code, 200)
         self.assertEqual(json.loads(response.body),
             json.loads(HTTPAgentDetailHandler.success_response_updated))
 
         token = dal.Session().query(AgentAuthToken).filter(AgentAuthToken.uuid == self.AGENT_TOKEN_0).one()
-        detail = token.agent.details
-
-        self.assertEqual(hostname, detail.hostname)
-        self.assertEqual(processor, detail.processor)
-        self.assertEqual(num_cores, detail.num_cores)
-        self.assertEqual(memory, detail.memory)
-        self.assertEqual(dist_name, detail.dist_name)
-        self.assertEqual(dist_version, detail.dist_version)
-        # self.assertEqual(data['updated'], detail.updated_on.strftime('%Y-%m-%dT%H:%M:%S.%fZ'))
-        # self.assertEqual(data['created'], detail.created_on.strftime('%Y-%m-%dT%H:%M:%S.%fZ'))
-
+        detail = token.agent.details.__json__()
+        detail.pop('updated')
+        detail.pop('created')
+        self.assertEqual(data, detail)
         self.assertEqual(count_before, AgentDetail.count())
 
     def test_http_agent_detail_create_handler(self):
         count_before = AgentDetail.count()
 
-        hostname = 'agent_2'
-        processor = 'amd64'
-        num_cores = 1
-        memory = 88888888
-        dist_name = 'Ubuntu'
-        dist_version = '14.04'
-
+        data = json.loads(open(os.path.join(FIXTURES_DIR,
+            'system_stats', 'valid_2.json')).read())['system']
         headers = {'authorization':self.AGENT_TOKEN_1}
-        body = json.dumps({
-            'hostname': hostname,
-            'processor': processor,
-            'num_cores': num_cores,
-            'memory': memory,
-            'dist_name': dist_name,
-            'dist_version': dist_version
-        })
+        body = json.dumps(data)
+
         response = self.fetch('/agent/detail/', method='POST', headers=headers, body=body)
         self.assertEqual(response.code, 201)
         self.assertEqual(json.loads(response.body),
             json.loads(HTTPAgentDetailHandler.success_response_created))
 
         token = dal.Session().query(AgentAuthToken).filter(AgentAuthToken.uuid == self.AGENT_TOKEN_1).one()
-        detail = token.agent.details
-
-        self.assertEqual(detail.hostname, hostname)
-        self.assertEqual(detail.processor, processor)
-        self.assertEqual(detail.num_cores, num_cores)
-        self.assertEqual(detail.memory, memory)
-        self.assertEqual(detail.dist_name, dist_name)
-        self.assertEqual(detail.dist_version, dist_version)
-
+        detail = token.agent.details.__json__()
+        detail.pop('updated')
+        detail.pop('created')
+        self.assertEqual(data, detail)
         self.assertEqual(count_before + 1, AgentDetail.count())
 
     def test_http_agent_detail_handler_missing_params(self):

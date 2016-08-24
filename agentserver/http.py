@@ -22,13 +22,10 @@ class JsonHandler(RequestHandler):
     unknown_error = json.dumps({'status': 'error', 'errors': [{'details': 'unknown error'}]})
 
     def prepare(self):
-        # Incorporate request JSON into arguments dictionary.
         if self.request.body:
             try:
-                # print('ARGUMENTS: %s' % self.request.arguments)
                 json_data = tornado.escape.json_decode(self.request.body)
                 self.json = json_data
-                # self.request.arguments.update(json_data)
             except ValueError:
                 self.send_error(400, message=self.invalid_json_error) # Bad Request
 
@@ -42,8 +39,7 @@ class JsonHandler(RequestHandler):
             else:
                 kwargs['message'] = self.unknown_error
 
-        self.response = kwargs['message']
-        self.write(self.response)
+        self.write(kwargs['message'])
 
 
 class HTTPVersionHandler(JsonHandler):
