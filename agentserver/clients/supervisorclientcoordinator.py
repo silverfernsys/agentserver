@@ -3,7 +3,7 @@ import threading
 from time import time, sleep
 from datetime import datetime, timedelta
 from tornado.escape import json_encode
-from db.models import mal, Agent
+from db.models import Agent
 from db.timeseries import dral, pal
 from utils.iso_8601 import (iso_8601_period_to_timedelta,
     iso_8601_interval_to_datetimes)
@@ -106,7 +106,7 @@ class SupervisorClientCoordinator(object):
         self.clients = {}
         self.updates = {}
 
-        for agent in mal.session.query(Agent).all():
+        for agent in Agent.all():
             info = AgentInfo(agent)
             result = pal.processes(agent.id, 'P6W')
             for row in json.loads(result):

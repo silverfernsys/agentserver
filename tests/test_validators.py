@@ -50,15 +50,15 @@ class TestSchema(unittest.TestCase):
             state = json.loads(line)['state']
             self.assertTrue(states_validator.validate(state))
 
-        # text = open(os.path.join(FIXTURES_DIR, 'states', 'invalid_0.json')).read().split('\n')
-        # for line in text:
-        #     state = json.loads(line)['state']
-        #     self.assertTrue(states_validator.validate(state))
+        text = open(os.path.join(FIXTURES_DIR, 'states', 'invalid_0.json')).read().split('\n')
+        for line in text:
+            state = json.loads(line)['state']
+            self.assertFalse(states_validator.validate(state))
 
-        # text = open(os.path.join(FIXTURES_DIR, 'states', 'invalid_1.json')).read().split('\n')
-        # for line in text:
-        #     state = json.loads(line)['state']
-        #     self.assertTrue(states_validator.validate(state))
+        text = open(os.path.join(FIXTURES_DIR, 'states', 'invalid_1.json')).read().split('\n')
+        for line in text:
+            state = json.loads(line)['state']
+            self.assertFalse(states_validator.validate(state))
 
     def test_snapshots(self):
         text = open(os.path.join(FIXTURES_DIR, 'snapshots', 'valid_0.json')).read()
@@ -67,12 +67,8 @@ class TestSchema(unittest.TestCase):
         text = open(os.path.join(FIXTURES_DIR, 'snapshots', 'valid_1.json')).read()
         self.assertTrue(snapshot_validator.validate(json.loads(text)))
 
-        # text = open(os.path.join(FIXTURES_DIR, 'snapshots', 'invalid_0.json')).read()
-        # for line in text:
-        #     state = json.loads(line)['snapshot']
-        #     self.assertTrue(states_validator.validate(state))
+        text = open(os.path.join(FIXTURES_DIR, 'snapshots', 'invalid_0.json')).read()
+        self.assertFalse(states_validator.validate(json.loads(text)))
 
-        # text = open(os.path.join(FIXTURES_DIR, 'snapshots', 'invalid_1.json')).read()
-        # for line in text:
-        #     state = json.loads(line)['snapshot']
-        #     self.assertTrue(states_validator.validate(state))
+        text = open(os.path.join(FIXTURES_DIR, 'snapshots', 'invalid_1.json')).read()
+        self.assertFalse(states_validator.validate(json.loads(text)))

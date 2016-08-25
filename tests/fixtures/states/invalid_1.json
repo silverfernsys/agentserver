@@ -1,4 +1,4 @@
 {"state":{"group": "process_1", "name": "process_1", "statename": "STOPPING", "pid": "4878", "start": 1460513172, "state": 40}}
-{"state":{"group": "process_1", "name": "process_1", "statename": "STOPPED", "pid": null, "start": 1460613204, "state": 0}}
-{"state":{"group": "process_1", "name": "process_1", "statename": "STARTING", "pid": null, "start": 1460613204, "state": 10}}
-{"state":{"group": "process_1", "name": "process_1", "statename": "RUNNING", "pid": "19859", "start": 1460613204, "state": 20}}
+{"state":{"group": "process_1", "name": "process_1", "statename": "STOPPED", "pid": null, "start": 1460613204, "state": "0"}}
+{"state":{"group": 1234, "name": "process_1", "statename": "STARTING", "pid": null, "start": 1460613204, "state": 10}}
+{"state":{"group": "process_1", "name": "process_1", "statename": 1234, "pid": "19859", "start": 1460613204, "state": 20}}

@@ -20,23 +20,61 @@ class Countable(object):
         return session.query(cls).count()
 
 
-class Agent(Base, Countable):
+class Saveable(object):
+    def save(self, session=None):
+        if not session:
+            session = mal.session
+        session.add(self)
+        session.commit()
+        return self
+
+
+class Allable(object):
+    @classmethod
+    def all(cls, session=None):
+        if not session:
+            session = mal.session
+        return session.query(cls)
+
+
+class Gettable(object):
+    @classmethod
+    def get(cls, session=None, *args, **kwargs):
+        """Find object with keyword args."""
+        if not session:
+            session = mal.session
+
+        query = None
+        for k, v in kwargs.items():
+            if query is None:
+                query = session.query(cls).filter(getattr(cls, k) == v)
+            else:
+                query = query.filter(getattr(cls, k) == v)
+        try:
+            return query.one()
+        except (AttributeError, NoResultFound):
+            return None
+
+
+class Deleteable(object):
+    def delete(self, session=None):
+        if not session:
+            session = mal.session
+        try:
+            session.delete(self)
+            session.commit()
+            return True
+        except Exception as e:
+            print('EXCEPTION: %s' % e)
+            return False
+
+
+class Agent(Base, Countable, Saveable, Allable, Gettable, Deleteable):
     __tablename__ = 'agents'
 
     id = Column(Integer(), primary_key=True)
     name = Column(String(), nullable=False, unique=True)
     created_on = Column(DateTime(), default=datetime.now)
-
-    @classmethod
-    def delete(cls, name, session=None):
-        if not session:
-            session = mal.session
-        try:
-            session.delete(session.query(Agent).filter(Agent.name == name).one())
-            session.commit()
-            return True
-        except NoResultFound:
-            return False
 
     @classmethod
     def authorize(cls, authorization_token, session=None):
@@ -55,7 +93,7 @@ class Agent(Base, Countable):
             "created_on='{self.created_on}')>".format(self=self)
 
 
-class AgentDetail(Base, Countable):
+class AgentDetail(Base, Countable, Deleteable):
     __tablename__ = 'agentdetails'
 
     id = Column(Integer(), primary_key=True)
@@ -127,7 +165,7 @@ class AgentDetail(Base, Countable):
             'created': self.created_on.strftime("%Y-%m-%dT%H:%M:%S.%fZ")}
 
 
-class AgentAuthToken(Base, Countable):
+class AgentAuthToken(Base, Countable, Saveable, Allable, Gettable, Deleteable):
     __tablename__ = 'agentauthtokens'
 
     uuid = Column(String(), primary_key=True, default=uuid)
@@ -154,7 +192,7 @@ class UserAuthenticationException(Exception):
             'password: {self.password}. Reason: {self.message}.'.format(self=self)
 
 
-class User(Base, Countable):
+class User(Base, Countable, Saveable, Allable, Gettable, Deleteable):
     __tablename__ = 'users'
 
     id = Column(Integer(), primary_key=True)
@@ -164,45 +202,6 @@ class User(Base, Countable):
     is_admin = Column(Boolean(), default=False)
     created_on = Column(DateTime(), default=datetime.now)
     updated_on = Column(DateTime(), default=datetime.now, onupdate=datetime.now)
-
-    @classmethod
-    def all(cls, session=None):
-        if not session:
-            session = mal.session
-        return session.query(User)
-
-    @classmethod
-    def get(cls, session=None, *args, **kwargs):
-        """Find user with either id or email."""
-        if not session:
-            session = mal.session
-        id = kwargs.get('id')
-        email = kwargs.get('email')
-        if id and email:
-            raise TypeError("Provide only one of 'id' or 'email'.")
-        if id:
-            try:
-                return session.query(User).get(id)
-            except NoResultFound:
-                return None
-        elif email:
-            try:
-                return session.query(User).filter(User.email == email).one()
-            except NoResultFound:
-                return None
-        else:
-            raise TypeError("Provide either 'id' or 'email' keyword argument.")
-
-    @classmethod
-    def delete(cls, email, session=None):
-        if not session:
-            session = mal.session
-        try:
-            session.delete(session.query(User).filter(User.email == email).one())
-            session.commit()
-            return True
-        except NoResultFound:
-            return False
 
     @classmethod
     def authorize(cls, authorization_token, session=None):
@@ -260,7 +259,7 @@ def hash_password(target, value, oldvalue, initiator):
 listen(User.password, 'set', hash_password, retval=True)
 
 
-class UserAuthToken(Base, Countable):
+class UserAuthToken(Base, Countable, Saveable, Allable, Gettable, Deleteable):
     __tablename__ = 'userauthtokens'
 
     uuid = Column(String(), primary_key=True, default=uuid)

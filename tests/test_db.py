@@ -22,6 +22,7 @@ class TestDb(unittest.TestCase):
              email='user_a@example.com',
              is_admin=True,
              password='randompassworda')
+        
         mal.session.add_all([UserAuthToken(user=user),
                         UserAuthToken(user=User(name='User B',
                          email='user_b@example.com',
@@ -54,14 +55,13 @@ class TestDb(unittest.TestCase):
         self.assertEqual(User.get(id=user.id), user)
         self.assertEqual(User.get(email=user.email), user)
         self.assertEqual(User.get(id=user.id), User.get(email=user.email))
+        self.assertEqual(User.get(id=user.id, email=user.email), user)
         self.assertEqual(User.get(id=1000), None)
-        self.assertRaises(TypeError, User.get, user.id)
-        with self.assertRaises(TypeError):
-            User.get(id=user.id, email=user.email)
+        self.assertEqual(User.get(), None)
 
         # Test delete method
-        self.assertTrue(User.delete(user.email))
-        self.assertFalse(User.delete('non-existent@example.com'))
+        self.assertTrue(User.get(email=user.email).delete())
+        self.assertRaises(AttributeError, lambda: User.get('non-existent@example.com').delete())
 
         self.assertEqual(User.count(), 2)
         self.assertEqual(UserAuthToken.count(), 2)
@@ -96,8 +96,9 @@ class TestDb(unittest.TestCase):
         self.assertEqual(Agent.authorize('non-existent token'), None)
 
         # Test delete method
-        self.assertTrue(Agent.delete(agent.name))
-        self.assertFalse(Agent.delete('non-existent agent'))
+        self.assertTrue(Agent.get(name=agent.name).delete())
+        self.assertRaises(AttributeError, lambda: Agent.get(name='non-existent agent').delete())
+        self.assertEqual(Agent.get(), None)
 
         self.assertEqual(Agent.count(),
             agents_before + 2)

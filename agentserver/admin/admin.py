@@ -12,13 +12,13 @@ class Admin(object):
 
     def create_user(self):
         while True:
-            input_email = raw_input('Enter email address: ')
-            if User.get(email=input_email):
+            email = raw_input('Enter email address: ')
+            if User.get(email=email):
                 print('Email already exists. Use another email address.')
             else:
                 break
 
-        input_name = raw_input('Enter display name: ')
+        name = raw_input('Enter display name: ')
 
         while True:
             input_is_admin = raw_input('Admininstrative user? (y/N): ')
@@ -36,24 +36,21 @@ class Admin(object):
             else:
                 break
 
-        session = mal.session
-        user = User(name=input_name,
-                     email=input_email,
+        user = User(name=name,
+                     email=email,
                      is_admin=is_admin,
-                     password=password_1)
-        session.add(user)
-        session.commit()
+                     password=password_1).save()
 
         print('Successfully created user {email}.'.format(email=user.email))
 
     def auth_admin(self):
         while True:
-            input_email = raw_input('Enter admin email address: ')
-            user = User.get(email=input_email)
+            email = raw_input('Enter admin email address: ')
+            user = User.get(email=email)
             if user and user.is_admin:
                 break
             else:
-                print('{email} is not an admin email address...'.format(email=input_email))
+                print('{email} is not an admin email address...'.format(email=email))
         while True:
             password = getpass.getpass('Enter password: ')
             if user.authenticates(password):
@@ -65,9 +62,10 @@ class Admin(object):
         print('Delete user: please authenticate...')
         self.auth_admin()
         email = raw_input('Enter email address of user to delete: ')
-        if User.delete(email):
+        try:
+            User.get(email=email).delete()
             print('Successfully deleted {email}.'.format(email=email))
-        else:
+        except:
             print('Could not find {email}.'.format(email=email))
 
     def list_users(self):
@@ -87,43 +85,37 @@ class Admin(object):
     def create_user_auth_token(self):
         print('Create token: please authenticate...')
         self.auth_admin()
-        session = mal.session
-        input_email = raw_input('Enter email to create a token for: ')
-        input_user = User.get(email=input_email)
-        if input_user:
-            user_token = UserAuthToken(user=input_user)
+        email = raw_input('Enter email to create a token for: ')
+        user = User.get(email=email)
+        if user:
             try:
-                session.add(user_token)
-                session.commit()
-                print('Token {token} created for {email}.'.format(token=user_token.uuid, email=input_email))
+                token = UserAuthToken(user=user).save()
+                print('Token {token} created for {email}.'.format(token=token.uuid, email=email))
             except:
-                print('A token already exists for {email}. Doing nothing.'.format(email=input_email))
+                print('A token already exists for {email}. Doing nothing.'.format(email=email))
         else:
-            print('User {email} does not exist.'.format(email=input_email))
+            print('User {email} does not exist.'.format(email=email))
 
     def delete_user_auth_token(self):
         print('Delete token: please authenticate...')
         self.auth_admin()
-        input_email = raw_input('Enter email to delete token for: ')
-        session = mal.session
-        user = User.get(email=input_email)
+        email = raw_input('Enter email to delete token for: ')
+        user = User.get(email=email)
         if user:
             try:
-                user_token = session.query(UserAuthToken).filter(UserAuthToken.user == user).one()
-                session.delete(user_token)
-                session.commit()
-                print('Successfully deleted token for {email}.'.format(email=input_email))
+                user.token.delete()
+                print('Successfully deleted token for {email}.'.format(email=email))
             except:
-                print('No token exists for {email}'.format(email=input_email))
+                print('No token exists for {email}'.format(email=email))
         else:
-            print('User {email} does not exist.'.format(email=input_email))
+            print('User {email} does not exist.'.format(email=email))
 
     def list_user_auth_tokens(self):
         print("{email}{token}{created}".format(
             email="Email".ljust(30),
             token="Token".ljust(70),
             created="Created"))
-        for token in mal.session.query(UserAuthToken):
+        for token in UserAuthToken.all():
             line = "{email}{token}{created}".format(
                 email=token.user.email.ljust(30),
                 token=token.uuid.ljust(70),
@@ -131,7 +123,6 @@ class Admin(object):
             print(line)
 
     def create_agent(self):
-        session = mal.session
         print('Create agent: please authenticate...')
         self.auth_admin()
 
@@ -139,40 +130,34 @@ class Admin(object):
         if len(name) == 0:
             name = haiku_name(Agent.count())
 
-        agent = Agent(name=name)
-        session.add(agent)
-        session.commit()
-
+        agent = Agent(name=name).save()
         print('Successfully created agent {name}'.format(name=agent.name))
 
     def delete_agent(self):
         print('Delete agent: please authenticate...')
         self.auth_admin()
         name = raw_input('Enter agent name: ')
-        if Agent.delete(name):
+        if Agent.get(name=name).delete():
             print('Successfully deleted agent %s' % name)
         else:
             print('Agent does not exist.')
 
     def list_agents(self):
         print("{id}{name}{created}".format(id="id".ljust(30), name="Name".ljust(30), created="Created"))
-        for agent in mal.session.query(Agent):
+        for agent in Agent.all():
             line = "{id}{name}{created}".format(id=str(agent.id).ljust(30), name=agent.name.ljust(30),
                 created=agent.created_on.strftime('%d-%m-%Y %H:%M:%S'))
             print(line)
 
     def create_agent_auth_token(self):
-        session = mal.session
         print('Create agent token: please authenticate...')
         self.auth_admin()
 
-        input_id = raw_input('Enter id of agent to create token for: ')
+        id = raw_input('Enter id of agent to create token for: ')
         try:
-            agent = session.query(Agent).filter(Agent.id == input_id).one()
-            token = AgentAuthToken(agent=agent)
+            agent = Agent.get(id=id)
             try:
-                session.add(token)
-                session.commit()
+                token = AgentAuthToken(agent=agent).save()
                 print(str('Token {token} created for {id}. {name}'
                     .format(token=token.uuid, id=agent.id,
                         name=agent.name)))
@@ -180,24 +165,22 @@ class Admin(object):
                 print('A token already exists for {id}. {name}. Doing nothing.'
                     .format(id=agent.id, name=agent.name))
         except Exception as e:
-            print('Agent {id} does not exist.'.format(id=input_id))
+            print('Agent {id} does not exist.'.format(id=id))
             print('Details: {details}'.format(details=str(e)))
 
     def delete_agent_auth_token(self):
-        session = mal.session
         print('Delete agent token: please authenticate...')
         self.auth_admin()
-        input_id = raw_input('Enter name of agent to delete token for: ')
+        id = raw_input('Enter name of agent to delete token for: ')
         try:
-            agent = session.query(Agent).filter(Agent.id == input_id).one()
+            agent = Agent.get(id=id)
             try:
-                session.delete(agent.token)
-                session.commit()
+                agent.token.delete()
                 print('Successfully deleted token for {id}. {name}'.format(id=agent.id, name=agent.name))
             except:
-                print('No token exists for {id}'.format(id=input_id))
+                print('No token exists for {id}'.format(id=id))
         except Exception as e:
-            print('Agent {id} does not exist.'.format(id=input_id))
+            print('Agent {id} does not exist.'.format(id=id))
             print('Details: {details}'.format(details=str(e)))
 
     def list_agent_auth_tokens(self):
@@ -206,7 +189,7 @@ class Admin(object):
             id="id".ljust(30),
             name="Name".ljust(30),
             token="Token".ljust(70)))
-        for token in mal.session.query(AgentAuthToken):
+        for token in AgentAuthToken.all():
             line = "{created}{id}{name}{token}".format(
                 created=token.created_on.strftime('%d-%m-%Y %H:%M:%S').ljust(30),
                 id=str(token.agent.id).ljust(30),
