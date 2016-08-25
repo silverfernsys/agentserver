@@ -9,16 +9,6 @@ from utils.iso_8601 import (iso_8601_period_to_timedelta,
     validate_iso_8601_interval)
 
 class TestUtils(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        pass
-
-    def setUp(self):
-        pass
-
-    def tearDown(self):
-        pass
-
     # http://www.voidspace.org.uk/python/mock/examples.html#partial-mocking
     @mock.patch('utils.iso_8601.datetime')
     def test_iso_8601_interval_to_datetimes(self, mock_datetime):
@@ -121,14 +111,10 @@ class TestUtils(unittest.TestCase):
     @mock.patch('utils.haiku.random.choice')
     def test_haiku(self, mock_choice):
         mock_choice.side_effect = [adjs[22], nouns[13], adjs[7], nouns[30]]
-        h = haiku()
-        self.assertIn('-', h, 'Haiku has a separator between adjective and noun')
-        [adjective, noun] = h.split('-')
+        (adjective, noun) = haiku()
         self.assertEqual(adjective, 'blue')
         self.assertEqual(noun, 'leaf')
-        h = haiku()
-        self.assertIn('-', h, 'Haiku has a separator between adjective and noun')
-        [adjective, noun] = h.split('-')
+        (adjective, noun) = haiku()
         self.assertEqual(adjective, 'dark')
         self.assertEqual(noun, 'flower')
 

@@ -109,7 +109,7 @@ class Admin(object):
         user = User.get(email=input_email)
         if user:
             try:
-                user_token = session.query(UserAuthToken).filter(UserAuthToken.user == input_user).one()
+                user_token = session.query(UserAuthToken).filter(UserAuthToken.user == user).one()
                 session.delete(user_token)
                 session.commit()
                 print('Successfully deleted token for {email}.'.format(email=input_email))

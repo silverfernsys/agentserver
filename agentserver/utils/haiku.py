@@ -21,20 +21,13 @@ def permute(x):
             return prime - residue
 
 
-def haiku(separator='-'):
-    adj = random.choice(adjs)
-    noun = random.choice(nouns)
-    return '{adj}{separator}{noun}'.format(
-         adj=adj,
-         noun=noun,
-         separator=separator)
+def haiku():
+    return (random.choice(adjs), random.choice(nouns))
 
 
 def haiku_name(id, separator='-'):
-    return '{h}{separator}{p}'.format(
-        h=haiku(separator),
-        separator=separator,
-        p=str(permute(id)).rjust(4,'0'))
+    (adj, noun) = haiku()
+    return separator.join((adj, noun, str(permute(id))))
 
 
 adjs = [
