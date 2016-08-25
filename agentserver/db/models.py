@@ -65,7 +65,6 @@ class Deleteable(object):
             session.commit()
             return True
         except Exception as e:
-            print('EXCEPTION: %s' % e)
             return False
 
 
