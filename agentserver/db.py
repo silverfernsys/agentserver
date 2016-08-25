@@ -38,16 +38,30 @@ class Agent(Base, Countable):
     __tablename__ = 'agents'
 
     id = Column(Integer(), primary_key=True)
-    name = Column(String(), nullable=False)
+    name = Column(String(), nullable=False, unique=True)
     created_on = Column(DateTime(), default=datetime.now)
+
+    @classmethod
+    def delete(cls, name, session=None):
+        if not session:
+            session = dal.session
+        try:
+            session.delete(session.query(Agent).filter(Agent.name == name).one())
+            session.commit()
+            return True
+        except NoResultFound:
+            return False
 
     @classmethod
     def authorize(cls, authorization_token, session=None):
         if not session:
             session = dal.session
-        return session.query(AgentAuthToken) \
-            .filter(AgentAuthToken.uuid == authorization_token) \
-            .one().agent
+        try:
+            return session.query(AgentAuthToken) \
+                .filter(AgentAuthToken.uuid == authorization_token) \
+                .one().agent
+        except NoResultFound:
+            return None
 
     def __repr__(self):
         return "<Agent(id='{self.id}', " \
@@ -59,7 +73,7 @@ class AgentDetail(Base, Countable):
     __tablename__ = 'agentdetails'
 
     id = Column(Integer(), primary_key=True)
-    agent_id = Column(Integer(), ForeignKey('agents.id'), unique=True)
+    agent_id = Column(Integer(), ForeignKey('agents.id'), unique=True, nullable=False)
     hostname = Column(String, nullable=False)
     processor = Column(String(), nullable=False)
     num_cores = Column(Integer(), default=1)
@@ -69,12 +83,16 @@ class AgentDetail(Base, Countable):
     updated_on = Column(DateTime(), default=datetime.now, onupdate=datetime.now)
     created_on = Column(DateTime(), default=datetime.now)
 
-    agent = relationship("Agent", backref=backref('details', uselist=False))
+    agent = relationship('Agent', backref=backref('details', 
+        cascade='all,delete,delete-orphan', uselist=False))
 
     @classmethod
     def detail_for_agent_id(cls, id):
-        return dal.Session().query(AgentDetail) \
-            .filter(AgentDetail.agent_id == id).one()
+        try:
+            return dal.Session().query(AgentDetail) \
+                .filter(AgentDetail.agent_id == id).one()
+        except NoResultFound:
+            return None
 
     @classmethod
     def update_or_create(cls, id, dist_name, dist_version,
@@ -109,7 +127,7 @@ class AgentDetail(Base, Countable):
             "memory='{self.memory}', " \
             "dist_name='{self.dist_name}', " \
             "dist_version='{self.dist_version}', " \
-            "updated_on='{self.updated_on}, '" \
+            "updated_on='{self.updated_on}', " \
             "created_on='{self.created_on}')>".format(self=self)
 
     def __json__(self):
@@ -130,7 +148,7 @@ class AgentAuthToken(Base, Countable):
     agent_id = Column(Integer(), ForeignKey('agents.id'), unique=True, nullable=False)
     created_on = Column(DateTime(), default=datetime.now)
 
-    agent = relationship("Agent", backref=backref('token',
+    agent = relationship('Agent', backref=backref('token',
         cascade='all,delete,delete-orphan', uselist=False))
 
     def __repr__(self):
@@ -160,6 +178,28 @@ class User(Base, Countable):
     is_admin = Column(Boolean(), default=False)
     created_on = Column(DateTime(), default=datetime.now)
     updated_on = Column(DateTime(), default=datetime.now, onupdate=datetime.now)
+
+    @classmethod
+    def delete(cls, email, session=None):
+        if not session:
+            session = dal.session
+        try:
+            session.delete(session.query(User).filter(User.email == email).one())
+            session.commit()
+            return True
+        except NoResultFound:
+            return False
+
+    @classmethod
+    def authorize(cls, authorization_token, session=None):
+        if not session:
+            session = dal.session
+        try:
+            return session.query(UserAuthToken) \
+                .filter(UserAuthToken.uuid == authorization_token) \
+                .one().user
+        except NoResultFound:
+            return None
 
     @classmethod
     def authenticate(cls, username, password, session=None):

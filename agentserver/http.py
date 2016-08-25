@@ -3,9 +3,8 @@ import json, logging
 import tornado.httpserver
 from tornado.web import RequestHandler, Finish
 from datetime import datetime
-from sqlalchemy.orm.exc import NoResultFound
 from log import log_kafka
-from db import (dal, kal, User, UserAuthToken, Agent, AgentDetail,
+from db import (kal, User, UserAuthToken, Agent, AgentDetail,
     AgentAuthToken, UserAuthenticationException)
 from ws import SupervisorAgentHandler
 from clients.supervisorclientcoordinator import scc
@@ -69,13 +68,12 @@ class CommonRequestHandler(JsonHandler):
 
 class UserRequestHandler(CommonRequestHandler, BadTokenLogger):
     def prepare(self):
-        try:
-            auth_token = self.request.headers.get('authorization')
-            UserAuthToken.authorize(auth_token)
-        except NoResultFound:
+        auth_token = self.request.headers.get('authorization')
+        if not User.authorize(auth_token):
             self.log(auth_token)
             self.send_error(401, message=self.not_authorized_error)
-        super(UserRequestHandler, self).prepare()
+        else:
+            super(UserRequestHandler, self).prepare()
 
 
 class HTTPCommandHandler(UserRequestHandler):
@@ -116,11 +114,11 @@ class HTTPDetailHandler(UserRequestHandler):
 
     @tornado.web.addslash
     def post(self):
-        try:
-            detail = AgentDetail.detail_for_agent_id(self.json['id'])
+        detail = AgentDetail.detail_for_agent_id(self.json['id'])
+        if detail:
             status = 200
             data = json.dumps(detail)
-        except NoResultFound as e:
+        else:
             status = 400
             data = self.invalid_id_error
         self.set_status(status)
@@ -129,13 +127,13 @@ class HTTPDetailHandler(UserRequestHandler):
 
 class HTTPAgentHandler(CommonRequestHandler, BadTokenLogger):
     def prepare(self):
-        try:
-            auth_token = self.request.headers.get('authorization')
-            self.agent = Agent.authorize(auth_token)
-        except Exception as e:
+        auth_token = self.request.headers.get('authorization')
+        self.agent = Agent.authorize(auth_token)
+        if self.agent is None:
             self.log(auth_token)
             self.send_error(401, message=self.not_authorized_error)
-        super(HTTPAgentHandler, self).prepare()
+        else:
+            super(HTTPAgentHandler, self).prepare()
 
 
 class HTTPAgentDetailHandler(HTTPAgentHandler):

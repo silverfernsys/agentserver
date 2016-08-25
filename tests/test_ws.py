@@ -176,7 +176,7 @@ class SupervisorAgentHandlerTest(WebSocketBaseTestCase):
         client.write_message('malformed json')
         response = yield client.read_message()
         self.assertEqual(json.loads(response),
-            json.loads(SupervisorAgent.invalid_json_error))
+            json.loads(SupervisorAgentHandler.invalid_json_error))
 
         client.close()
         yield self.close_future
@@ -497,11 +497,11 @@ class SupervisorClientHandlerTest(WebSocketBaseTestCase):
 
         ws_client.write_message('invalid json')
         response = yield ws_client.read_message()
-        self.assertEqual(json.loads(response), json.loads(SupervisorClient.invalid_json_error))
+        self.assertEqual(json.loads(response), json.loads(SupervisorClientHandler.invalid_json_error))
 
         ws_client.write_message('')
         response = yield ws_client.read_message()
-        self.assertEqual(json.loads(response), json.loads(SupervisorClient.invalid_json_error))
+        self.assertEqual(json.loads(response), json.loads(SupervisorClientHandler.invalid_json_error))
 
         ws_client.close()
         yield self.close_future

@@ -18,10 +18,11 @@ class TestDb(unittest.TestCase):
 
     def test_users_and_user_tokens(self):
         # Generate users and tokens
-        dal.session.add_all([UserAuthToken(user=User(name='User A',
-                         email='user_a@example.com',
-                         is_admin=True,
-                         password='randompassworda')),
+        user = User(name='User A',
+             email='user_a@example.com',
+             is_admin=True,
+             password='randompassworda')
+        dal.session.add_all([UserAuthToken(user=user),
                         UserAuthToken(user=User(name='User B',
                          email='user_b@example.com',
                          is_admin=False,
@@ -43,11 +44,16 @@ class TestDb(unittest.TestCase):
 
         dal.session.rollback()
 
+        # Test authorize method
+        self.assertEqual(User.authorize(user.token.uuid), user)
+        self.assertEqual(User.authorize('non-existent token'), None)
+
         self.assertEqual(User.count(), 3)
         self.assertEqual(UserAuthToken.count(), 3)
 
-        dal.session.delete(dal.session.query(User).filter(User.email == 'user_a@example.com').one())
-        dal.session.commit()
+        # Test delete method
+        self.assertTrue(User.delete(user.email))
+        self.assertFalse(User.delete('non-existent@example.com'))
 
         self.assertEqual(User.count(), 2)
         self.assertEqual(UserAuthToken.count(), 2)
@@ -56,6 +62,8 @@ class TestDb(unittest.TestCase):
         # Generate agents and tokens
         agents_before = Agent.count()
         agent_tokens_before = AgentAuthToken.count()
+        agent_details_before = AgentDetail.count()
+
         agent = Agent(name='Agent 0')
 
         dal.session.add_all([
@@ -64,18 +72,31 @@ class TestDb(unittest.TestCase):
             AgentAuthToken(agent=Agent(name='Agent 2'))])
         dal.session.commit()
 
+        dal.session.add(AgentDetail(agent=agent, dist_name='Debian', dist_version='7.0',
+            hostname='host', num_cores=8, memory=160000, processor='x86_64'))
+        dal.session.commit()
+
         self.assertEqual(Agent.count(),
             agents_before + 3)
         self.assertEqual(AgentAuthToken.count(),
             agent_tokens_before + 3)
+        self.assertEqual(AgentDetail.count(),
+            agent_details_before + 1)
 
-        dal.session.delete(dal.session.query(Agent).get(agent.id))
-        dal.session.commit()
+        # Test authorize method
+        self.assertEqual(Agent.authorize(agent.token.uuid), agent)
+        self.assertEqual(Agent.authorize('non-existent token'), None)
+
+        # Test delete method
+        self.assertTrue(Agent.delete(agent.name))
+        self.assertFalse(Agent.delete('non-existent agent'))
 
         self.assertEqual(Agent.count(),
             agents_before + 2)
         self.assertEqual(AgentAuthToken.count(),
             agent_tokens_before + 2)
+        self.assertEqual(AgentDetail.count(),
+            agent_details_before)
 
     def test_agent_detail(self):
         agent = Agent(name='Agent')
@@ -96,3 +117,4 @@ class TestDb(unittest.TestCase):
         created = AgentDetail.update_or_create(agent.id, **args)
         self.assertFalse(created)
         self.assertEqual(AgentDetail.count(), 1)
+        self.assertEqual(agent.details.id, AgentDetail.detail_for_agent_id(agent.id).id)

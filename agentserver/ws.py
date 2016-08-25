@@ -2,14 +2,40 @@
 import json
 from time import time
 import tornado.websocket
-from db import dal, kal, UserAuthToken, AgentAuthToken
-from sqlalchemy.orm.exc import NoResultFound
+from db import Agent, User 
 from agents.supervisoragent import SupervisorAgent
 from clients.supervisorclient import SupervisorClient
 from clients.supervisorclientcoordinator import scc
 
 
-class SupervisorAgentHandler(tornado.websocket.WebSocketHandler):
+class JSONWebsocket(tornado.websocket.WebSocketHandler):
+    invalid_json_error = json.dumps({'status': 'error', 'errors': [{'details': 'invalid json'}]})
+
+    def authorize(self, uuid):
+        """Override this method."""
+        raise NotImplementedError
+
+    def on_json(self, message):
+        """Override this method."""
+        raise NotImplementedError
+
+    def open(self):
+        uuid = self.request.headers.get('authorization')
+        if uuid is None or not self.authorize(uuid):
+            self.close()
+
+    def on_message(self, message):
+        try:
+            data = tornado.escape.json_decode(message)
+            self.on_json(data)
+        except:
+            self.write_message(self.invalid_json_error)
+
+    def check_origin(self, origin):
+        return True
+
+
+class SupervisorAgentHandler(JSONWebsocket):
     Connections = {}
     IDs = {}
 
@@ -20,27 +46,17 @@ class SupervisorAgentHandler(tornado.websocket.WebSocketHandler):
             return True
         return False
 
-    @tornado.web.addslash
-    def open(self):
-        uuid = self.request.headers.get('authorization')
-        if uuid is None:
-            self.close()
+    def authorize(self, uuid):
+        agent = Agent.authorize(uuid)
+        if agent and not (agent.id in self.IDs):
+            supervisor_agent = SupervisorAgent(agent.id, self)
+            self.IDs[agent.id] = supervisor_agent
+            self.Connections[self] = supervisor_agent
+            return True
         else:
-            try:
-                token = dal.Session().query(AgentAuthToken).filter(AgentAuthToken.uuid == uuid).one()
-                agent = token.agent
-                if not (agent.id in self.IDs):
-                    supervisor_agent = SupervisorAgent(agent.id, self)
-                    self.IDs[agent.id] = supervisor_agent
-                    self.Connections[self] = supervisor_agent
-                else:
-                    self.close()
-            except NoResultFound:
-                self.close()
-            except Exception as e:
-                self.close()
+            return False
       
-    def on_message(self, message):
+    def on_json(self, message):
         """Pass message along to SupervisorAgent if connected,
         ignores message otherwise."""
         if self in self.Connections:
@@ -57,30 +73,19 @@ class SupervisorAgentHandler(tornado.websocket.WebSocketHandler):
         except:
             pass
 
-    def check_origin(self, origin):
-        """'origin' is the base url hit by the request.
-        Eg 10.0.0.10:8081"""
-        return True
 
-
-class SupervisorClientHandler(tornado.websocket.WebSocketHandler):
+class SupervisorClientHandler(JSONWebsocket):
     Connections = {}
 
-    @tornado.web.addslash
-    def open(self):
-        uuid = self.request.headers.get('authorization')
-        if uuid is None:
-            self.close()
+    def authorize(self, uuid):
+        user = User.authorize(uuid)
+        if user:
+            self.Connections[self] = SupervisorClient(user.id, self)
+            return True
         else:
-            try:
-                token = dal.Session().query(UserAuthToken).filter(UserAuthToken.uuid == uuid).one()
-                self.Connections[self] = SupervisorClient(token.user.id, self)
-            except NoResultFound:
-                self.close()
-            except Exception:
-                self.close()
+            return False
 
-    def on_message(self, message):
+    def on_json(self, message):
         if self in self.Connections:
             self.Connections[self].update(message)
         else:
@@ -94,6 +99,3 @@ class SupervisorClientHandler(tornado.websocket.WebSocketHandler):
             self.Connections.pop(self, None)
         except:
             pass
-
-    def check_origin(self, origin):
-        return True

@@ -1,10 +1,7 @@
 #! /usr/bin/env python
 import json
-from time import time
-from datetime import datetime
-from sqlalchemy.orm.exc import NoResultFound
 from log import log_kafka
-from db import dal, kal, AgentDetail
+from db import kal, AgentDetail
 from clients.supervisorclientcoordinator import scc
 from validator import (system_stats_validator,
     states_validator, snapshot_validator)
@@ -15,7 +12,6 @@ STATE = 'state'
 SYSTEM = 'system'
 
 class SupervisorAgent(object):
-    invalid_json_error = json.dumps({'status': 'error', 'errors': [{'details': 'invalid json'}]})
     unknown_message_type_error = json.dumps({'status': 'error', 'errors': [{'details': 'unknown message type'}]})
     snapshot_update_success = json.dumps({'status': 'success', 'details': 'snapshot updated'})
     state_update_success = json.dumps({'status': 'success', 'details': 'state updated'})
@@ -25,7 +21,6 @@ class SupervisorAgent(object):
         self.id = id
         self.ip = get_ip(ws.request)
         self.ws = ws
-        self.session = dal.Session()
 
     def command(self, cmd, process):
         # message = {'cmd': 'restart web'}
@@ -61,16 +56,12 @@ class SupervisorAgent(object):
         else:
             self.ws.write_message(self.error_message(system_stats_validator.errors))
 
-    def update(self, message):
-        try:
-            data = json.loads(message)
-            if SNAPSHOT in data:
-                self.snapshot_update(data)
-            elif STATE in data:
-                self.state_update(data)
-            elif SYSTEM in data:
-                self.system_stats_update(data)
-            else:
-                self.ws.write_message(self.unknown_message_type_error)
-        except ValueError as e:
-            self.ws.write_message(self.invalid_json_error)
+    def update(self, data):
+        if SNAPSHOT in data:
+            self.snapshot_update(data)
+        elif STATE in data:
+            self.state_update(data)
+        elif SYSTEM in data:
+            self.system_stats_update(data)
+        else:
+            self.ws.write_message(self.unknown_message_type_error)
