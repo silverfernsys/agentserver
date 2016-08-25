@@ -5,8 +5,8 @@ import sys, os
 sys.path.insert(0, os.path.join(os.path.split(os.path.dirname(os.path.abspath(__file__)))[0], 'agentserver'))
 
 testmodules = [
-    # 'test_admin',
-    'test_db',
+    'test_admin',
+    # 'test_db',
     # 'test_http',
     # 'test_validator',
     # 'test_ws',

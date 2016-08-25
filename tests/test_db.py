@@ -51,6 +51,14 @@ class TestDb(unittest.TestCase):
         self.assertEqual(User.count(), 3)
         self.assertEqual(UserAuthToken.count(), 3)
 
+        self.assertEqual(User.get(id=user.id), user)
+        self.assertEqual(User.get(email=user.email), user)
+        self.assertEqual(User.get(id=user.id), User.get(email=user.email))
+        self.assertEqual(User.get(id=1000), None)
+        self.assertRaises(TypeError, User.get, user.id)
+        with self.assertRaises(TypeError):
+            User.get(id=user.id, email=user.email)
+
         # Test delete method
         self.assertTrue(User.delete(user.email))
         self.assertFalse(User.delete('non-existent@example.com'))

@@ -133,7 +133,7 @@ class TestApp(unittest.TestCase):
         dal.session.add(admin)
         dal.session.add(agent)
         dal.session.commit()
-        mock_raw_input.side_effect = [admin.email, str(agent.id)]
+        mock_raw_input.side_effect = [admin.email, agent.name]
         mock_getpass.side_effect = [password]
         TestApp.admin.delete_agent()
 

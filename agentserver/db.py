@@ -180,6 +180,34 @@ class User(Base, Countable):
     updated_on = Column(DateTime(), default=datetime.now, onupdate=datetime.now)
 
     @classmethod
+    def all(cls, session=None):
+        if not session:
+            session = dal.session
+        return session.query(User)
+
+    @classmethod
+    def get(cls, session=None, *args, **kwargs):
+        """Find user with either id or email."""
+        if not session:
+            session = dal.session
+        id = kwargs.get('id')
+        email = kwargs.get('email')
+        if id and email:
+            raise TypeError("Provide only one of 'id' or 'email'.")
+        if id:
+            try:
+                return session.query(User).get(id)
+            except NoResultFound:
+                return None
+        elif email:
+            try:
+                return session.query(User).filter(User.email == email).one()
+            except NoResultFound:
+                return None
+        else:
+            raise TypeError("Provide either 'id' or 'email' keyword argument.")
+
+    @classmethod
     def delete(cls, email, session=None):
         if not session:
             session = dal.session
@@ -220,6 +248,13 @@ class User(Base, Countable):
         except NoResultFound:
             raise UserAuthenticationException('unknown username', username, password)
 
+    @property
+    def admin(self):
+        if self.is_admin:
+            return 'Y'
+        else:
+            return 'N'
+    
     def authenticates(self, other_password):
         try:
             return pwd_context.verify(other_password, self.password)
