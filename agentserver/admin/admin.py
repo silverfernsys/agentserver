@@ -1,6 +1,6 @@
-from db import dal, User, Agent, UserAuthToken, AgentAuthToken
+from db.models import mal, User, Agent, UserAuthToken, AgentAuthToken
 from config import config
-from utils import haiku, permute
+from utils.haiku import haiku_name
 from datetime import datetime
 
 import getpass
@@ -8,7 +8,7 @@ import getpass
 class Admin(object):
     def __init__(self):
         print('Connecting to database...')
-        dal.connect(conn_string=config.database)
+        mal.connect(conn_string=config.database)
 
     def create_user(self):
         while True:
@@ -36,7 +36,7 @@ class Admin(object):
             else:
                 break
 
-        session = dal.session
+        session = mal.session
         user = User(name=input_name,
                      email=input_email,
                      is_admin=is_admin,
@@ -87,7 +87,7 @@ class Admin(object):
     def create_user_auth_token(self):
         print('Create token: please authenticate...')
         self.auth_admin()
-        session = dal.session
+        session = mal.session
         input_email = raw_input('Enter email to create a token for: ')
         input_user = User.get(email=input_email)
         if input_user:
@@ -105,7 +105,7 @@ class Admin(object):
         print('Delete token: please authenticate...')
         self.auth_admin()
         input_email = raw_input('Enter email to delete token for: ')
-        session = dal.session
+        session = mal.session
         user = User.get(email=input_email)
         if user:
             try:
@@ -123,26 +123,21 @@ class Admin(object):
             email="Email".ljust(30),
             token="Token".ljust(70),
             created="Created"))
-        for token in dal.session.query(UserAuthToken):
+        for token in mal.session.query(UserAuthToken):
             line = "{email}{token}{created}".format(
                 email=token.user.email.ljust(30),
                 token=token.uuid.ljust(70),
                 created=token.created_on.strftime('%d-%m-%Y %H:%M:%S'))
             print(line)
 
-    def generate_agent_name(self):
-        h = haiku()
-        count = dal.session.query(Agent).count()
-        return '{haiku}-{num}'.format(haiku=h, num=str(permute(count)).rjust(4, '0'))
-
     def create_agent(self):
-        session = dal.session
+        session = mal.session
         print('Create agent: please authenticate...')
         self.auth_admin()
 
         name = raw_input('Enter agent name[Press ENTER to autogenerate]: ')
         if len(name) == 0:
-            name = self.generate_agent_name()
+            name = haiku_name(Agent.count())
 
         agent = Agent(name=name)
         session.add(agent)
@@ -161,13 +156,13 @@ class Admin(object):
 
     def list_agents(self):
         print("{id}{name}{created}".format(id="id".ljust(30), name="Name".ljust(30), created="Created"))
-        for agent in dal.session.query(Agent):
+        for agent in mal.session.query(Agent):
             line = "{id}{name}{created}".format(id=str(agent.id).ljust(30), name=agent.name.ljust(30),
                 created=agent.created_on.strftime('%d-%m-%Y %H:%M:%S'))
             print(line)
 
     def create_agent_auth_token(self):
-        session = dal.session
+        session = mal.session
         print('Create agent token: please authenticate...')
         self.auth_admin()
 
@@ -189,7 +184,7 @@ class Admin(object):
             print('Details: {details}'.format(details=str(e)))
 
     def delete_agent_auth_token(self):
-        session = dal.session
+        session = mal.session
         print('Delete agent token: please authenticate...')
         self.auth_admin()
         input_id = raw_input('Enter name of agent to delete token for: ')
@@ -211,7 +206,7 @@ class Admin(object):
             id="id".ljust(30),
             name="Name".ljust(30),
             token="Token".ljust(70)))
-        for token in dal.session.query(AgentAuthToken):
+        for token in mal.session.query(AgentAuthToken):
             line = "{created}{id}{name}{token}".format(
                 created=token.created_on.strftime('%d-%m-%Y %H:%M:%S').ljust(30),
                 id=str(token.agent.id).ljust(30),

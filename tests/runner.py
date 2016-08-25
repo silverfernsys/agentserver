@@ -6,11 +6,11 @@ sys.path.insert(0, os.path.join(os.path.split(os.path.dirname(os.path.abspath(__
 
 testmodules = [
     'test_admin',
-    # 'test_db',
-    # 'test_http',
-    # 'test_validator',
-    # 'test_ws',
-    # 'test_utils',
+    'test_db',
+    'test_http',
+    'test_validators',
+    'test_ws',
+    'test_utils',
     ]
 
 suite = unittest.TestSuite()

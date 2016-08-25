@@ -1,10 +1,11 @@
-from time import time, sleep
-from datetime import datetime, timedelta
 import json
 import threading
-from sqlalchemy.orm.exc import NoResultFound
-from db import dal, dral, pal, Agent
-from utils import (iso_8601_period_to_timedelta,
+from time import time, sleep
+from datetime import datetime, timedelta
+from tornado.escape import json_encode
+from db.models import mal, Agent
+from db.timeseries import dral, pal
+from utils.iso_8601 import (iso_8601_period_to_timedelta,
     iso_8601_interval_to_datetimes)
 
 
@@ -48,7 +49,7 @@ class SupervisorProcess(object):
             self.state = state
             data = {'state': self.__json__()}
             for client in self.subscribers:
-                client.ws.write_message(json.dumps(data))
+                client.ws.write_message(json_encode(data))
 
     def __repr__(self):
         return "<SupervisorProcess(name={0}, " \
@@ -105,7 +106,7 @@ class SupervisorClientCoordinator(object):
         self.clients = {}
         self.updates = {}
 
-        for agent in dal.session.query(Agent).all():
+        for agent in mal.session.query(Agent).all():
             info = AgentInfo(agent)
             result = pal.processes(agent.id, 'P6W')
             for row in json.loads(result):
@@ -150,7 +151,7 @@ class SupervisorClientCoordinator(object):
                         body = {'snapshot': {'id': id, 'process': process,
                             'stats': map(lambda x: {'timestamp': x['timestamp'],
                             'cpu': x['result']['cpu'], 'mem': x['result']['mem']}, result)}}
-                        client.ws.write_message(json.dumps(body))
+                        client.ws.write_message(json_encode(body))
                         # print('result: %s' % result)
                         # Note: when end != None and start > end, remove key from self.updates
                         sleep(1.0)   

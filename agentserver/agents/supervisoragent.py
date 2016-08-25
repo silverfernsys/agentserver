@@ -1,21 +1,21 @@
-#! /usr/bin/env python
-import json
-from log import log_kafka
-from db import kal, AgentDetail
+from tornado.escape import json_encode
+from db.models import AgentDetail
+from db.timeseries import kal
 from clients.supervisorclientcoordinator import scc
-from validator import (system_stats_validator,
+from utils.validators import (system_stats_validator,
     states_validator, snapshot_validator)
-from utils import get_ip
+from utils.ip import get_ip
+from utils.log import log_kafka
 
 SNAPSHOT = 'snapshot'
 STATE = 'state'
 SYSTEM = 'system'
 
 class SupervisorAgent(object):
-    unknown_message_type_error = json.dumps({'status': 'error', 'errors': [{'details': 'unknown message type'}]})
-    snapshot_update_success = json.dumps({'status': 'success', 'details': 'snapshot updated'})
-    state_update_success = json.dumps({'status': 'success', 'details': 'state updated'})
-    system_stats_update_success = json.dumps({'status': 'success', 'details': 'system stats updated'})
+    unknown_message_type_error = json_encode({'status': 'error', 'errors': [{'details': 'unknown message type'}]})
+    snapshot_update_success = json_encode({'status': 'success', 'details': 'snapshot updated'})
+    state_update_success = json_encode({'status': 'success', 'details': 'state updated'})
+    system_stats_update_success = json_encode({'status': 'success', 'details': 'system stats updated'})
 
     def __init__(self, id, ws):
         self.id = id
@@ -24,11 +24,11 @@ class SupervisorAgent(object):
 
     def command(self, cmd, process):
         # message = {'cmd': 'restart web'}
-        self.ws.write_message(json.dumps({'cmd': '{0} {1}'.format(cmd, process)}))
+        self.ws.write_message(json_encode({'cmd': '{0} {1}'.format(cmd, process)}))
 
     def error_message(self, errors):
         errors = [{'arg': k, 'details': v} for k, v in errors.items()]
-        return json.dumps({'status': 'error', 'errors': errors})
+        return json_encode({'status': 'error', 'errors': errors})
     
     def snapshot_update(self, data):
         if snapshot_validator.validate(data):

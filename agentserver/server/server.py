@@ -9,11 +9,13 @@ import tornado.web
 import tornado.httpserver
 from termcolor import colored, cprint
 from config import config
-from db import dal, kal, dral, pal
-from http import (HTTPVersionHandler, HTTPTokenHandler,
-    HTTPDetailHandler, HTTPCommandHandler, HTTPListHandler,
-    HTTPAgentUpdateHandler, HTTPAgentDetailHandler)
-from ws import SupervisorAgentHandler, SupervisorClientHandler
+from db.models import mal
+from db.timeseries import kal, dral, pal
+from http.client import (HTTPVersionHandler, HTTPTokenHandler,
+    HTTPDetailHandler, HTTPCommandHandler, HTTPListHandler)
+from http.agent import HTTPAgentUpdateHandler, HTTPAgentDetailHandler
+from ws.agent import SupervisorAgentHandler
+from ws.client import SupervisorClientHandler
 from clients.supervisorclientcoordinator import scc
 
 from pyfiglet import figlet_format
@@ -28,11 +30,11 @@ class Server():
 
     def __init__(self):
         self.print_splash_page()
-    	dal.connect(config.database)
+    	mal.connect(config.database)
         kal.connect(config.kafka)
         dral.connect(config.druid)
         pal.connect(config.druid)
-    	self.session = dal.Session()
+    	self.session = mal.Session()
         self.logger = logging.getLogger('Web Server')
         scc.initialize()
 

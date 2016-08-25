@@ -1,8 +1,10 @@
 #! /usr/bin/env python
 import unittest, mock
 from datetime import datetime, timedelta
-from utils import (permute, haiku, haiku_permute, adjs,
-    nouns, uuid, validate_ip, iso_8601_period_to_timedelta,
+from utils.haiku import permute, haiku, haiku_name, adjs, nouns
+from utils.uuid import uuid
+from utils.ip import validate_ip
+from utils.iso_8601 import (iso_8601_period_to_timedelta,
     iso_8601_interval_to_datetimes, validate_iso_8601_period,
     validate_iso_8601_interval)
 
@@ -18,7 +20,7 @@ class TestUtils(unittest.TestCase):
         pass
 
     # http://www.voidspace.org.uk/python/mock/examples.html#partial-mocking
-    @mock.patch('utils.datetime')
+    @mock.patch('utils.iso_8601.datetime')
     def test_iso_8601_interval_to_datetimes(self, mock_datetime):
         now = datetime(2016, 1, 1)
         mock_datetime.now.return_value = now
@@ -116,29 +118,40 @@ class TestUtils(unittest.TestCase):
         self.assertFalse(validate_iso_8601_period('23P7DT5H'))
         self.assertFalse(validate_iso_8601_period(''))
 
-    def test_haiku(self):
+    @mock.patch('utils.haiku.random.choice')
+    def test_haiku(self, mock_choice):
+        mock_choice.side_effect = [adjs[22], nouns[13], adjs[7], nouns[30]]
         h = haiku()
         self.assertIn('-', h, 'Haiku has a separator between adjective and noun')
-        adjective = h.split('-')[0]
-        noun = h.split('-')[1]
-        self.assertIn(adjective, adjs, 'Adjective is in adj list')
-        self.assertIn(noun, nouns, 'Noun is in noun list')
+        [adjective, noun] = h.split('-')
+        self.assertEqual(adjective, 'blue')
+        self.assertEqual(noun, 'leaf')
+        h = haiku()
+        self.assertIn('-', h, 'Haiku has a separator between adjective and noun')
+        [adjective, noun] = h.split('-')
+        self.assertEqual(adjective, 'dark')
+        self.assertEqual(noun, 'flower')
 
     def test_permute(self):
         for i in range(9999):
             permutation = permute(i)
-            # print('%d - %d' % (i, permutation))
             self.assertTrue(permutation < 9999)
+        self.assertEqual(permute(0), 7469)
+        self.assertEqual(permute(3), 309)
 
-    def test_haiku_permute(self):
-        hp = haiku_permute(0)
-        num = hp.split('-')[-1]
-        self.assertEqual(len(str(num)), 4, 'Length of number string is 4')
-        self.assertEqual(int(num), 7469, 'Integer value is 7469')
-        hp = haiku_permute(3)
-        num = hp.split('-')[-1]
-        self.assertEqual(len(str(num)), 4, 'Length of number string is 4')
-        self.assertEqual(int(num), 309, 'Integer value is 309')
+    @mock.patch('utils.haiku.random.choice')
+    def test_haiku_name(self, mock_choice):
+        mock_choice.side_effect = [adjs[4], nouns[10], adjs[17], nouns[21]]
+        [adjective, noun, num] = haiku_name(5).split('-')
+        self.assertEqual(adjective, 'silent')
+        self.assertEqual(noun, 'sunset')
+        self.assertEqual(len(num), 4, 'Length of number string is 4')
+        self.assertEqual(int(num), 2137, 'Integer value is 2137')
+        [adjective, noun, num] = haiku_name(9000).split('-')
+        self.assertEqual(adjective, 'twilight')
+        self.assertEqual(noun, 'glade')
+        self.assertEqual(len(num), 4, 'Length of number string is 4')
+        self.assertEqual(int(num), 9384, 'Integer value is 9384')
 
     def test_uuid(self):
         id = uuid()

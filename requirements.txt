@@ -7,7 +7,6 @@ coverage==4.0.3
 enum34==1.1.6
 funcsigs==1.0.2
 functools32==3.2.3.post2
-hashids==1.1.0
 iso8601==0.1.11
 kafka-python==1.1.0
 mock==2.0.0

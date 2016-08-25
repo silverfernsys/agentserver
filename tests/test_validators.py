@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 import json, os, unittest
-from validator import system_stats_validator, states_validator, snapshot_validator
+from utils.validators import system_stats_validator, states_validator, snapshot_validator
 
 FIXTURES_DIR =  os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fixtures')
 

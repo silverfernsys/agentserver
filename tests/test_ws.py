@@ -29,9 +29,11 @@ except ImportError:
 
 from mocks import pal_mock_query, FIXTURES_DIR
 from ws_helpers import websocket_connect
-from ws import SupervisorAgentHandler, SupervisorClientHandler
-from db import dal, kal, dral, pal, User, UserAuthToken, Agent, AgentDetail, AgentAuthToken
-from utils import validate_timestamp
+from ws.agent import SupervisorAgentHandler
+from ws.client import SupervisorClientHandler
+from db.models import mal, User, UserAuthToken, Agent, AgentDetail, AgentAuthToken
+from db.timeseries import kal, dral, pal
+from utils.iso_8601 import validate_timestamp
 from clients.supervisorclient import SupervisorClient
 from clients.supervisorclientcoordinator import scc
 from agents.supervisoragent import SupervisorAgent
@@ -66,13 +68,13 @@ class MockSupervisorClientHandler(SupervisorClientHandler, TestWebSocketHandler)
 class WebSocketBaseTestCase(AsyncHTTPTestCase):
     @classmethod
     def setUpClass(cls):
-        dal.connect('sqlite:///:memory:')
+        mal.connect('sqlite:///:memory:')
         kal.connect('debug')
 
     @classmethod
     def tearDownClass(cls):
-        dal.session.rollback()
-        dal.session.close()
+        mal.session.rollback()
+        mal.session.close()
 
     @gen.coroutine
     def ws_connect(self, path, headers=None, compression_options=None):
@@ -92,15 +94,15 @@ class WebSocketBaseTestCase(AsyncHTTPTestCase):
 
 class SupervisorAgentHandlerTest(WebSocketBaseTestCase):
     @classmethod
-    @mock.patch('db.pal.query', side_effect=pal_mock_query)
+    @mock.patch('db.timeseries.pal.query', side_effect=pal_mock_query)
     def setUpClass(cls, mock_query):
         super(SupervisorAgentHandlerTest, cls).setUpClass()
         # Generate agents
         agent = Agent(name='Agent 0')
-        dal.session.add_all([AgentAuthToken(agent=agent),
+        mal.session.add_all([AgentAuthToken(agent=agent),
             AgentAuthToken(agent=Agent(name='Agent 1')),
             AgentAuthToken(agent=Agent(name='Agent 2'))])
-        dal.session.commit()
+        mal.session.commit()
         dral.connect('debug')
         pal.connect('debug')
         scc.initialize()
@@ -279,15 +281,16 @@ class SupervisorAgentMock(object):
     def __init__(self, id, ip):
         self.id = id
         self.ip = ip
-        self.session = dal.Session()
+        self.session = mal.Session()
         self.processes = {}
 
     def update(self, message):
         pass
 
+
 class SupervisorClientHandlerTest(WebSocketBaseTestCase):
     @classmethod
-    @mock.patch('db.pal.query', side_effect=pal_mock_query)
+    @mock.patch('db.timeseries.pal.query', side_effect=pal_mock_query)
     def setUpClass(cls, mock_query):
         super(SupervisorClientHandlerTest, cls).setUpClass()
         # Generate users and tokens
@@ -295,7 +298,7 @@ class SupervisorClientHandlerTest(WebSocketBaseTestCase):
                          email='user_a@example.com',
                          is_admin=True,
                          password='randompassworda')
-        dal.session.add_all([UserAuthToken(user=user),
+        mal.session.add_all([UserAuthToken(user=user),
             UserAuthToken(user=User(name='User B',
                      email='user_b@example.com',
                      is_admin=False,
@@ -304,11 +307,11 @@ class SupervisorClientHandlerTest(WebSocketBaseTestCase):
                      email='user_c@example.com',
                      is_admin=True,
                      password='randompasswordc'))])
-        dal.session.commit()
+        mal.session.commit()
 
         agent = Agent(name='Agent 0')
-        dal.session.add(AgentAuthToken(agent=agent))
-        dal.session.commit()
+        mal.session.add(AgentAuthToken(agent=agent))
+        mal.session.commit()
         dral.connect('debug')
         pal.connect('debug')
         scc.initialize()

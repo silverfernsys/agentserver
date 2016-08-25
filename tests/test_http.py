@@ -6,23 +6,24 @@ from tornado.testing import AsyncHTTPTestCase, gen_test
 from tornado.web import Application, RequestHandler, url
 from tornado import gen
 
-from http import (HTTPVersionHandler, HTTPTokenHandler,
-    HTTPDetailHandler, HTTPCommandHandler, HTTPListHandler,
-    HTTPAgentUpdateHandler, HTTPAgentDetailHandler)
+from http.client import (HTTPVersionHandler, HTTPTokenHandler,
+    HTTPDetailHandler, HTTPCommandHandler, HTTPListHandler)
+from http.agent import HTTPAgentUpdateHandler, HTTPAgentDetailHandler
 
 from mocks import pal_mock_query, FIXTURES_DIR
 from ws_helpers import websocket_connect
 from test_ws import MockSupervisorAgentHandler
 
-from db import dal, kal, dral, pal, User, UserAuthToken, Agent, AgentAuthToken, AgentDetail
+from db.models import mal, User, UserAuthToken, Agent, AgentAuthToken, AgentDetail
+from db.timeseries import kal, dral, pal
 from clients.supervisorclientcoordinator import scc
 
 
 class TestHTTP(AsyncHTTPTestCase):
     @classmethod
-    @mock.patch('db.pal.query', side_effect=pal_mock_query)
+    @mock.patch('db.timeseries.pal.query', side_effect=pal_mock_query)
     def setUpClass(cls, mock_query):
-        dal.connect('sqlite:///:memory:')
+        mal.connect('sqlite:///:memory:')
         kal.connect('debug')
         dral.connect('debug')
         pal.connect('debug')
@@ -35,7 +36,7 @@ class TestHTTP(AsyncHTTPTestCase):
                      email=cls.EMAIL,
                      is_admin=True,
                      password=cls.PASSWORD)
-        dal.session.add_all([UserAuthToken(user=user),
+        mal.session.add_all([UserAuthToken(user=user),
                         UserAuthToken(user=User(name='User B',
                          email='user_b@example.com',
                          is_admin=False,
@@ -51,12 +52,12 @@ class TestHTTP(AsyncHTTPTestCase):
         agent_2 = Agent(name='Agent 2')
         agent_3 = Agent(name='Agent 3')
 
-        dal.session.add_all([AgentAuthToken(agent=agent_0),
+        mal.session.add_all([AgentAuthToken(agent=agent_0),
             AgentAuthToken(agent=agent_1),
             AgentAuthToken(agent=agent_2),
             AgentAuthToken(agent=agent_3)])
 
-        dal.session.add(AgentDetail(agent=agent_0,
+        mal.session.add(AgentDetail(agent=agent_0,
             hostname='agent_1',
             processor='x86_64',
             num_cores=2,
@@ -64,7 +65,7 @@ class TestHTTP(AsyncHTTPTestCase):
             dist_name='Ubuntu',
             dist_version='15.04'))
 
-        dal.session.commit()
+        mal.session.commit()
         scc.initialize()
 
         cls.TOKEN = user.token.uuid
@@ -77,8 +78,8 @@ class TestHTTP(AsyncHTTPTestCase):
 
     @classmethod
     def tearDownClass(cls):
-        dal.session.rollback()
-        dal.session.close()
+        mal.session.rollback()
+        mal.session.close()
 
     def get_app(self):
         self.close_future = Future()
@@ -199,7 +200,7 @@ class TestHTTP(AsyncHTTPTestCase):
         self.assertEqual(response.code, 400)
         self.assertEqual(json.loads(response.body),
             json.loads(HTTPCommandHandler.invalid_json_error))
-      
+     
     @gen_test
     def test_http_command_handler(self):
         ws_agent = yield self.ws_connect('/supervisor/',
@@ -224,7 +225,7 @@ class TestHTTP(AsyncHTTPTestCase):
         headers = {'authorization':self.TOKEN}
         body = json.dumps({'id': 1})
         response = self.fetch('/detail/', method='POST', headers=headers, body=body)
-        detail = dal.Session().query(AgentAuthToken) \
+        detail = mal.Session().query(AgentAuthToken) \
             .filter(AgentAuthToken.uuid == self.AGENT_TOKEN_0) \
             .one().agent.details
         self.assertEqual(response.code, 200)
@@ -258,7 +259,7 @@ class TestHTTP(AsyncHTTPTestCase):
         self.assertEqual(json.loads(response.body),
             json.loads(HTTPAgentDetailHandler.success_response_updated))
 
-        token = dal.Session().query(AgentAuthToken).filter(AgentAuthToken.uuid == self.AGENT_TOKEN_0).one()
+        token = mal.Session().query(AgentAuthToken).filter(AgentAuthToken.uuid == self.AGENT_TOKEN_0).one()
         detail = token.agent.details.__json__()
         detail.pop('updated')
         detail.pop('created')
@@ -278,7 +279,7 @@ class TestHTTP(AsyncHTTPTestCase):
         self.assertEqual(json.loads(response.body),
             json.loads(HTTPAgentDetailHandler.success_response_created))
 
-        token = dal.Session().query(AgentAuthToken).filter(AgentAuthToken.uuid == self.AGENT_TOKEN_1).one()
+        token = mal.Session().query(AgentAuthToken).filter(AgentAuthToken.uuid == self.AGENT_TOKEN_1).one()
         detail = token.agent.details.__json__()
         detail.pop('updated')
         detail.pop('created')
