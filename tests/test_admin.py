@@ -1,8 +1,9 @@
 from admin.admin import Admin
 from admin.config import config
 from db.models import mal, User, UserAuthToken, Agent, AgentAuthToken
+from mocks import FIXTURES_DIR
 
-import mock, unittest, sys
+import mock, unittest, sys, os
 from cStringIO import StringIO
 from contextlib import contextmanager
 from datetime import datetime
@@ -11,13 +12,13 @@ from tempfile import NamedTemporaryFile
 # http://schinckel.net/2013/04/15/capture-and-test-sys.stdout-sys.stderr-in-unittest.testcase/
 @contextmanager
 def capture(command, *args, **kwargs):
-  out, sys.stdout = sys.stdout, StringIO()
-  try:
-    command(*args, **kwargs)
-    sys.stdout.seek(0)
-    yield sys.stdout.read().strip()
-  finally:
-    sys.stdout = out
+    out, sys.stdout = sys.stdout, StringIO()
+    try:
+        command(*args, **kwargs)
+        sys.stdout.seek(0)
+        yield sys.stdout.read().strip()
+    finally:
+        sys.stdout = out
 
 
 class MockArgs(object):
@@ -53,7 +54,11 @@ class TestApp(unittest.TestCase):
         mal.session.close()
 
     def test_init_output(self):
-        self.assertEqual(self.init_output, 'Connecting to database...')
+        self.assertEqual(self.init_output, self.read_file('init.txt'))
+
+    def read_file(self, filename):
+        return open(os.path.join(FIXTURES_DIR,
+            'test_admin', filename)).read().strip()
 
     @mock.patch('getpass.getpass')
     @mock.patch('__builtin__.raw_input')
@@ -61,7 +66,7 @@ class TestApp(unittest.TestCase):
         mock_raw_input.side_effect = ['marcw@silverfern.io', 'Marc Wilson', 'Y']
         mock_getpass.side_effect = ['asdfasdf', 'asdfasdf']
         with capture(self.admin.create_user) as output:
-            self.assertEqual(output, 'Successfully created user marcw@silverfern.io.')
+            self.assertEqual(output, self.read_file('create_user.txt'))
 
     @mock.patch('getpass.getpass')
     @mock.patch('__builtin__.raw_input')
@@ -80,16 +85,13 @@ class TestApp(unittest.TestCase):
         mal.session.commit()
         mock_raw_input.side_effect = [colin.email, phil.email]
         mock_getpass.side_effect = [password]
-        expected_output = 'Delete user: please authenticate...\n' \
-            'Successfully deleted philip@gmail.com.'
+        expected_output = self.read_file('delete_user.txt')
         with capture(self.admin.delete_user) as output:
             self.assertEqual(output, expected_output)
 
-    @mock.patch('db.models.datetime')
-    def test_list_users(self, mock_datetime):
-        # print('\n\n')
-        now = datetime(2016, 1, 1)
-        mock_datetime.now.return_value = now
+    @mock.patch('db.models.User.created_on', new_callable=mock.PropertyMock)
+    def test_list_users(self, mock_created_on): 
+        mock_created_on.side_effect = [datetime(2016, 1, 1), datetime(2016, 2, 1)]
         mal.session.add_all([User(name='User A',
              email='user_a@example.com',
              is_admin=True,
@@ -99,15 +101,15 @@ class TestApp(unittest.TestCase):
              is_admin=False,
              password='randompasswordb')])
         mal.session.commit()
-        self.admin.list_users()
-        # with capture(self.admin.list_users) as output:
-        #     self.assertEqual(output, expected_output)
+        expected_output = self.read_file('list_users.txt')
+        with capture(self.admin.list_users) as output:
+            self.assertEqual(output, expected_output)
 
-    # @mock.patch('utils.uuid.uuid')
+    @mock.patch('db.models.UserAuthToken.uuid', new_callable=mock.PropertyMock)
     @mock.patch('getpass.getpass')
     @mock.patch('__builtin__.raw_input')
-    def test_create_user_auth_token(self, mock_raw_input, mock_getpass):
-        # mock_uuid.return_value = 'asdfasdfasdf'
+    def test_create_user_auth_token(self, mock_raw_input, mock_getpass, mock_uuid):
+        mock_uuid.return_value = '346bfe75a106553f715726f6c6de2b89552a3b05'
         password='asdfasdf'
         admin = User(name='Joe Admin',
                     email='admin@gmail.com',
@@ -122,11 +124,10 @@ class TestApp(unittest.TestCase):
         mal.session.commit()  
         mock_raw_input.side_effect = [admin.email, user.email]
         mock_getpass.side_effect = [password]
-        self.admin.create_user_auth_token()
-        # with capture(self.admin.create_user_auth_token) as output:
-        #     print(output)
-        
-
+        expected_output = self.read_file('create_user_auth_token.txt')
+        with capture(self.admin.create_user_auth_token) as output:
+            self.assertEqual(output, expected_output)
+    
     @mock.patch('getpass.getpass')
     @mock.patch('__builtin__.raw_input')
     def test_delete_user_auth_token(self, mock_raw_input, mock_getpass):
@@ -145,12 +146,18 @@ class TestApp(unittest.TestCase):
         mal.session.commit()
         mock_raw_input.side_effect = [admin.email, user.email]
         mock_getpass.side_effect = [password]
-        expected_output = 'Delete token: please authenticate...\n' \
-            'Successfully deleted token for user@gmail.com.'
+        expected_output = self.read_file('delete_user_auth_token.txt')
         with capture(self.admin.delete_user_auth_token) as output:
             self.assertEqual(output, expected_output)
 
-    def test_list_user_auth_tokens(self):
+    @mock.patch('db.models.UserAuthToken.created_on', new_callable=mock.PropertyMock)
+    @mock.patch('db.models.UserAuthToken.uuid', new_callable=mock.PropertyMock)
+    def test_list_user_auth_tokens(self, mock_uuid, mock_created_on):
+        mock_uuid.side_effect = ['ee5378e881f7b24868ff9fd436d51ccc22bf8f12',
+            'fb7ae8230108557d3328d9f0c6d32a992620460f',
+            '87dcd304d0587baebf8d9f6dfc9e0aac0442c326']
+        mock_created_on.side_effect = [datetime(2016, 1, 1),
+            datetime(2016, 2, 1), datetime(2016, 3, 1)]
         mal.session.add_all([
             UserAuthToken(user=User(name='User A',
                      email='user_a@example.com',
@@ -165,7 +172,9 @@ class TestApp(unittest.TestCase):
                      is_admin=True,
                      password='randompasswordc'))])
         mal.session.commit()
-        self.admin.list_user_auth_tokens()
+        expected_output = self.read_file('list_user_auth_tokens.txt')
+        with capture(self.admin.list_user_auth_tokens) as output:
+            self.assertEqual(output, expected_output)
 
     @mock.patch('utils.haiku.random.choice')
     @mock.patch('getpass.getpass')
@@ -181,8 +190,7 @@ class TestApp(unittest.TestCase):
         mal.session.commit()
         mock_raw_input.side_effect = [admin.email, '']
         mock_getpass.side_effect = [password]
-        expected_output = 'Create agent: please authenticate...\n' \
-            'Successfully created agent dark-flower-7469'
+        expected_output = self.read_file('create_agent.txt')
         with capture(self.admin.create_agent) as output:
             self.assertEqual(output, expected_output)
 
@@ -200,24 +208,30 @@ class TestApp(unittest.TestCase):
         mal.session.commit()
         mock_raw_input.side_effect = [admin.email, agent.name]
         mock_getpass.side_effect = [password]
-        expected_output = 'Delete agent: please authenticate...\n' \
-            'Successfully deleted agent Agent 007'
+        expected_output = self.read_file('delete_agent.txt')
         with capture(self.admin.delete_agent) as output:
             self.assertEqual(output, expected_output)
 
-
-    def test_list_agents(self):
+    @mock.patch('db.models.Agent.created_on', new_callable=mock.PropertyMock)
+    def test_list_agents(self, mock_created_on):
+        mock_created_on.side_effect = [datetime(2016, 1, 1),
+            datetime(2016, 2, 1), datetime(2016, 3, 1),
+            datetime(2016,4,1)]
         mal.session.add_all([
             Agent(name='Agent 0'),
             Agent(name='Agent 1'),
             Agent(name='Agent 2'),
             Agent(name='Agent 3')])
         mal.session.commit()
-        self.admin.list_agents()
+        expected_output = self.read_file('list_agents.txt')
+        with capture(self.admin.list_agents) as output:
+            self.assertEqual(output, expected_output)
 
+    @mock.patch('db.models.AgentAuthToken.uuid', new_callable=mock.PropertyMock)
     @mock.patch('getpass.getpass')
     @mock.patch('__builtin__.raw_input')
-    def test_create_agent_auth_token(self, mock_raw_input, mock_getpass):
+    def test_create_agent_auth_token(self, mock_raw_input, mock_getpass, mock_uuid):
+        mock_uuid.return_value = 'afb52acc8a01a6aee832488234c252d423db1fc4'
         password='asdfasdf'
         admin = User(name='Joe Admin',
                     email='admin@gmail.com',
@@ -229,7 +243,9 @@ class TestApp(unittest.TestCase):
         mal.session.commit()
         mock_raw_input.side_effect = [admin.email, str(agent.id)]
         mock_getpass.side_effect = [password]
-        self.admin.create_agent_auth_token()
+        expected_output = self.read_file('create_agent_auth_token.txt')
+        with capture(self.admin.create_agent_auth_token) as output:
+            self.assertEqual(output, expected_output)
 
     @mock.patch('getpass.getpass')
     @mock.patch('__builtin__.raw_input')
@@ -246,16 +262,25 @@ class TestApp(unittest.TestCase):
         mal.session.commit()
         mock_raw_input.side_effect = [admin.email, str(agent.id)]
         mock_getpass.side_effect = [password]
-        expected_output = 'Delete agent token: please authenticate...\n' \
-            'Successfully deleted token for 1. Agent 007'
+        expected_output = self.read_file('delete_agent_auth_token.txt')
         with capture(self.admin.delete_agent_auth_token) as output:
             self.assertEqual(output, expected_output)
 
-    def test_list_agent_auth_tokens(self):
+    @mock.patch('db.models.AgentAuthToken.created_on', new_callable=mock.PropertyMock)
+    @mock.patch('db.models.AgentAuthToken.uuid', new_callable=mock.PropertyMock)
+    def test_list_agent_auth_tokens(self, mock_uuid, mock_created_on):
+        mock_uuid.side_effect = ['ae8d68dabc68268c0f895ff1b9fc46f3e94d3097',
+            '3913a8ef57139a71a7aebdb24d0c4dc25e8acb41',
+            '8507ab2c7fe1ab3789b996f16b1a960ccaf29755',
+            '25babaa14973ae688edbaa27893a005ee662dfb0']
+        mock_created_on.side_effect = [datetime(2016, 1, 1),
+            datetime(2016, 2, 1), datetime(2016, 3, 1), datetime(2016, 4, 1)]
         mal.session.add_all([
             AgentAuthToken(agent=Agent(name='Agent 0')),
             AgentAuthToken(agent=Agent(name='Agent 1')),
             AgentAuthToken(agent=Agent(name='Agent 2')),
             AgentAuthToken(agent=Agent(name='Agent 3'))])
         mal.session.commit()
-        self.admin.list_agent_auth_tokens()
+        expected_output = self.read_file('list_agent_auth_tokens.txt')
+        with capture(self.admin.list_agent_auth_tokens) as output:
+            self.assertEqual(output, expected_output)

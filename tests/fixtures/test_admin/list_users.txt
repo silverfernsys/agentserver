@@ -1,0 +1,3 @@
+Name                                                                  Email                         Admin     Created
+User A                                                                user_a@example.com            Y         01-01-2016 00:00:00
+User B                                                                user_b@example.com            N         01-02-2016 00:00:00

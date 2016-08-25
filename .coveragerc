@@ -10,3 +10,4 @@ omit =
 	agentserver/config.py
 	agentserver/__init__.py
 	agentserver/agents/__init__.py
+	/home/vagrant/.virtualenvs/*

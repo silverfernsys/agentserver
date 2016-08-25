@@ -1,8 +1,8 @@
 #! /usr/bin/env python
-import unittest
-import sys, os
+import unittest, sys, os, logging
 
 sys.path.insert(0, os.path.join(os.path.split(os.path.dirname(os.path.abspath(__file__)))[0], 'agentserver'))
+logging.disable(logging.CRITICAL)
 
 testmodules = [
     'test_admin',
