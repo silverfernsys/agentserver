@@ -29,8 +29,9 @@ class Server():
         self.logger.warning("Caught signal: %s", sig)
         tornado.ioloop.IOLoop.instance().add_callback(self.shutdown)
 
-    def __init__(self):
+    def __init__(self, config):
         setproctitle('agentserver')
+        config.parse()
         self.print_splash_page()
     	mal.connect(config.database)
         kal.connect(config.kafka)
@@ -91,7 +92,7 @@ class Server():
 
 
 def main():
-    server = Server()
+    server = Server(config)
 
 
 if __name__ == "__main__":

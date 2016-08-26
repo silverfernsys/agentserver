@@ -1,5 +1,4 @@
-from admin.admin import Admin
-from admin.config import config
+from admin import Admin
 from db.models import mal, User, UserAuthToken, Agent, AgentAuthToken
 from mocks import FIXTURES_DIR
 
@@ -21,22 +20,23 @@ def capture(command, *args, **kwargs):
         sys.stdout = out
 
 
-class MockArgs(object):
-    def __init__(self, tmp_file):
+class MockConfig(object):
+    def __init__(self):
         self.log_level = 'DEBUG'
-        self.log_file = tmp_file.name,
+        self.log_file = NamedTemporaryFile().name
         self.database = 'sqlite:///:memory:'
         self.config = None
+
+    def parse(self):
+        pass
 
 
 class TestApp(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.tmp_file = NamedTemporaryFile()
-        config.resolveArgs(MockArgs(cls.tmp_file))
         out, sys.stdout = sys.stdout, StringIO()
         try:
-            cls.admin = Admin()
+            cls.admin = Admin(MockConfig())
             sys.stdout.seek(0)
             cls.init_output = sys.stdout.read().strip()
         finally:

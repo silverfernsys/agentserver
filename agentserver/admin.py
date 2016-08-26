@@ -8,10 +8,16 @@ from setproctitle import setproctitle
 import getpass
 
 class Admin(object):
-    def __init__(self):
+    def __init__(self, config):
         setproctitle('agentserveradmin')
         print('Connecting to database...')
+        self.config = config
+        self.config.parse()
         mal.connect(conn_string=config.database)
+
+    def run(self):
+        command = getattr(self, self.config.command)
+        command()
 
     def create_user(self):
         while True:
@@ -202,9 +208,7 @@ class Admin(object):
 
 
 def main():
-    admin = Admin()
-    command = getattr(admin, config.command)
-    command()
+    Admin(config).run()
 
 
 if __name__ == "__main__":
