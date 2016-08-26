@@ -7,6 +7,8 @@ import time
 import tornado.ioloop
 import tornado.web
 import tornado.httpserver
+from pyfiglet import figlet_format
+from datetime import datetime, timedelta
 from termcolor import colored, cprint
 from setproctitle import setproctitle
 from config.server import config
@@ -19,9 +21,6 @@ from ws.agent import SupervisorAgentHandler
 from ws.client import SupervisorClientHandler
 from clients.supervisorclientcoordinator import scc
 
-from pyfiglet import figlet_format
-
-from datetime import datetime, timedelta
 
 class Server():
     # Adapted from code found at https://gist.github.com/mywaiting/4643396
@@ -34,7 +33,7 @@ class Server():
         config.parse()
         self.print_splash_page()
     	mal.connect(config.database)
-        # kal.connect(config.kafka)
+        kal.connect(config.kafka)
         dral.connect(config.druid)
     	self.session = mal.Session()
         self.logger = logging.getLogger('Web Server')
