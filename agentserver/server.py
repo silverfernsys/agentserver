@@ -11,7 +11,7 @@ from termcolor import colored, cprint
 from setproctitle import setproctitle
 from config.server import config
 from db.models import mal
-from db.timeseries import kal, dral, pal
+from db.timeseries import kal, dral
 from http.client import (HTTPVersionHandler, HTTPTokenHandler,
     HTTPDetailHandler, HTTPCommandHandler, HTTPListHandler)
 from http.agent import HTTPAgentUpdateHandler, HTTPAgentDetailHandler
@@ -34,9 +34,8 @@ class Server():
         config.parse()
         self.print_splash_page()
     	mal.connect(config.database)
-        kal.connect(config.kafka)
+        # kal.connect(config.kafka)
         dral.connect(config.druid)
-        pal.connect(config.druid)
     	self.session = mal.Session()
         self.logger = logging.getLogger('Web Server')
         scc.initialize()

@@ -1,12 +1,15 @@
 from admin import Admin
 from db.models import mal, User, UserAuthToken, Agent, AgentAuthToken
-from mocks import FIXTURES_DIR
 
 import mock, unittest, sys, os
 from cStringIO import StringIO
 from contextlib import contextmanager
 from datetime import datetime
 from tempfile import NamedTemporaryFile
+
+
+FIXTURES_DIR =  os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fixtures')
+
 
 # http://schinckel.net/2013/04/15/capture-and-test-sys.stdout-sys.stderr-in-unittest.testcase/
 @contextmanager

@@ -4,7 +4,7 @@ from time import time, sleep
 from datetime import datetime, timedelta
 from tornado.escape import json_encode
 from db.models import Agent
-from db.timeseries import dral, pal
+from db.timeseries import dral
 from utils.iso_8601 import (iso_8601_period_to_timedelta,
     iso_8601_interval_to_datetimes)
 
@@ -108,8 +108,8 @@ class SupervisorClientCoordinator(object):
 
         for agent in Agent.all():
             info = AgentInfo(agent)
-            result = pal.processes(agent.id, 'P6W')
-            for row in json.loads(result):
+            result = dral.processes(agent.id, 'P6W')
+            for row in result:
                 info.add(SupervisorProcess(info.id, row['process'], None,
                     datetime.utcfromtimestamp(float(row['time'])/1000.0)))
             self.agents[info.id] = info

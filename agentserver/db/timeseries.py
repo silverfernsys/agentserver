@@ -1,21 +1,13 @@
-import os, subprocess, json, random
+import os, subprocess, json, random, sys
 from datetime import datetime, timedelta
 from pydruid.client import PyDruid
 from pydruid.utils.aggregators import doublesum
 from pydruid.utils.filters import Dimension, Filter
 from kafka import KafkaProducer
+from kafka.errors import NoBrokersAvailable
 from utils.iso_8601 import (validate_iso_8601_period,
     validate_iso_8601_interval, iso_8601_interval_to_datetimes,
     iso_8601_period_to_timedelta)
-
-
-class KafkaProducerMock(object):
-    def __init__(self, bootstrap_servers=None, value_serializer=None):
-        pass
-    def send(self, topic, data):
-        pass
-    def flush(self):
-        pass
 
 
 class KafkaAccessLayer(object): 
@@ -23,11 +15,13 @@ class KafkaAccessLayer(object):
         self.connection = None
 
     def connect(self, uri):
-        if uri.lower() == 'debug':
-            self.connection = KafkaProducerMock()
-        else:
+        try:
             self.connection = KafkaProducer(bootstrap_servers=uri,
                 value_serializer=lambda v: json.dumps(v).encode('utf-8'))
+        except NoBrokersAvailable:
+            print('No Kafka broker available at {0}. Exiting.'.format(uri))
+            sys.exit(1)
+
 
     def write_stats(self, id, name, stats, **kwargs):
         for stat in stats:
@@ -40,86 +34,38 @@ class KafkaAccessLayer(object):
 kal = KafkaAccessLayer()
 
 
-class PyDruidResultMock(object):
-    def __init__(self, result):
-        self.result = result
+class PlyQLError(Exception):
+    def __init__(self, expr, msg):
+        self.expr = expr
+        self.msg = msg
 
 
-class PyDruidMock(object):
-    def groupby(self, datasource, granularity, intervals, dimensions,
-        filter, aggregations):
-        f = Filter.build_filter(filter)
-        if f['type'] == 'selector' and f['dimension'] == 'agent_id' and 'value' in f:
+class PlyQLConnectionError(PlyQLError):
+    def __init__(self, expr, msg, uri):
+        super(PlyQLConnectionError, self).__init__(expr, msg)
+        self.uri = uri
+
+
+class PlyQL(object):
+    def __init__(self, uri):
+        self.uri = uri
+
+    def query(self, q, interval=None):
+        command = ['plyql', '-h', self.uri, '-q', q, '-o', 'json']
+        if interval:
+            command.extend(['-i', interval])
+        process = subprocess.Popen(command, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE)
+        out, err = process.communicate()
+        if err:
             try:
-                body = open(os.path.join(self.fixtures_dir,
-                    'groupby{0}.json'.format(f['value']))).read().decode('utf-8')
-            except:
-                body = '[]'
+                (_, _, uri) = err.split(' ')
+                raise PlyQLConnectionError(err,
+                    'Could not connect to Druid.', uri)
+            except ValueError:
+                raise PlyQLError(err, 'Error executing query.') 
         else:
-            body = '[]'
-        return PyDruidResultMock(body)
-
-    def __granularity_to_timedelta__(self, granularity):
-        if granularity == 'none' or granularity == 'second':
-            return timedelta(seconds=1)
-        elif granularity == 'minute':
-            return timedelta(minutes=1)
-        elif granularity == 'fifteen_minute':
-            return timedelta(minutes=15)
-        elif granularity == 'thirty_minute':
-            return timedelta(minutes=30)
-        elif granularity == 'hour':
-            return timedelta(hours=1)
-        elif granularity == 'day':
-            return timedelta(days=1)
-        elif granularity == 'week':
-            return timedelta(weeks=1)
-        elif granularity == 'month':
-            return timedelta(days=30)
-        elif granularity == 'quarter':
-            return timedelta(days=30 * 4)
-        elif granularity == 'year':
-            return timedelta(days=365)
-        else:
-            return timedelta(hours=1)
-
-    def timeseries(self, datasource, granularity, descending, intervals,
-        aggregations, context, filter):
-        f = Filter.build_filter(filter)
-        if f['type'] == 'and' and f['fields'][0]['type'] == 'selector' and \
-            f['fields'][0]['dimension'] == 'agent_id' and \
-            f['fields'][1]['type'] == 'selector' and \
-            f['fields'][1]['dimension'] == 'process_name':
-            agent_id = f['fields'][0]['value']
-            process_name = f['fields'][1]['value']
-
-            (interval_start, interval_end) = iso_8601_interval_to_datetimes(intervals)
-            if interval_end is None:
-                interval_end = datetime.now()
-
-            if granularity in DruidAccessLayer.timeseries_granularities:
-                query_granularity = self.__granularity_to_timedelta__(granularity)
-            else:
-                query_granularity = iso_8601_period_to_timedelta(granularity['period'])
-
-            body = []
-            curr_time = interval_start
-
-            while curr_time < interval_end:
-                body.append({'timestamp': curr_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
-                    'result': {'cpu': random.uniform(0, 1),
-                    'mem': random.randint(1, 10000000)}})
-                curr_time += query_granularity
-        else:
-            body = []
-        return PyDruidResultMock(body)
-
-    def select(self, datasource, granularity, intervals, descending,
-        dimensions, metrics, filter, paging_spec):
-        f = Filter.build_filter(filter)
-        print('f: %s' % f)
-        body = []
-        return PyDruidResultMock(body)
+            return json.loads(out)
 
 
 class DruidAccessLayer(object):
@@ -133,12 +79,20 @@ class DruidAccessLayer(object):
 
     def __init__(self):
         self.connection = None
+        self.plyql = None
 
     def connect(self, uri):
-        if uri.lower() == 'debug':
-            self.connection = PyDruidMock()
-        else:
-            self.connection = PyDruid('http://{0}'.format(uri), 'druid/v2/')
+        self.connection = PyDruid('http://{0}'.format(uri), 'druid/v2/')
+        self.plyql = PlyQL(uri)
+        try:
+            tables = self.tables()
+            if 'supervisor' not in tables:
+                print('Druid not correctly configured. Missing' \
+                    '"supervisor" table.')
+                sys.exit(1)
+        except PlyQLConnectionError as e:
+            print('Error connecting to Druid at {0}. Exiting.'.format(uri))
+            sys.exit(1)
 
     def __longmax__(self, raw_metric):
         return {"type": "longMax", "fieldName": raw_metric} 
@@ -159,6 +113,15 @@ class DruidAccessLayer(object):
         if not validate_iso_8601_interval(intervals):
             raise ValueError('Unsupported interval "{0}"'.format(intervals))
         return intervals
+
+    def tables(self):
+        return self.plyql.query('SHOW TABLES')
+
+    def processes(self, agent_id, period='P6W'):
+        return self.plyql.query('SELECT process_name AS process, ' \
+            'COUNT() AS count, MAX(__time) AS time FROM supervisor ' \
+            'WHERE agent_id = "{0}" GROUP BY process_name;'
+            .format(agent_id), period)
 
     def timeseries(self, agent_id, process_name, granularity='none',
             intervals='P6W', descending=False):
@@ -196,37 +159,3 @@ class DruidAccessLayer(object):
         )
 
 dral = DruidAccessLayer()
-
-
-class PlyQLAccessLayer(object):
-    def __init__(self):
-        self.uri = None
-
-    def connect(self, uri):
-        if uri.lower() == 'debug':
-            self.uri = 'debug'
-        else:
-            self.uri = uri
-
-    def query(self, q, interval=None):
-        if not self.uri:
-            raise UnboundLocalError('Please connect to valid uri before calling query.')
-
-        command = ['plyql', '-h', self.uri, '-q', q, '-o', 'json']
-        if interval:
-            command.extend(['-i', interval])
-        process = subprocess.Popen(command, stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE)
-        out, err = process.communicate()
-        if err:
-            return json.dumps({'error': err.strip()})
-        else:
-            return out
-
-    def processes(self, agent_id, period='P6W'):
-        return self.query('SELECT process_name AS process, ' \
-            'COUNT() AS count, MAX(__time) AS time FROM supervisor ' \
-            'WHERE agent_id = "{0}" GROUP BY process_name;'
-            .format(agent_id), period)
-
-pal = PlyQLAccessLayer()

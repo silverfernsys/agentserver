@@ -27,16 +27,20 @@ try:
 except ImportError:
     speedups = None
 
-from mocks import pal_mock_query, FIXTURES_DIR
+from mocks.timeseries import KafkaProducerMock, PyDruidMock, PlyQLMock
 from ws_helpers import websocket_connect
 from ws.agent import SupervisorAgentHandler
 from ws.client import SupervisorClientHandler
 from db.models import mal, User, UserAuthToken, Agent, AgentDetail, AgentAuthToken
-from db.timeseries import kal, dral, pal
+from db.timeseries import kal, dral
 from utils.iso_8601 import validate_timestamp
 from clients.supervisorclient import SupervisorClient
 from clients.supervisorclientcoordinator import scc
 from agents.supervisoragent import SupervisorAgent
+
+
+FIXTURES_DIR =  os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fixtures')
+
 
 class TestWebSocketHandler(WebSocketHandler):
     """Base class for testing handlers that exposes the on_close event.
@@ -69,7 +73,8 @@ class WebSocketBaseTestCase(AsyncHTTPTestCase):
     @classmethod
     def setUpClass(cls):
         mal.connect('sqlite:///:memory:')
-        kal.connect('debug')
+        kal.connection = KafkaProducerMock()
+        # kal.connect('debug')
 
     @classmethod
     def tearDownClass(cls):
@@ -94,8 +99,7 @@ class WebSocketBaseTestCase(AsyncHTTPTestCase):
 
 class SupervisorAgentHandlerTest(WebSocketBaseTestCase):
     @classmethod
-    @mock.patch('db.timeseries.pal.query', side_effect=pal_mock_query)
-    def setUpClass(cls, mock_query):
+    def setUpClass(cls):
         super(SupervisorAgentHandlerTest, cls).setUpClass()
         # Generate agents
         agent = Agent(name='Agent 0')
@@ -103,8 +107,10 @@ class SupervisorAgentHandlerTest(WebSocketBaseTestCase):
             AgentAuthToken(agent=Agent(name='Agent 1')),
             AgentAuthToken(agent=Agent(name='Agent 2'))])
         mal.session.commit()
-        dral.connect('debug')
-        pal.connect('debug')
+        dral.connection = PyDruidMock()
+        dral.plyql = PlyQLMock()
+        # dral.connect('debug')
+        # dral.plyql.fixtures_dir = FIXTURES_DIR
         scc.initialize()
 
         cls.AGENT_TOKEN = agent.token.uuid
@@ -290,8 +296,7 @@ class SupervisorAgentMock(object):
 
 class SupervisorClientHandlerTest(WebSocketBaseTestCase):
     @classmethod
-    @mock.patch('db.timeseries.pal.query', side_effect=pal_mock_query)
-    def setUpClass(cls, mock_query):
+    def setUpClass(cls):
         super(SupervisorClientHandlerTest, cls).setUpClass()
         # Generate users and tokens
         user = User(name='User A',
@@ -312,8 +317,10 @@ class SupervisorClientHandlerTest(WebSocketBaseTestCase):
         agent = Agent(name='Agent 0')
         mal.session.add(AgentAuthToken(agent=agent))
         mal.session.commit()
-        dral.connect('debug')
-        pal.connect('debug')
+        dral.connection = PyDruidMock()
+        dral.plyql = PlyQLMock()
+        # dral.connect('debug')
+        # dral.plyql.fixtures_dir = FIXTURES_DIR
         scc.initialize()
 
         cls.AGENT_TOKEN = agent.token.uuid

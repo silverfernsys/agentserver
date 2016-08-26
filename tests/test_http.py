@@ -10,24 +10,28 @@ from http.client import (HTTPVersionHandler, HTTPTokenHandler,
     HTTPDetailHandler, HTTPCommandHandler, HTTPListHandler)
 from http.agent import HTTPAgentUpdateHandler, HTTPAgentDetailHandler
 
-from mocks import pal_mock_query, FIXTURES_DIR
+from mocks.timeseries import KafkaProducerMock, PyDruidMock, PlyQLMock
 from ws_helpers import websocket_connect
 from test_ws import MockSupervisorAgentHandler
 
 from db.models import mal, User, UserAuthToken, Agent, AgentAuthToken, AgentDetail
-from db.timeseries import kal, dral, pal
+from db.timeseries import kal, dral
 from clients.supervisorclientcoordinator import scc
+
+
+FIXTURES_DIR =  os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fixtures')
 
 
 class TestHTTP(AsyncHTTPTestCase):
     @classmethod
-    @mock.patch('db.timeseries.pal.query', side_effect=pal_mock_query)
-    def setUpClass(cls, mock_query):
+    def setUpClass(cls):
         mal.connect('sqlite:///:memory:')
-        kal.connect('debug')
-        dral.connect('debug')
-        pal.connect('debug')
-        dral.connection.fixtures_dir = FIXTURES_DIR
+        kal.connection = KafkaProducerMock()
+        dral.connection = PyDruidMock()
+        dral.plyql = PlyQLMock()
+        # kal.connect('debug')
+        # dral.connect('debug')
+        # dral.plyql.fixtures_dir = FIXTURES_DIR
 
         # Generate users
         cls.EMAIL = 'user_a@example.com'
