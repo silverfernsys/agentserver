@@ -86,7 +86,7 @@ class DruidAccessLayer(object):
         self.plyql = PlyQL(uri)
         try:
             tables = self.tables()
-            if 'supervisor' not in tables:
+            if {'Tables_in_database': 'supervisor'} not in tables:
                 print('Druid not correctly configured. Missing' \
                     '"supervisor" table.')
                 sys.exit(1)
