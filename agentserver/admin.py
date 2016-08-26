@@ -1,12 +1,15 @@
+#! /usr/bin/env python
 from db.models import mal, User, Agent, UserAuthToken, AgentAuthToken
-from config import config
+from config.admin import config
 from utils.haiku import haiku_name
 from datetime import datetime
+from setproctitle import setproctitle
 
 import getpass
 
 class Admin(object):
     def __init__(self):
+        setproctitle('agentserveradmin')
         print('Connecting to database...')
         mal.connect(conn_string=config.database)
 
@@ -196,3 +199,13 @@ class Admin(object):
                 name=token.agent.name.ljust(30),
                 token=token.uuid.ljust(70))
             print(line)
+
+
+def main():
+    admin = Admin()
+    command = getattr(admin, config.command)
+    command()
+
+
+if __name__ == "__main__":
+    main()

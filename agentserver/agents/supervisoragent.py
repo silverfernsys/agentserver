@@ -38,6 +38,7 @@ class SupervisorAgent(object):
                 log_kafka(self.id, 'SupervisorAgent', **row)
             self.ws.write_message(self.snapshot_update_success)
         else:
+            print(snapshot_validator.errors)
             self.ws.write_message(self.error_message(snapshot_validator.errors))
 
     def state_update(self, data):

@@ -8,7 +8,8 @@ import tornado.ioloop
 import tornado.web
 import tornado.httpserver
 from termcolor import colored, cprint
-from config import config
+from setproctitle import setproctitle
+from config.server import config
 from db.models import mal
 from db.timeseries import kal, dral, pal
 from http.client import (HTTPVersionHandler, HTTPTokenHandler,
@@ -29,6 +30,7 @@ class Server():
         tornado.ioloop.IOLoop.instance().add_callback(self.shutdown)
 
     def __init__(self):
+        setproctitle('agentserver')
         self.print_splash_page()
     	mal.connect(config.database)
         kal.connect(config.kafka)
@@ -86,3 +88,11 @@ class Server():
             title = 'AgentServer v0.1a'
             centered_title = title.center(width, ' ')
             cprint(centered_title, 'red')
+
+
+def main():
+    server = Server()
+
+
+if __name__ == "__main__":
+    main()
