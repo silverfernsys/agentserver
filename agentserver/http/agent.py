@@ -1,7 +1,7 @@
 from tornado.escape import json_encode
 from http.base import JSONHandler
 from db.models import Agent, AgentDetail
-from db.timeseries import kal
+from db.timeseries import kafka
 from clients.supervisorclientcoordinator import scc
 from utils.validators import snapshot_validator, system_stats_validator
 from utils.log import log_auth_error, log_kafka
@@ -48,7 +48,7 @@ class HTTPAgentUpdateHandler(HTTPAgentHandler):
         if snapshot_validator.validate(self.json):
             for row in self.json[SNAPSHOT]:
                 scc.update(self.agent.id, **row)
-                kal.write_stats(self.agent.id, **row)
+                kafka.write_stats(self.agent.id, **row)
                 log_kafka(self.agent.id, 'HTTPAgentUpdateHandler', **row)
             status = 200
             data = self.snapshot_update_success

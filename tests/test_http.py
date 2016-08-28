@@ -14,8 +14,8 @@ from mocks.timeseries import KafkaProducerMock, PyDruidMock, PlyQLMock
 from ws_helpers import websocket_connect
 from test_ws import MockSupervisorAgentHandler
 
-from db.models import mal, User, UserAuthToken, Agent, AgentAuthToken, AgentDetail
-from db.timeseries import kal, dral
+from db.models import models, User, UserAuthToken, Agent, AgentAuthToken, AgentDetail
+from db.timeseries import kafka, druid
 from clients.supervisorclientcoordinator import scc
 
 
@@ -25,13 +25,10 @@ FIXTURES_DIR =  os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fixtur
 class TestHTTP(AsyncHTTPTestCase):
     @classmethod
     def setUpClass(cls):
-        mal.connect('sqlite:///:memory:')
-        kal.connection = KafkaProducerMock()
-        dral.connection = PyDruidMock()
-        dral.plyql = PlyQLMock()
-        # kal.connect('debug')
-        # dral.connect('debug')
-        # dral.plyql.fixtures_dir = FIXTURES_DIR
+        models.connect('sqlite:///:memory:')
+        kafka.connection = KafkaProducerMock()
+        druid.connection = PyDruidMock()
+        druid.plyql = PlyQLMock()
 
         # Generate users
         cls.EMAIL = 'user_a@example.com'
@@ -40,7 +37,7 @@ class TestHTTP(AsyncHTTPTestCase):
                      email=cls.EMAIL,
                      is_admin=True,
                      password=cls.PASSWORD)
-        mal.session.add_all([UserAuthToken(user=user),
+        models.session.add_all([UserAuthToken(user=user),
                         UserAuthToken(user=User(name='User B',
                          email='user_b@example.com',
                          is_admin=False,
@@ -56,12 +53,12 @@ class TestHTTP(AsyncHTTPTestCase):
         agent_2 = Agent(name='Agent 2')
         agent_3 = Agent(name='Agent 3')
 
-        mal.session.add_all([AgentAuthToken(agent=agent_0),
+        models.session.add_all([AgentAuthToken(agent=agent_0),
             AgentAuthToken(agent=agent_1),
             AgentAuthToken(agent=agent_2),
             AgentAuthToken(agent=agent_3)])
 
-        mal.session.add(AgentDetail(agent=agent_0,
+        models.session.add(AgentDetail(agent=agent_0,
             hostname='agent_1',
             processor='x86_64',
             num_cores=2,
@@ -69,7 +66,7 @@ class TestHTTP(AsyncHTTPTestCase):
             dist_name='Ubuntu',
             dist_version='15.04'))
 
-        mal.session.commit()
+        models.session.commit()
         scc.initialize()
 
         cls.TOKEN = user.token.uuid
@@ -82,8 +79,8 @@ class TestHTTP(AsyncHTTPTestCase):
 
     @classmethod
     def tearDownClass(cls):
-        mal.session.rollback()
-        mal.session.close()
+        models.session.rollback()
+        models.session.close()
 
     def get_app(self):
         self.close_future = Future()
@@ -229,7 +226,7 @@ class TestHTTP(AsyncHTTPTestCase):
         headers = {'authorization':self.TOKEN}
         body = json.dumps({'id': 1})
         response = self.fetch('/detail/', method='POST', headers=headers, body=body)
-        detail = mal.Session().query(AgentAuthToken) \
+        detail = models.Session().query(AgentAuthToken) \
             .filter(AgentAuthToken.uuid == self.AGENT_TOKEN_0) \
             .one().agent.details
         self.assertEqual(response.code, 200)
@@ -263,7 +260,7 @@ class TestHTTP(AsyncHTTPTestCase):
         self.assertEqual(json.loads(response.body),
             json.loads(HTTPAgentDetailHandler.success_response_updated))
 
-        token = mal.Session().query(AgentAuthToken).filter(AgentAuthToken.uuid == self.AGENT_TOKEN_0).one()
+        token = models.Session().query(AgentAuthToken).filter(AgentAuthToken.uuid == self.AGENT_TOKEN_0).one()
         detail = token.agent.details.__json__()
         detail.pop('updated')
         detail.pop('created')
@@ -283,7 +280,7 @@ class TestHTTP(AsyncHTTPTestCase):
         self.assertEqual(json.loads(response.body),
             json.loads(HTTPAgentDetailHandler.success_response_created))
 
-        token = mal.Session().query(AgentAuthToken).filter(AgentAuthToken.uuid == self.AGENT_TOKEN_1).one()
+        token = models.Session().query(AgentAuthToken).filter(AgentAuthToken.uuid == self.AGENT_TOKEN_1).one()
         detail = token.agent.details.__json__()
         detail.pop('updated')
         detail.pop('created')

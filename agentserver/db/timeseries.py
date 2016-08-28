@@ -4,7 +4,6 @@ from pydruid.client import PyDruid
 from pydruid.utils.aggregators import doublesum
 from pydruid.utils.filters import Dimension, Filter
 from kafka import KafkaProducer
-from kafka.errors import NoBrokersAvailable
 from utils.iso_8601 import (validate_iso_8601_period,
     validate_iso_8601_interval, iso_8601_interval_to_datetimes,
     iso_8601_period_to_timedelta)
@@ -18,10 +17,8 @@ class KafkaAccessLayer(object):
         try:
             self.connection = KafkaProducer(bootstrap_servers=uri,
                 value_serializer=lambda v: json.dumps(v).encode('utf-8'))
-        except NoBrokersAvailable:
-            print('No Kafka broker available at {0}. Exiting.'.format(uri))
-            sys.exit(1)
-
+        except Exception as e:
+            raise Exception('Kafka connection error: {0}'.format(uri))
 
     def write_stats(self, id, name, stats, **kwargs):
         for stat in stats:
@@ -31,13 +28,13 @@ class KafkaAccessLayer(object):
             self.connection.send('supervisor', msg)
         self.connection.flush()
 
-kal = KafkaAccessLayer()
+kafka = KafkaAccessLayer()
 
 
 class PlyQLError(Exception):
     def __init__(self, expr, msg):
         self.expr = expr
-        self.msg = msg
+        self.message = msg
 
 
 class PlyQLConnectionError(PlyQLError):
@@ -51,7 +48,7 @@ class PlyQL(object):
         self.uri = uri
 
     def query(self, q, interval=None):
-        command = ['plyql', '-h', self.uri, '-q', q, '-o', 'json']
+        command = ['plyql', '-h', str(self.uri), '-q', str(q), '-o', 'json']
         if interval:
             command.extend(['-i', interval])
         process = subprocess.Popen(command, stdout=subprocess.PIPE,
@@ -87,12 +84,10 @@ class DruidAccessLayer(object):
         try:
             tables = self.tables()
             if {'Tables_in_database': 'supervisor'} not in tables:
-                print('Druid not correctly configured. Missing' \
-                    '"supervisor" table.')
-                sys.exit(1)
-        except PlyQLConnectionError as e:
-            print('Error connecting to Druid at {0}. Exiting.'.format(uri))
-            sys.exit(1)
+                raise Exception('Druid connection error: missing ' \
+                    '"supervisor" table')
+        except Exception as e:
+            raise Exception('Druid connection error: {0}'.format(uri))
 
     def __longmax__(self, raw_metric):
         return {"type": "longMax", "fieldName": raw_metric} 
@@ -158,4 +153,4 @@ class DruidAccessLayer(object):
             paging_spec={'pagingIdentifiers': {}, "threshold":1}
         )
 
-dral = DruidAccessLayer()
+druid = DruidAccessLayer()

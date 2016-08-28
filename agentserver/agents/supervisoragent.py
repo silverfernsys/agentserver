@@ -1,6 +1,6 @@
 from tornado.escape import json_encode
 from db.models import AgentDetail
-from db.timeseries import kal
+from db.timeseries import kafka
 from clients.supervisorclientcoordinator import scc
 from utils.validators import (system_stats_validator,
     states_validator, snapshot_validator)
@@ -34,7 +34,7 @@ class SupervisorAgent(object):
         if snapshot_validator.validate(data):
             for row in data[SNAPSHOT]:
                 scc.update(self.id, **row)
-                kal.write_stats(self.id, **row)
+                kafka.write_stats(self.id, **row)
                 log_kafka(self.id, 'SupervisorAgent', **row)
             self.ws.write_message(self.snapshot_update_success)
         else:

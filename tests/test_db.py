@@ -2,19 +2,19 @@
 import unittest
 from datetime import datetime
 from sqlalchemy.exc import IntegrityError
-from db.models import (mal, User, UserAuthToken,
+from db.models import (models, User, UserAuthToken,
     Agent, AgentAuthToken, AgentDetail)
 
 
 class TestDb(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        mal.connect('sqlite:///:memory:')
+        models.connect('sqlite:///:memory:')
 
     @classmethod
     def tearDownClass(cls):
-        mal.session.rollback()
-        mal.session.close()
+        models.session.rollback()
+        models.session.close()
 
     def test_users_and_user_tokens(self):
         # Generate users and tokens
@@ -23,7 +23,7 @@ class TestDb(unittest.TestCase):
              is_admin=True,
              password='randompassworda')
         
-        mal.session.add_all([UserAuthToken(user=user),
+        models.session.add_all([UserAuthToken(user=user),
                         UserAuthToken(user=User(name='User B',
                          email='user_b@example.com',
                          is_admin=False,
@@ -32,18 +32,18 @@ class TestDb(unittest.TestCase):
                          email='user_c@example.com',
                          is_admin=True,
                          password='randompasswordc'))])
-        mal.session.commit()
+        models.session.commit()
 
         # Test that creating a new user with an
         # existing email address fails
-        mal.session.add(User(name='User D',
+        models.session.add(User(name='User D',
                          email='user_a@example.com',
                          is_admin=False,
                          password='randompasswordd'))
         with self.assertRaises(IntegrityError) as e:
-            mal.session.commit()
+            models.session.commit()
 
-        mal.session.rollback()
+        models.session.rollback()
 
         # Test authorize method
         self.assertEqual(User.authorize(user.token.uuid), user)
@@ -74,15 +74,15 @@ class TestDb(unittest.TestCase):
 
         agent = Agent(name='Agent 0')
 
-        mal.session.add_all([
+        models.session.add_all([
             AgentAuthToken(agent=agent),
             AgentAuthToken(agent=Agent(name='Agent 1')),
             AgentAuthToken(agent=Agent(name='Agent 2'))])
-        mal.session.commit()
+        models.session.commit()
 
-        mal.session.add(AgentDetail(agent=agent, dist_name='Debian', dist_version='7.0',
+        models.session.add(AgentDetail(agent=agent, dist_name='Debian', dist_version='7.0',
             hostname='host', num_cores=8, memory=160000, processor='x86_64'))
-        mal.session.commit()
+        models.session.commit()
 
         self.assertEqual(Agent.count(),
             agents_before + 3)
@@ -109,8 +109,8 @@ class TestDb(unittest.TestCase):
 
     def test_agent_detail(self):
         agent = Agent(name='Agent')
-        mal.session.add(agent)
-        mal.session.commit()
+        models.session.add(agent)
+        models.session.commit()
 
         self.assertEqual(AgentDetail.count(), 0)
         args = {'dist_name': 'Ubuntu', 'dist_version': '15.10',

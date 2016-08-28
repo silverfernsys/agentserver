@@ -4,7 +4,7 @@ from time import time, sleep
 from datetime import datetime, timedelta
 from tornado.escape import json_encode
 from db.models import Agent
-from db.timeseries import dral
+from db.timeseries import druid
 from utils.iso_8601 import (iso_8601_period_to_timedelta,
     iso_8601_interval_to_datetimes)
 
@@ -108,7 +108,7 @@ class SupervisorClientCoordinator(object):
 
         for agent in Agent.all():
             info = AgentInfo(agent)
-            result = dral.processes(agent.id, 'P6W')
+            result = druid.processes(agent.id, 'P6W')
             for row in result:
                 info.add(SupervisorProcess(info.id, row['process'], None,
                     datetime.utcfromtimestamp(float(row['time'])/1000.0)))
@@ -132,8 +132,8 @@ class SupervisorClientCoordinator(object):
             self.agents[id].processes[name].update(started, statename, updated)
 
     def subscribe(self, client, id, process, granularity='P3D', intervals='P6W', **kwargs):
-        dral.__validate_granularity__(granularity, dral.timeseries_granularities)
-        dral.__validate_intervals__(intervals)
+        druid.__validate_granularity__(granularity, druid.timeseries_granularities)
+        druid.__validate_intervals__(intervals)
 
         (start, end) = iso_8601_interval_to_datetimes(intervals)
 
@@ -146,7 +146,7 @@ class SupervisorClientCoordinator(object):
                 while client in self.clients:
                     for (id, process) in self.clients[client]:
                         (granularity, (start, end)) = self.updates[(client, id, process)]
-                        result = dral.timeseries(id, process, granularity=granularity,
+                        result = druid.timeseries(id, process, granularity=granularity,
                             intervals=intervals).result
                         body = {'snapshot': {'id': id, 'process': process,
                             'stats': map(lambda x: {'timestamp': x['timestamp'],

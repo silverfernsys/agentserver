@@ -5,6 +5,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, backref, sessionmaker, validates
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.event import listen
+from sqlalchemy.exc import ArgumentError, NoSuchModuleError, OperationalError
 from passlib.apps import custom_app_context as pwd_context
 from utils.uuid import uuid
 
@@ -16,14 +17,14 @@ class Countable(object):
     @classmethod
     def count(cls, session=None):
         if not session:
-            session = mal.session
+            session = models.session
         return session.query(cls).count()
 
 
 class Saveable(object):
     def save(self, session=None):
         if not session:
-            session = mal.session
+            session = models.session
         session.add(self)
         session.commit()
         return self
@@ -33,7 +34,7 @@ class Allable(object):
     @classmethod
     def all(cls, session=None):
         if not session:
-            session = mal.session
+            session = models.session
         return session.query(cls)
 
 
@@ -42,7 +43,7 @@ class Gettable(object):
     def get(cls, session=None, *args, **kwargs):
         """Find object with keyword args."""
         if not session:
-            session = mal.session
+            session = models.session
 
         query = None
         for k, v in kwargs.items():
@@ -59,7 +60,7 @@ class Gettable(object):
 class Deleteable(object):
     def delete(self, session=None):
         if not session:
-            session = mal.session
+            session = models.session
         try:
             session.delete(self)
             session.commit()
@@ -78,7 +79,7 @@ class Agent(Base, Countable, Saveable, Allable, Gettable, Deleteable):
     @classmethod
     def authorize(cls, authorization_token, session=None):
         if not session:
-            session = mal.session
+            session = models.session
         try:
             return session.query(AgentAuthToken) \
                 .filter(AgentAuthToken.uuid == authorization_token) \
@@ -112,7 +113,7 @@ class AgentDetail(Base, Countable, Deleteable):
     @classmethod
     def detail_for_agent_id(cls, id):
         try:
-            return mal.Session().query(AgentDetail) \
+            return models.Session().query(AgentDetail) \
                 .filter(AgentDetail.agent_id == id).one()
         except NoResultFound:
             return None
@@ -121,7 +122,7 @@ class AgentDetail(Base, Countable, Deleteable):
     def update_or_create(cls, id, dist_name, dist_version,
         hostname, num_cores, memory, processor, session=None):
         if not session:
-            session = mal.session
+            session = models.session
         try:
             detail = session.query(AgentDetail) \
                 .filter(AgentDetail.agent_id == id).one()
@@ -205,7 +206,7 @@ class User(Base, Countable, Saveable, Allable, Gettable, Deleteable):
     @classmethod
     def authorize(cls, authorization_token, session=None):
         if not session:
-            session = mal.session
+            session = models.session
         try:
             return session.query(UserAuthToken) \
                 .filter(UserAuthToken.uuid == authorization_token) \
@@ -216,7 +217,7 @@ class User(Base, Countable, Saveable, Allable, Gettable, Deleteable):
     @classmethod
     def authenticate(cls, username, password, session=None):
         if session is None:
-            session = mal.session
+            session = models.session
         try:
             user = session.query(User).filter(User.email == username).one()
             if user.authenticates(password):
@@ -272,7 +273,7 @@ class UserAuthToken(Base, Countable, Saveable, Allable, Gettable, Deleteable):
     @classmethod
     def authorize(cls, authorization_token, session=None):
         if not session:
-            session = mal.session
+            session = models.session
         return session.query(UserAuthToken) \
             .filter(UserAuthToken.uuid == authorization_token) \
             .one().user
@@ -294,9 +295,22 @@ class ModelAccessLayer:
     def connect(self, conn_string=None):
         self.conn_string = conn_string
         if self.conn_string:
-            self.engine = create_engine(self.conn_string)
-            Base.metadata.create_all(self.engine)
-            self.Session = sessionmaker(bind=self.engine)
-            self.session = self.Session()
+            try:
+                self.engine = create_engine(self.conn_string)
+                Base.metadata.create_all(self.engine)
+                self.Session = sessionmaker(bind=self.engine)
+                self.session = self.Session()
+            except OperationalError as e:
+                message = e.orig.message.split('\n')[0].strip()
+                raise Exception('Database connection error: {0}'.format(message))
+            except NoSuchModuleError as e:
+                message = e.message.split(':')[-1]
+                raise Exception('Database connection error: unknown database type "{0}"'.format(message))
+            except ArgumentError as e:
+                raise Exception('Database connection error: {0}'.format(e.message))
+            except Exception as e:
+                raise Exception('Database connection error: {0}'.format(e.message))
+        else:
+            raise Exception('Database connection error: connection cannot be none.')
 
-mal = ModelAccessLayer()
+models = ModelAccessLayer()

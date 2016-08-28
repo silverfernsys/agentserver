@@ -31,8 +31,8 @@ from mocks.timeseries import KafkaProducerMock, PyDruidMock, PlyQLMock
 from ws_helpers import websocket_connect
 from ws.agent import SupervisorAgentHandler
 from ws.client import SupervisorClientHandler
-from db.models import mal, User, UserAuthToken, Agent, AgentDetail, AgentAuthToken
-from db.timeseries import kal, dral
+from db.models import models, User, UserAuthToken, Agent, AgentDetail, AgentAuthToken
+from db.timeseries import kafka, druid
 from utils.iso_8601 import validate_timestamp
 from clients.supervisorclient import SupervisorClient
 from clients.supervisorclientcoordinator import scc
@@ -72,14 +72,14 @@ class MockSupervisorClientHandler(SupervisorClientHandler, TestWebSocketHandler)
 class WebSocketBaseTestCase(AsyncHTTPTestCase):
     @classmethod
     def setUpClass(cls):
-        mal.connect('sqlite:///:memory:')
-        kal.connection = KafkaProducerMock()
-        # kal.connect('debug')
+        models.connect('sqlite:///:memory:')
+        kafka.connection = KafkaProducerMock()
+        # kafka.connect('debug')
 
     @classmethod
     def tearDownClass(cls):
-        mal.session.rollback()
-        mal.session.close()
+        models.session.rollback()
+        models.session.close()
 
     @gen.coroutine
     def ws_connect(self, path, headers=None, compression_options=None):
@@ -103,14 +103,12 @@ class SupervisorAgentHandlerTest(WebSocketBaseTestCase):
         super(SupervisorAgentHandlerTest, cls).setUpClass()
         # Generate agents
         agent = Agent(name='Agent 0')
-        mal.session.add_all([AgentAuthToken(agent=agent),
+        models.session.add_all([AgentAuthToken(agent=agent),
             AgentAuthToken(agent=Agent(name='Agent 1')),
             AgentAuthToken(agent=Agent(name='Agent 2'))])
-        mal.session.commit()
-        dral.connection = PyDruidMock()
-        dral.plyql = PlyQLMock()
-        # dral.connect('debug')
-        # dral.plyql.fixtures_dir = FIXTURES_DIR
+        models.session.commit()
+        druid.connection = PyDruidMock()
+        druid.plyql = PlyQLMock()
         scc.initialize()
 
         cls.AGENT_TOKEN = agent.token.uuid
@@ -181,7 +179,7 @@ class SupervisorAgentHandlerTest(WebSocketBaseTestCase):
         self.assertEqual(json.loads(response),
             json.loads(SupervisorAgent.snapshot_update_success))
 
-        client.write_message('malformed json')
+        client.write_message('modelsformed json')
         response = yield client.read_message()
         self.assertEqual(json.loads(response),
             json.loads(SupervisorAgentHandler.invalid_json_error))
@@ -287,7 +285,7 @@ class SupervisorAgentMock(object):
     def __init__(self, id, ip):
         self.id = id
         self.ip = ip
-        self.session = mal.Session()
+        self.session = models.Session()
         self.processes = {}
 
     def update(self, message):
@@ -303,7 +301,7 @@ class SupervisorClientHandlerTest(WebSocketBaseTestCase):
                          email='user_a@example.com',
                          is_admin=True,
                          password='randompassworda')
-        mal.session.add_all([UserAuthToken(user=user),
+        models.session.add_all([UserAuthToken(user=user),
             UserAuthToken(user=User(name='User B',
                      email='user_b@example.com',
                      is_admin=False,
@@ -312,15 +310,13 @@ class SupervisorClientHandlerTest(WebSocketBaseTestCase):
                      email='user_c@example.com',
                      is_admin=True,
                      password='randompasswordc'))])
-        mal.session.commit()
+        models.session.commit()
 
         agent = Agent(name='Agent 0')
-        mal.session.add(AgentAuthToken(agent=agent))
-        mal.session.commit()
-        dral.connection = PyDruidMock()
-        dral.plyql = PlyQLMock()
-        # dral.connect('debug')
-        # dral.plyql.fixtures_dir = FIXTURES_DIR
+        models.session.add(AgentAuthToken(agent=agent))
+        models.session.commit()
+        druid.connection = PyDruidMock()
+        druid.plyql = PlyQLMock()
         scc.initialize()
 
         cls.AGENT_TOKEN = agent.token.uuid

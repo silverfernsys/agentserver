@@ -1,11 +1,11 @@
 #! /usr/bin/env python
-from db.models import mal, User, Agent, UserAuthToken, AgentAuthToken
+from db.models import models, User, Agent, UserAuthToken, AgentAuthToken
 from config.admin import config
 from utils.haiku import haiku_name
 from datetime import datetime
 from setproctitle import setproctitle
 
-import getpass
+import getpass, sys
 
 class Admin(object):
     def __init__(self, config):
@@ -13,11 +13,18 @@ class Admin(object):
         print('Connecting to database...')
         self.config = config
         self.config.parse()
-        mal.connect(conn_string=config.database)
+        self.connect(config.database)
 
     def run(self):
         command = getattr(self, self.config.command)
         command()
+
+    def connect(self, uri):
+        try:
+            models.connect(conn_string=uri)
+        except Exception as e:
+            print(e.message)
+            sys.exit(1)
 
     def create_user(self):
         while True:

@@ -12,8 +12,8 @@ from datetime import datetime, timedelta
 from termcolor import colored, cprint
 from setproctitle import setproctitle
 from config.server import config
-from db.models import mal
-from db.timeseries import kal, dral
+from db.models import models
+from db.timeseries import kafka, druid
 from http.client import (HTTPVersionHandler, HTTPTokenHandler,
     HTTPDetailHandler, HTTPCommandHandler, HTTPListHandler)
 from http.agent import HTTPAgentUpdateHandler, HTTPAgentDetailHandler
@@ -32,10 +32,7 @@ class Server():
         setproctitle('agentserver')
         config.parse()
         self.print_splash_page()
-    	mal.connect(config.database)
-        kal.connect(config.kafka)
-        dral.connect(config.druid)
-    	self.session = mal.Session()
+    	self.connect(config.database, config.kafka, config.druid)
         self.logger = logging.getLogger('Web Server')
         scc.initialize()
 
@@ -55,12 +52,21 @@ class Server():
         port = config.port
         server = tornado.httpserver.HTTPServer(application)
         server.listen(port)
-        self.logger.info('Running on port %s' % port)
+        self.logger.info('Running on port {0}'.format(port))
         self.server = server
         signal.signal(signal.SIGTERM, self.sig_handler)
         signal.signal(signal.SIGINT, self.sig_handler)
         tornado.ioloop.IOLoop.instance().start()
         self.logger.info("Exit...")
+
+    def connect(self, db_uri, kafka_uri, druid_uri):
+        try:
+            models.connect(db_uri)
+            kafka.connect(kafka_uri)
+            druid.connect(druid_uri)
+        except Exception as e:
+            print(e.message)
+            sys.exit(1)
 
     def shutdown(self):
         self.logger.info('Stopping HTTP Server.')
