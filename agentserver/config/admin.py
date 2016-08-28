@@ -15,6 +15,8 @@ class AdminConfig(Config):
         '/etc/agentserver/agentserver.conf'
     ]
 
+    config_name = 'agentserver'
+
     def config_parser(self, parser):
         subparsers = parser.add_subparsers(help="sub-command help", dest="subparser_name")
 

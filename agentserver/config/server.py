@@ -21,6 +21,8 @@ class ServerConfig(Config):
         '/etc/agentserver/agentserver.conf'
     ]
 
+    config_name = 'agentserver'
+
     def config_parser(self, parser):
         parser.add_argument("--config", help="configuration file to read")
         parser.add_argument("--log_level", help="log level")

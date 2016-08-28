@@ -44,7 +44,7 @@ class Config(object):
 
             config_parser.read(paths)
 
-            data = {p: f(getattr(args, p, None) or config_parser.get('agentserver', p)) for (p, f) in self.possible_args}
+            data = {p: f(getattr(args, p, None) or config_parser.get(self.config_name, p)) for (p, f) in self.possible_args}
 
             for (arg, _type) in self.possible_args:
                 if arg not in data:
