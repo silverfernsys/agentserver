@@ -228,7 +228,7 @@ class TestHTTP(AsyncHTTPTestCase):
         response = self.fetch('/detail/', method='POST', headers=headers, body=body)
         detail = models.Session().query(AgentAuthToken) \
             .filter(AgentAuthToken.uuid == self.AGENT_TOKEN_0) \
-            .one().agent.details
+            .one().agent.detail
         self.assertEqual(response.code, 200)
         self.assertEqual(json.loads(response.body), detail.__json__())
 
@@ -261,7 +261,7 @@ class TestHTTP(AsyncHTTPTestCase):
             json.loads(HTTPAgentDetailHandler.success_response_updated))
 
         token = models.Session().query(AgentAuthToken).filter(AgentAuthToken.uuid == self.AGENT_TOKEN_0).one()
-        detail = token.agent.details.__json__()
+        detail = token.agent.detail.__json__()
         detail.pop('updated')
         detail.pop('created')
         self.assertEqual(data, detail)
@@ -281,7 +281,7 @@ class TestHTTP(AsyncHTTPTestCase):
             json.loads(HTTPAgentDetailHandler.success_response_created))
 
         token = models.Session().query(AgentAuthToken).filter(AgentAuthToken.uuid == self.AGENT_TOKEN_1).one()
-        detail = token.agent.details.__json__()
+        detail = token.agent.detail.__json__()
         detail.pop('updated')
         detail.pop('created')
         self.assertEqual(data, detail)

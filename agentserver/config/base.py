@@ -1,4 +1,4 @@
-import sys, logging
+import logging
 from ConfigParser import SafeConfigParser
 from argparse import ArgumentParser
 
@@ -10,6 +10,12 @@ log_vals = {
     'INFO': logging.INFO,
     'DEBUG': logging.DEBUG, 
     'NOTSET': logging.NOTSET }
+
+
+class ConfigError(Exception):
+    def __init__(self, arg):
+        self.message = 'Missing configuration argument "{0}".'.format(arg)
+        self.arg = arg
 
 
 class Config(object):
@@ -48,8 +54,7 @@ class Config(object):
 
             for (arg, _type) in self.possible_args:
                 if arg not in data:
-                    print('Missing configuration argument {0}. Exiting.\n'.format(arg))
-                    sys.exit(1)
+                    raise ConfigError(arg)
 
             if hasattr(args, 'subparser_name'):
                 data['command'] = args.subparser_name

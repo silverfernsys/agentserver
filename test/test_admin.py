@@ -78,14 +78,11 @@ class TestApp(unittest.TestCase):
         phil = User(name='Phil Lake',
                     email='philip@gmail.com',
                     is_admin=False,
-                    password=password)
+                    password=password).save()
         colin = User(name='Colin Ng',
                     email='colin@ngland.net',
                     is_admin=True,
-                    password=password)
-        models.session.add(phil)
-        models.session.add(colin)
-        models.session.commit()
+                    password=password).save()
         mock_raw_input.side_effect = [colin.email, phil.email]
         mock_getpass.side_effect = [password]
         expected_output = self.read_file('delete_user.txt')
@@ -95,7 +92,7 @@ class TestApp(unittest.TestCase):
     @mock.patch('db.models.User.created_on', new_callable=mock.PropertyMock)
     def test_list_users(self, mock_created_on): 
         mock_created_on.side_effect = [datetime(2016, 1, 1), datetime(2016, 2, 1)]
-        models.session.add_all([User(name='User A',
+        User.save_all([User(name='User A',
              email='user_a@example.com',
              is_admin=True,
              password='randompassworda'),
@@ -103,7 +100,6 @@ class TestApp(unittest.TestCase):
              email='user_b@example.com',
              is_admin=False,
              password='randompasswordb')])
-        models.session.commit()
         expected_output = self.read_file('list_users.txt')
         with capture(self.admin.list_users) as output:
             self.assertEqual(output, expected_output)
@@ -117,14 +113,11 @@ class TestApp(unittest.TestCase):
         admin = User(name='Joe Admin',
                     email='admin@gmail.com',
                     is_admin=True,
-                    password=password)
+                    password=password).save()
         user = User(name='Joe User',
                     email='user@gmail.com',
                     is_admin=False,
-                    password='qwerqwer')
-        models.session.add(admin)
-        models.session.add(user)
-        models.session.commit()  
+                    password='qwerqwer').save()
         mock_raw_input.side_effect = [admin.email, user.email]
         mock_getpass.side_effect = [password]
         expected_output = self.read_file('create_user_auth_token.txt')
@@ -138,15 +131,12 @@ class TestApp(unittest.TestCase):
         admin = User(name='Joe Admin',
                     email='admin@gmail.com',
                     is_admin=True,
-                    password=password)
+                    password=password).save()
         user = User(name='Joe User',
                     email='user@gmail.com',
                     is_admin=False,
-                    password='qwerqwer')
-        token = UserAuthToken(user=user)
-        models.session.add(admin)
-        models.session.add(token)
-        models.session.commit()
+                    password='qwerqwer').save()
+        token = UserAuthToken(user=user).save()
         mock_raw_input.side_effect = [admin.email, user.email]
         mock_getpass.side_effect = [password]
         expected_output = self.read_file('delete_user_auth_token.txt')
@@ -161,7 +151,7 @@ class TestApp(unittest.TestCase):
             '87dcd304d0587baebf8d9f6dfc9e0aac0442c326']
         mock_created_on.side_effect = [datetime(2016, 1, 1),
             datetime(2016, 2, 1), datetime(2016, 3, 1)]
-        models.session.add_all([
+        UserAuthToken.save_all([
             UserAuthToken(user=User(name='User A',
                      email='user_a@example.com',
                      is_admin=True,
@@ -174,7 +164,7 @@ class TestApp(unittest.TestCase):
                      email='user_c@example.com',
                      is_admin=True,
                      password='randompasswordc'))])
-        models.session.commit()
+        # models.session.commit()
         expected_output = self.read_file('list_user_auth_tokens.txt')
         with capture(self.admin.list_user_auth_tokens) as output:
             self.assertEqual(output, expected_output)
@@ -188,9 +178,7 @@ class TestApp(unittest.TestCase):
         admin = User(name='Joe Admin',
                     email='admin@gmail.com',
                     is_admin=True,
-                    password=password)
-        models.session.add(admin)
-        models.session.commit()
+                    password=password).save()
         mock_raw_input.side_effect = [admin.email, '']
         mock_getpass.side_effect = [password]
         expected_output = self.read_file('create_agent.txt')
@@ -204,11 +192,8 @@ class TestApp(unittest.TestCase):
         admin = User(name='Joe Admin',
                     email='admin@gmail.com',
                     is_admin=True,
-                    password=password)
-        agent = Agent(name='Agent 007')
-        models.session.add(admin)
-        models.session.add(agent)
-        models.session.commit()
+                    password=password).save()
+        agent = Agent(name='Agent 007').save()
         mock_raw_input.side_effect = [admin.email, agent.name]
         mock_getpass.side_effect = [password]
         expected_output = self.read_file('delete_agent.txt')
@@ -220,12 +205,11 @@ class TestApp(unittest.TestCase):
         mock_created_on.side_effect = [datetime(2016, 1, 1),
             datetime(2016, 2, 1), datetime(2016, 3, 1),
             datetime(2016,4,1)]
-        models.session.add_all([
+        Agent.save_all([
             Agent(name='Agent 0'),
             Agent(name='Agent 1'),
             Agent(name='Agent 2'),
             Agent(name='Agent 3')])
-        models.session.commit()
         expected_output = self.read_file('list_agents.txt')
         with capture(self.admin.list_agents) as output:
             self.assertEqual(output, expected_output)
@@ -239,11 +223,8 @@ class TestApp(unittest.TestCase):
         admin = User(name='Joe Admin',
                     email='admin@gmail.com',
                     is_admin=True,
-                    password=password)
-        agent = Agent(name='Agent 007')
-        models.session.add(admin)
-        models.session.add(agent)
-        models.session.commit()
+                    password=password).save()
+        agent = Agent(name='Agent 007').save()
         mock_raw_input.side_effect = [admin.email, str(agent.id)]
         mock_getpass.side_effect = [password]
         expected_output = self.read_file('create_agent_auth_token.txt')
@@ -257,12 +238,9 @@ class TestApp(unittest.TestCase):
         admin = User(name='Joe Admin',
                     email='admin@gmail.com',
                     is_admin=True,
-                    password=password)
-        agent = Agent(name='Agent 007')
-        token = AgentAuthToken(agent=agent)
-        models.session.add(admin)
-        models.session.add(token)
-        models.session.commit()
+                    password=password).save()
+        agent = Agent(name='Agent 007').save()
+        token = AgentAuthToken(agent=agent).save()
         mock_raw_input.side_effect = [admin.email, str(agent.id)]
         mock_getpass.side_effect = [password]
         expected_output = self.read_file('delete_agent_auth_token.txt')
@@ -278,12 +256,11 @@ class TestApp(unittest.TestCase):
             '25babaa14973ae688edbaa27893a005ee662dfb0']
         mock_created_on.side_effect = [datetime(2016, 1, 1),
             datetime(2016, 2, 1), datetime(2016, 3, 1), datetime(2016, 4, 1)]
-        models.session.add_all([
+        AgentAuthToken.save_all([
             AgentAuthToken(agent=Agent(name='Agent 0')),
             AgentAuthToken(agent=Agent(name='Agent 1')),
             AgentAuthToken(agent=Agent(name='Agent 2')),
             AgentAuthToken(agent=Agent(name='Agent 3'))])
-        models.session.commit()
         expected_output = self.read_file('list_agent_auth_tokens.txt')
         with capture(self.admin.list_agent_auth_tokens) as output:
             self.assertEqual(output, expected_output)

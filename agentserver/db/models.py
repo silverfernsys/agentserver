@@ -1,7 +1,7 @@
 from datetime import datetime
 from sqlalchemy import (Column, Integer, Numeric, String, DateTime, ForeignKey,
                         Boolean, create_engine, desc, Enum)
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.ext.declarative import declarative_base, declared_attr
 from sqlalchemy.orm import relationship, backref, sessionmaker, validates
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.event import listen
@@ -10,10 +10,16 @@ from passlib.apps import custom_app_context as pwd_context
 from utils.uuid import uuid
 
 
-Base = declarative_base()
+# Mixins
+class AllMixin(object):
+    @classmethod
+    def all(cls, session=None):
+        if not session:
+            session = models.session
+        return session.query(cls).all()
 
 
-class Countable(object):
+class CountMixin(object):
     @classmethod
     def count(cls, session=None):
         if not session:
@@ -21,24 +27,19 @@ class Countable(object):
         return session.query(cls).count()
 
 
-class Saveable(object):
-    def save(self, session=None):
+class DeleteMixin(object):
+    def delete(self, session=None):
         if not session:
             session = models.session
-        session.add(self)
-        session.commit()
-        return self
+        try:
+            session.delete(self)
+            session.commit()
+            return True
+        except Exception as e:
+            return False
 
 
-class Allable(object):
-    @classmethod
-    def all(cls, session=None):
-        if not session:
-            session = models.session
-        return session.query(cls)
-
-
-class Gettable(object):
+class GetMixin(object):
     @classmethod
     def get(cls, session=None, *args, **kwargs):
         """Find object with keyword args."""
@@ -57,22 +58,40 @@ class Gettable(object):
             return None
 
 
-class Deleteable(object):
-    def delete(self, session=None):
+class IDMixin(object):
+    id =  Column(Integer, primary_key=True)
+
+
+class SaveMixin(object):
+    def save(self, session=None):
         if not session:
             session = models.session
-        try:
-            session.delete(self)
-            session.commit()
-            return True
-        except Exception as e:
-            return False
+        session.add(self)
+        session.commit()
+        return self
 
 
-class Agent(Base, Countable, Saveable, Allable, Gettable, Deleteable):
-    __tablename__ = 'agents'
+class SaveAllMixin(object):
+    @classmethod
+    def save_all(cls, items, session=None):
+        if not session:
+            session = models.session
+        session.add_all(items)
+        session.commit()
 
-    id = Column(Integer(), primary_key=True)
+
+class Base(object):
+    @declared_attr
+    def __tablename__(cls):
+        return cls.__name__.lower()
+
+
+Base = declarative_base(cls=Base)
+
+
+class Agent(Base, IDMixin, AllMixin, CountMixin, DeleteMixin,
+    GetMixin, SaveMixin, SaveAllMixin):
+
     name = Column(String(), nullable=False, unique=True)
     created_on = Column(DateTime(), default=datetime.now)
 
@@ -93,11 +112,9 @@ class Agent(Base, Countable, Saveable, Allable, Gettable, Deleteable):
             "created_on='{self.created_on}')>".format(self=self)
 
 
-class AgentDetail(Base, Countable, Deleteable):
-    __tablename__ = 'agentdetails'
+class AgentDetail(Base, IDMixin, CountMixin, DeleteMixin, SaveMixin):
 
-    id = Column(Integer(), primary_key=True)
-    agent_id = Column(Integer(), ForeignKey('agents.id'), unique=True, nullable=False)
+    agent_id = Column(Integer(), ForeignKey('agent.id'), unique=True, nullable=False)
     hostname = Column(String, nullable=False)
     processor = Column(String(), nullable=False)
     num_cores = Column(Integer(), default=1)
@@ -107,7 +124,7 @@ class AgentDetail(Base, Countable, Deleteable):
     updated_on = Column(DateTime(), default=datetime.now, onupdate=datetime.now)
     created_on = Column(DateTime(), default=datetime.now)
 
-    agent = relationship('Agent', backref=backref('details', 
+    agent = relationship('Agent', backref=backref('detail', 
         cascade='all,delete,delete-orphan', uselist=False))
 
     @classmethod
@@ -165,11 +182,11 @@ class AgentDetail(Base, Countable, Deleteable):
             'created': self.created_on.strftime("%Y-%m-%dT%H:%M:%S.%fZ")}
 
 
-class AgentAuthToken(Base, Countable, Saveable, Allable, Gettable, Deleteable):
-    __tablename__ = 'agentauthtokens'
+class AgentAuthToken(Base, AllMixin, CountMixin, DeleteMixin,
+    GetMixin, SaveMixin, SaveAllMixin):
 
     uuid = Column(String(), primary_key=True, default=uuid)
-    agent_id = Column(Integer(), ForeignKey('agents.id'), unique=True, nullable=False)
+    agent_id = Column(Integer(), ForeignKey('agent.id'), unique=True, nullable=False)
     created_on = Column(DateTime(), default=datetime.now)
 
     agent = relationship('Agent', backref=backref('token',
@@ -192,10 +209,9 @@ class UserAuthenticationException(Exception):
             'password: {self.password}. Reason: {self.message}.'.format(self=self)
 
 
-class User(Base, Countable, Saveable, Allable, Gettable, Deleteable):
-    __tablename__ = 'users'
+class User(Base, IDMixin, AllMixin, CountMixin,
+    DeleteMixin, GetMixin, SaveMixin, SaveAllMixin):
 
-    id = Column(Integer(), primary_key=True)
     name = Column(String(), nullable=False)
     email = Column(String(), nullable=False, unique=True)
     password = Column(String(), nullable=False)
@@ -253,21 +269,21 @@ class User(Base, Countable, Saveable, Allable, Gettable, Deleteable):
             "password='{self.password}')>".format(self=self)
 
 def hash_password(target, value, oldvalue, initiator):
-    "hashes password"
+    # "hashes password"
     return pwd_context.encrypt(value)
 
 listen(User.password, 'set', hash_password, retval=True)
 
 
-class UserAuthToken(Base, Countable, Saveable, Allable, Gettable, Deleteable):
-    __tablename__ = 'userauthtokens'
+class UserAuthToken(Base, AllMixin, CountMixin, DeleteMixin,
+    GetMixin, SaveMixin, SaveAllMixin):
 
     uuid = Column(String(), primary_key=True, default=uuid)
-    user_id = Column(Integer(), ForeignKey('users.id'), unique=True, nullable=False)
+    user_id = Column(Integer(), ForeignKey('user.id'), unique=True, nullable=False)
     created_on = Column(DateTime(), default=datetime.now)
 
-    user = relationship("User",
-        backref=backref('token', cascade='all,delete,delete-orphan', uselist=False),
+    user = relationship("User", backref=backref('token',
+        cascade='all,delete,delete-orphan', uselist=False),
         single_parent=True)
 
     @classmethod

@@ -22,26 +22,20 @@ class TestDb(unittest.TestCase):
              email='user_a@example.com',
              is_admin=True,
              password='randompassworda')
-        
-        models.session.add_all([UserAuthToken(user=user),
-                        UserAuthToken(user=User(name='User B',
-                         email='user_b@example.com',
-                         is_admin=False,
-                         password='randompasswordb')),
-                        UserAuthToken(user=User(name='User C',
-                         email='user_c@example.com',
-                         is_admin=True,
-                         password='randompasswordc'))])
-        models.session.commit()
 
-        # Test that creating a new user with an
-        # existing email address fails
-        models.session.add(User(name='User D',
-                         email='user_a@example.com',
-                         is_admin=False,
-                         password='randompasswordd'))
+        UserAuthToken.save_all([UserAuthToken(user=user),
+            UserAuthToken(user=User(name='User B',
+             email='user_b@example.com',
+             is_admin=False,
+             password='randompasswordb')),
+            UserAuthToken(user=User(name='User C',
+             email='user_c@example.com',
+             is_admin=True,
+             password='randompasswordc'))])
+
         with self.assertRaises(IntegrityError) as e:
-            models.session.commit()
+            User(name='User D', email='user_a@example.com',
+             is_admin=False, password='randompasswordd').save()
 
         models.session.rollback()
 
@@ -74,15 +68,13 @@ class TestDb(unittest.TestCase):
 
         agent = Agent(name='Agent 0')
 
-        models.session.add_all([
+        AgentAuthToken.save_all([
             AgentAuthToken(agent=agent),
             AgentAuthToken(agent=Agent(name='Agent 1')),
             AgentAuthToken(agent=Agent(name='Agent 2'))])
-        models.session.commit()
 
-        models.session.add(AgentDetail(agent=agent, dist_name='Debian', dist_version='7.0',
-            hostname='host', num_cores=8, memory=160000, processor='x86_64'))
-        models.session.commit()
+        AgentDetail(agent=agent, dist_name='Debian', dist_version='7.0',
+            hostname='host', num_cores=8, memory=160000, processor='x86_64').save()
 
         self.assertEqual(Agent.count(),
             agents_before + 3)
@@ -126,4 +118,4 @@ class TestDb(unittest.TestCase):
         created = AgentDetail.update_or_create(agent.id, **args)
         self.assertFalse(created)
         self.assertEqual(AgentDetail.count(), 1)
-        self.assertEqual(agent.details.id, AgentDetail.detail_for_agent_id(agent.id).id)
+        self.assertEqual(agent.detail.id, AgentDetail.detail_for_agent_id(agent.id).id)

@@ -1,5 +1,6 @@
 #! /usr/bin/env python
 from db.models import models, User, Agent, UserAuthToken, AgentAuthToken
+from config import ConfigError
 from config.admin import config
 from utils.haiku import haiku_name
 from datetime import datetime
@@ -12,7 +13,11 @@ class Admin(object):
         setproctitle('agentserveradmin')
         print('Connecting to database...')
         self.config = config
-        self.config.parse()
+        try:
+            self.config.parse()
+        except ConfigError as e:
+            print('{0} Exiting.\n'.format(e.message))
+            sys.exit(1)
         self.connect(config.database)
 
     def run(self):

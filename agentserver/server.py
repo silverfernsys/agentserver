@@ -1,9 +1,5 @@
 #!/usr/bin/env python
-import logging
-import signal
-import sys
-import threading
-import time
+import logging, signal, sys, time
 import tornado.ioloop
 import tornado.web
 import tornado.httpserver
@@ -11,6 +7,7 @@ from pyfiglet import figlet_format
 from datetime import datetime, timedelta
 from termcolor import colored, cprint
 from setproctitle import setproctitle
+from config import ConfigError
 from config.server import config
 from db.models import models
 from db.timeseries import kafka, druid
@@ -30,7 +27,11 @@ class Server():
 
     def __init__(self, config):
         setproctitle('agentserver')
-        config.parse()
+        try:
+            config.parse()
+        except ConfigError as e:
+            print('{0}. Exiting.\n'.format(e.message))
+            sys.exit(1)
         self.print_splash_page()
     	self.connect(config.database, config.kafka, config.druid)
         self.logger = logging.getLogger('Web Server')
