@@ -19,7 +19,7 @@ from ws.client import SupervisorClientHandler
 from clients.supervisorclientcoordinator import scc
 
 
-class Server():
+class Server(object):
     # Adapted from code found at https://gist.github.com/mywaiting/4643396
     def sig_handler(self, sig, frame):
         self.logger.warning("Caught signal: %s", sig)
