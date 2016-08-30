@@ -17,6 +17,7 @@ from http.agent import HTTPAgentUpdateHandler, HTTPAgentDetailHandler
 from ws.agent import SupervisorAgentHandler
 from ws.client import SupervisorClientHandler
 from clients.supervisorclientcoordinator import scc
+from utils.log import config_logging, LoggingError
 
 
 class Server(object):
@@ -30,7 +31,12 @@ class Server(object):
         try:
             config.parse()
         except ConfigError as e:
-            print('{0}. Exiting.\n'.format(e.message))
+            print('{0} Exiting.'.format(e.message))
+            sys.exit(1)
+        try:
+            config_logging(config)
+        except Exception as e:
+            print('{0} Please run server as root. Exiting.'.format(e.message))
             sys.exit(1)
         self.print_splash_page()
     	self.connect(config.database, config.kafka, config.druid)

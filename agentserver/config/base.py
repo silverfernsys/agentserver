@@ -1,20 +1,16 @@
-import logging
-from ConfigParser import SafeConfigParser
+from ConfigParser import SafeConfigParser, NoOptionError, NoSectionError
 from argparse import ArgumentParser
-
-
-log_vals = {
-    'CRITICAL': logging.CRITICAL,
-    'ERROR': logging.ERROR,
-    'WARNING': logging.WARNING, 
-    'INFO': logging.INFO,
-    'DEBUG': logging.DEBUG, 
-    'NOTSET': logging.NOTSET }
 
 
 class ConfigError(Exception):
     def __init__(self, arg):
         self.message = 'Missing configuration argument "{0}".'.format(arg)
+        self.arg = arg
+
+
+class MissingSection(ConfigError):
+    def __init__(self, arg):
+        self.message = 'Missing section "{0}" in configuration.'.format(arg)
         self.arg = arg
 
 
@@ -30,43 +26,35 @@ class Config(object):
 
     def parse(self):
         self.parse_config(self.config_search_paths)
-        self.init_logging()
 
     def config_parser(self, parser):
         raise NotImplemented('config_parser must be implemented')
 
     def parse_config(self, paths):
+        parser = ArgumentParser()
+        self.config_parser(parser)
+
+        args = parser.parse_args()
+
+        config_parser = SafeConfigParser()
+        if args.config:
+            paths = [args.config]
+        else:
+            paths = self.config_search_paths
+
+        config_parser.read(paths)
+
         try:
-            parser = ArgumentParser()
-            self.config_parser(parser)
-
-            args = parser.parse_args()
-
-            config_parser = SafeConfigParser()
-            if args.config:
-                paths = [args.config]
-            else:
-                paths = self.config_search_paths
-
-            config_parser.read(paths)
-
             data = {p: f(getattr(args, p, None) or config_parser.get(self.config_name, p)) for (p, f) in self.possible_args}
+        except NoOptionError as e:
+            raise ConfigError(e.args[0])
+        except NoSectionError as e:
+            raise MissingSection(e.section)
 
-            for (arg, _type) in self.possible_args:
-                if arg not in data:
-                    raise ConfigError(arg)
+        if hasattr(args, 'subparser_name'):
+            data['command'] = args.subparser_name
 
-            if hasattr(args, 'subparser_name'):
-                data['command'] = args.subparser_name
-
-            self.__dict__.update(data)
-        except Exception as e:
-            print('Error loading configuration files at {0}.\nEXCEPTION DETAILS: {1}'.format(paths, e))
-
-    def init_logging(self):
-        logging.basicConfig(filename=self.log_file,
-            format='%(asctime)s::%(levelname)s::%(name)s::%(message)s',
-            level=log_vals.get(self.log_level, logging.DEBUG))
+        self.__dict__.update(data)
 
     def __repr__(self):
         return '<Config({0}>'.format(', '.join('%s=%r' % (k, v)
