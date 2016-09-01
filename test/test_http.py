@@ -11,8 +11,7 @@ from http.client import (HTTPVersionHandler, HTTPTokenHandler,
 from http.agent import HTTPAgentUpdateHandler, HTTPAgentDetailHandler
 
 from mocks.timeseries import KafkaProducerMock, PyDruidMock, PlyQLMock
-from ws_helpers import websocket_connect
-from test_ws import MockSupervisorAgentHandler
+from ws_helpers import websocket_connect, MockSupervisorAgentHandler
 
 from db.models import models, User, UserAuthToken, Agent, AgentAuthToken, AgentDetail
 from db.timeseries import kafka, druid

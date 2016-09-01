@@ -20,8 +20,6 @@ except ImportError:
     traceback.print_exc()
     raise
 
-from tornado.websocket import WebSocketHandler, websocket_connect, WebSocketError
-
 try:
     from tornado import speedups
 except ImportError:
@@ -37,36 +35,9 @@ from utils.iso_8601 import validate_timestamp
 from clients.supervisorclient import SupervisorClient
 from clients.supervisorclientcoordinator import scc
 from agents.supervisoragent import SupervisorAgent
-
+from ws_helpers import MockSupervisorAgentHandler, MockSupervisorClientHandler
 
 FIXTURES_DIR =  os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fixtures')
-
-
-class TestWebSocketHandler(WebSocketHandler):
-    """Base class for testing handlers that exposes the on_close event.
-    This allows for deterministic cleanup of the associated socket.
-    """
-    def initialize(self, close_future, compression_options=None):
-        self.close_future = close_future
-        self.compression_options = compression_options
-
-    def get_compression_options(self):
-        return self.compression_options
-
-    def on_close(self):
-        self.close_future.set_result((self.close_code, self.close_reason))
-
-
-class MockSupervisorAgentHandler(SupervisorAgentHandler, TestWebSocketHandler):
-    def on_close(self):
-        self.close_future.set_result((self.close_code, self.close_reason))
-        super(MockSupervisorAgentHandler, self).on_close()
-
-
-class MockSupervisorClientHandler(SupervisorClientHandler, TestWebSocketHandler):
-    def on_close(self):
-        self.close_future.set_result((self.close_code, self.close_reason))
-        super(MockSupervisorClientHandler, self).on_close()
 
 
 class WebSocketBaseTestCase(AsyncHTTPTestCase):
