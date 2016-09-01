@@ -4,3 +4,4 @@ AgentServer.egg-info/
 .coverage
 test/__pycache__
 .cache
+.tox/
