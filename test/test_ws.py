@@ -37,7 +37,8 @@ from clients.supervisorclientcoordinator import scc
 from agents.supervisoragent import SupervisorAgent
 from ws_helpers import MockSupervisorAgentHandler, MockSupervisorClientHandler
 
-FIXTURES_DIR =  os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fixtures')
+
+resources =  os.path.join(os.path.abspath(os.path.dirname(__file__)), 'resources')
 
 
 class WebSocketBaseTestCase(AsyncHTTPTestCase):
@@ -135,8 +136,8 @@ class SupervisorAgentHandlerTest(WebSocketBaseTestCase):
     
     @gen_test
     def test_snapshot_update(self):
-        update_0 = open(os.path.join(FIXTURES_DIR, 'snapshots', 'valid_0.json')).read()
-        update_1 = open(os.path.join(FIXTURES_DIR, 'snapshots', 'valid_1.json')).read()
+        update_0 = open(os.path.join(resources, 'snapshots', 'valid_0.json')).read()
+        update_1 = open(os.path.join(resources, 'snapshots', 'valid_1.json')).read()
 
         client = yield self.ws_connect('/supervisor/',
             headers={'authorization': self.AGENT_TOKEN})
@@ -163,8 +164,8 @@ class SupervisorAgentHandlerTest(WebSocketBaseTestCase):
 
     @gen_test
     def test_state_update(self):
-        state_0 = open(os.path.join(FIXTURES_DIR, 'states', 'valid_0.json')).read().split('\n')
-        state_1 = open(os.path.join(FIXTURES_DIR, 'states', 'valid_1.json')).read().split('\n')
+        state_0 = open(os.path.join(resources, 'states', 'valid_0.json')).read().split('\n')
+        state_1 = open(os.path.join(resources, 'states', 'valid_1.json')).read().split('\n')
 
         client = yield self.ws_connect('/supervisor/',
             headers={'authorization': self.AGENT_TOKEN})
@@ -367,7 +368,7 @@ class SupervisorClientHandlerTest(WebSocketBaseTestCase):
         response = yield ws_agent.read_message()
         self.assertEqual(json.loads(response), {'cmd':'restart process_0'})
 
-        state_0 = open(os.path.join(FIXTURES_DIR, 'states', 'valid_0.json')).read().split('\n')
+        state_0 = open(os.path.join(resources, 'states', 'valid_0.json')).read().split('\n')
 
         for state in state_0:
             ws_agent.write_message(state)
@@ -417,7 +418,7 @@ class SupervisorClientHandlerTest(WebSocketBaseTestCase):
         response = yield ws_agent.read_message()
         self.assertEqual(json.loads(response), {'cmd':'restart process_1'})
 
-        state_1 = open(os.path.join(FIXTURES_DIR, 'states', 'valid_1.json')).read().split('\n')
+        state_1 = open(os.path.join(resources, 'states', 'valid_1.json')).read().split('\n')
 
         for state in state_1:
             ws_agent.write_message(state)

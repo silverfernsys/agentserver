@@ -18,7 +18,7 @@ from db.timeseries import kafka, druid
 from clients.supervisorclientcoordinator import scc
 
 
-FIXTURES_DIR =  os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fixtures')
+resources =  os.path.join(os.path.abspath(os.path.dirname(__file__)), 'resources')
 
 
 class TestHTTP(AsyncHTTPTestCase):
@@ -248,7 +248,7 @@ class TestHTTP(AsyncHTTPTestCase):
     def test_http_agent_detail_update_handler(self):
         count_before = AgentDetail.count()
 
-        data = json.loads(open(os.path.join(FIXTURES_DIR,
+        data = json.loads(open(os.path.join(resources,
             'system_stats', 'valid_2.json')).read())['system']
         headers = {'authorization':self.AGENT_TOKEN_0}
         body = json.dumps(data)
@@ -269,7 +269,7 @@ class TestHTTP(AsyncHTTPTestCase):
     def test_http_agent_detail_create_handler(self):
         count_before = AgentDetail.count()
 
-        data = json.loads(open(os.path.join(FIXTURES_DIR,
+        data = json.loads(open(os.path.join(resources,
             'system_stats', 'valid_2.json')).read())['system']
         headers = {'authorization':self.AGENT_TOKEN_1}
         body = json.dumps(data)
@@ -290,7 +290,7 @@ class TestHTTP(AsyncHTTPTestCase):
         count_before = AgentDetail.count()
 
         headers = {'authorization':self.AGENT_TOKEN_2}
-        data = json.loads(open(os.path.join(FIXTURES_DIR, 'system_stats',
+        data = json.loads(open(os.path.join(resources, 'system_stats',
             'invalid_2.json')).read())['system']
         body = json.dumps(data)
 
@@ -307,7 +307,7 @@ class TestHTTP(AsyncHTTPTestCase):
         count_before = AgentDetail.count()
 
         headers = {'authorization':self.AGENT_TOKEN_2}
-        data = json.loads(open(os.path.join(FIXTURES_DIR, 'system_stats',
+        data = json.loads(open(os.path.join(resources, 'system_stats',
             'invalid_3.json')).read())['system']
         body = json.dumps(data)
 
@@ -331,12 +331,12 @@ class TestHTTP(AsyncHTTPTestCase):
 
     def test_http_agent_update_handler(self):
         headers = {'authorization': self.AGENT_TOKEN_0}
-        body = open(os.path.join(FIXTURES_DIR, 'snapshots', 'valid_0.json')).read()
+        body = open(os.path.join(resources, 'snapshots', 'valid_0.json')).read()
         response = self.fetch('/agent/update/', method='POST', headers=headers, body=body)
         self.assertEqual(response.code, 200)
         self.assertEqual(json.loads(response.body), json.loads(HTTPAgentUpdateHandler.snapshot_update_success))
 
-        body = open(os.path.join(FIXTURES_DIR, 'snapshots', 'valid_1.json')).read()
+        body = open(os.path.join(resources, 'snapshots', 'valid_1.json')).read()
         response = self.fetch('/agent/update/', method='POST', headers=headers, body=body)
         self.assertEqual(response.code, 200)
         self.assertEqual(json.loads(response.body), json.loads(HTTPAgentUpdateHandler.snapshot_update_success))
@@ -347,7 +347,7 @@ class TestHTTP(AsyncHTTPTestCase):
         self.assertEqual(response.code, 400)
         self.assertEqual(json.loads(response.body), json.loads(HTTPAgentUpdateHandler.invalid_json_error))
 
-        body = open(os.path.join(FIXTURES_DIR, 'snapshots', 'invalid_0.json')).read()
+        body = open(os.path.join(resources, 'snapshots', 'invalid_0.json')).read()
         response = self.fetch('/agent/update/', method='POST', headers=headers, body=body)
         expected_error = {'status': 'error', 'errors':
             [{'details': 'must be of integer type', 'arg': 'pid'},
@@ -357,7 +357,7 @@ class TestHTTP(AsyncHTTPTestCase):
 
     def test_http_agent_update_handler_bad_auth(self):
         headers = {'authorization': 'gibberish'}
-        body = open(os.path.join(FIXTURES_DIR, 'snapshots', 'valid_0.json')).read()
+        body = open(os.path.join(resources, 'snapshots', 'valid_0.json')).read()
         response = self.fetch('/agent/update/', method='POST', headers=headers, body=body)
         self.assertEqual(response.code, 401)
         self.assertEqual(json.loads(response.body), json.loads(HTTPAgentUpdateHandler.not_authorized_error))

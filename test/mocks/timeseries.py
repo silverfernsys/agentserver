@@ -6,7 +6,8 @@ from utils.iso_8601 import (validate_iso_8601_period,
     validate_iso_8601_interval, iso_8601_interval_to_datetimes,
     iso_8601_period_to_timedelta)
 
-FIXTURES_DIR =  os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'fixtures'))
+
+resources =  os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'resources'))
 
 
 class KafkaProducerMock(object):
@@ -29,7 +30,7 @@ class PyDruidMock(object):
         f = Filter.build_filter(filter)
         if f['type'] == 'selector' and f['dimension'] == 'agent_id' and 'value' in f:
             try:
-                body = open(os.path.join(FIXTURES_DIR,
+                body = open(os.path.join(resources,
                     'groupby{0}.json'.format(f['value']))).read().decode('utf-8')
             except:
                 body = '[]'
@@ -110,7 +111,7 @@ class PlyQLMock(object):
         else:
             try:
                 agent_id = re.search(r'agent_id = "(.+?)"', q).group(1)
-                data = open(os.path.join(FIXTURES_DIR, 'plyql',
+                data = open(os.path.join(resources, 'plyql',
                     'result_{0}.json'.format(agent_id))).read()
                 return json.loads(data)
             except (AttributeError, IOError):

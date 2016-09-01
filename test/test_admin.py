@@ -8,7 +8,7 @@ from datetime import datetime
 from tempfile import NamedTemporaryFile
 
 
-FIXTURES_DIR =  os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fixtures')
+resources =  os.path.join(os.path.abspath(os.path.dirname(__file__)), 'resources')
 
 
 # http://schinckel.net/2013/04/15/capture-and-test-sys.stdout-sys.stderr-in-unittest.testcase/
@@ -60,7 +60,7 @@ class TestApp(unittest.TestCase):
         self.assertEqual(self.init_output, self.read_file('init.txt'))
 
     def read_file(self, filename):
-        return open(os.path.join(FIXTURES_DIR,
+        return open(os.path.join(resources,
             'test_admin', filename)).read().strip()
 
     @mock.patch('getpass.getpass')
