@@ -1,10 +1,8 @@
 [run]
 branch = True
 omit = 
-	__init__.py
 	setup.py
 	agentserver/config/*
 	agentserver/tests/*
-	agentserver/__init__.py
 	agentserver/server.py
-	/home/vagrant/.virtualenvs/*
+	~/.virtualenvs/*

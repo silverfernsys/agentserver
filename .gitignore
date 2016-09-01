@@ -1,7 +1,8 @@
 *.pyc
 .DS_Store
-AgentServer.egg-info/
-.coverage
-test/__pycache__
 .cache
 .tox
+.coverage
+AgentServer.egg-info/
+test/__pycache__
+
