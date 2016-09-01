@@ -35,7 +35,7 @@ class Server(object):
             sys.exit(1)
         try:
             config_logging(config)
-        except Exception as e:
+        except LoggingError as e:
             print('{0} Please run server as root. Exiting.'.format(e.message))
             sys.exit(1)
         self.print_splash_page()
