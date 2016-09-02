@@ -95,6 +95,10 @@ class Agent(Base, IDMixin, AllMixin, CountMixin, DeleteMixin,
     name = Column(String(), nullable=False, unique=True)
     created_on = Column(DateTime(), default=datetime.now)
 
+    @property
+    def created(self):
+        return self.created_on.strftime('%d-%m-%Y %H:%M:%S')
+
     @classmethod
     def authorize(cls, authorization_token, session=None):
         if not session:
@@ -126,6 +130,14 @@ class AgentDetail(Base, IDMixin, CountMixin, DeleteMixin, SaveMixin):
 
     agent = relationship('Agent', backref=backref('detail', 
         cascade='all,delete,delete-orphan', uselist=False))
+
+    @property
+    def created(self):
+        return self.created_on.strftime('%d-%m-%Y %H:%M:%S')
+
+    @property
+    def updated(self):
+        return self.updated_on.strftime('%d-%m-%Y %H:%M:%S')
 
     @classmethod
     def detail_for_agent_id(cls, id):
@@ -192,6 +204,10 @@ class AgentAuthToken(Base, AllMixin, CountMixin, DeleteMixin,
     agent = relationship('Agent', backref=backref('token',
         cascade='all,delete,delete-orphan', uselist=False))
 
+    @property
+    def created(self):
+        return self.created_on.strftime('%d-%m-%Y %H:%M:%S')
+
     def __repr__(self):
         return "<AgentAuthToken(uuid='{self.uuid}', " \
             "agent_id='{self.agent_id}', " \
@@ -250,6 +266,14 @@ class User(Base, IDMixin, AllMixin, CountMixin,
             raise UserAuthenticationException('unknown username', username, password)
 
     @property
+    def created(self):
+        return self.created_on.strftime('%d-%m-%Y %H:%M:%S')
+
+    @property
+    def updated(self):
+        return self.updated_on.strftime('%d-%m-%Y %H:%M:%S')
+
+    @property
     def admin(self):
         if self.is_admin:
             return 'Y'
@@ -293,6 +317,10 @@ class UserAuthToken(Base, AllMixin, CountMixin, DeleteMixin,
         return session.query(UserAuthToken) \
             .filter(UserAuthToken.uuid == authorization_token) \
             .one().user
+
+    @property
+    def created(self):
+        return self.created_on.strftime('%d-%m-%Y %H:%M:%S')
 
     def __repr__(self):
         return "<UserAuthToken(uuid='{self.uuid}', " \

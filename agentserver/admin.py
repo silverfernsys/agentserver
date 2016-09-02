@@ -5,6 +5,7 @@ from config.admin import config
 from utils.haiku import haiku_name
 from datetime import datetime
 from setproctitle import setproctitle
+from tabulate import tabulate
 
 import getpass, sys
 
@@ -90,18 +91,8 @@ class Admin(object):
             print('Could not find {email}.'.format(email=email))
 
     def list_users(self):
-        print("{name}{email}{admin}{created}".format(
-            name="Name".ljust(70),
-            email="Email".ljust(30),
-            admin="Admin".ljust(10),
-            created="Created"))
-        for user in User.all():
-            line = "{name}{email}{admin}{created}".format(
-                name=user.name.ljust(70),
-                email=user.email.ljust(30),
-                admin=user.admin.ljust(10),
-                created=user.created_on.strftime('%d-%m-%Y %H:%M:%S'))
-            print(line)
+        table = [[user.name, user.email, user.admin, user.created] for user in User.all()]
+        print(tabulate(table, headers=['Name','Email', 'Admin', 'Created'], tablefmt='plain'))
 
     def create_user_auth_token(self):
         print('Create token: please authenticate...')
@@ -132,16 +123,8 @@ class Admin(object):
             print('User {email} does not exist.'.format(email=email))
 
     def list_user_auth_tokens(self):
-        print("{email}{token}{created}".format(
-            email="Email".ljust(30),
-            token="Token".ljust(70),
-            created="Created"))
-        for token in UserAuthToken.all():
-            line = "{email}{token}{created}".format(
-                email=token.user.email.ljust(30),
-                token=token.uuid.ljust(70),
-                created=token.created_on.strftime('%d-%m-%Y %H:%M:%S'))
-            print(line)
+        table = [[token.user.email, token.uuid, token.created] for token in UserAuthToken.all()]
+        print(tabulate(table, headers=['Email', 'Token', 'Created'], tablefmt='plain'))
 
     def create_agent(self):
         print('Create agent: please authenticate...')
@@ -164,11 +147,8 @@ class Admin(object):
             print('Agent does not exist.')
 
     def list_agents(self):
-        print("{id}{name}{created}".format(id="id".ljust(30), name="Name".ljust(30), created="Created"))
-        for agent in Agent.all():
-            line = "{id}{name}{created}".format(id=str(agent.id).ljust(30), name=agent.name.ljust(30),
-                created=agent.created_on.strftime('%d-%m-%Y %H:%M:%S'))
-            print(line)
+        table = [[agent.name, agent.id, agent.created] for agent in Agent.all()]
+        print(tabulate(table, headers=['Name', 'id', 'Created'], tablefmt='plain'))
 
     def create_agent_auth_token(self):
         print('Create agent token: please authenticate...')
@@ -205,18 +185,8 @@ class Admin(object):
             print('Details: {details}'.format(details=str(e)))
 
     def list_agent_auth_tokens(self):
-        print("{created}{id}{name}{token}".format(
-            created="Created".ljust(30),
-            id="id".ljust(30),
-            name="Name".ljust(30),
-            token="Token".ljust(70)))
-        for token in AgentAuthToken.all():
-            line = "{created}{id}{name}{token}".format(
-                created=token.created_on.strftime('%d-%m-%Y %H:%M:%S').ljust(30),
-                id=str(token.agent.id).ljust(30),
-                name=token.agent.name.ljust(30),
-                token=token.uuid.ljust(70))
-            print(line)
+        table = [[token.agent.name, token.agent.id, token.uuid, token.created] for token in AgentAuthToken.all()]
+        print(tabulate(table, headers=['Name', 'id', 'Token', 'Created'], tablefmt='plain'))
 
 
 def main():

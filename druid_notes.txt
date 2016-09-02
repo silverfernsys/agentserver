@@ -24,4 +24,3 @@ To reset druid data:
 $ cd /opt/druid
 $ sudo rm -r log var
 $ sudo bin/init
-
