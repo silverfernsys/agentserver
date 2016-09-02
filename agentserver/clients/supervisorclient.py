@@ -1,13 +1,15 @@
 from tornado.escape import json_encode
 from ws.agent import SupervisorAgentHandler
 from supervisorclientcoordinator import scc
-from constants import *
+from constants import (SUPERVISOR_COMMANDS,
+                       SUBSCRIBE_COMMAND, UNSUBSCRIBE_COMMAND)
 from utils.validators import cmd_validator
 from utils.ip import get_ip
 
 
 class SupervisorClient(object):
-    agent_not_connected_error = json_encode({'status': 'error', 'errors': [{'details': 'agent not connected'}]})
+    agent_not_connected_error = json_encode(
+        {'status': 'error', 'errors': [{'details': 'agent not connected'}]})
 
     def __init__(self, id, ws):
         self.id = id
@@ -16,11 +18,15 @@ class SupervisorClient(object):
 
     @classmethod
     def cmd_success_message(cls, cmd):
-        return json_encode({'status': 'success', 'details': 'command {cmd} accepted'.format(cmd=cmd)})
+        return json_encode({'status': 'success',
+                            'details': 'command {cmd} accepted'
+                            .format(cmd=cmd)})
 
     @classmethod
     def unknown_cmd_error(cls, cmd):
-        return json_encode({'status': 'error', 'details': 'unknown command', 'arg': cmd})
+        return json_encode({'status': 'error',
+                            'details': 'unknown command',
+                            'arg': cmd})
 
     def error_message(self, errors):
         errors = [{'arg': k, 'details': v} for k, v in errors.items()]

@@ -3,10 +3,14 @@ from tornado.web import RequestHandler
 
 
 class JSONHandler(RequestHandler):
-    invalid_json_error = json_encode({'status': 'error', 'errors': [{'details': 'invalid json'}]})
-    invalid_http_method_error = json_encode({'status': 'error', 'errors': [{'details': 'invalid http method'}]})
-    unknown_error = json_encode({'status': 'error', 'errors': [{'details': 'unknown error'}]})
-    not_authorized_error = json_encode({'status': 'error', 'errors': [{'details': 'not authorized'}]})
+    invalid_json_error = json_encode(
+        {'status': 'error', 'errors': [{'details': 'invalid json'}]})
+    invalid_http_method_error = json_encode(
+        {'status': 'error', 'errors': [{'details': 'invalid http method'}]})
+    unknown_error = json_encode(
+        {'status': 'error', 'errors': [{'details': 'unknown error'}]})
+    not_authorized_error = json_encode(
+        {'status': 'error', 'errors': [{'details': 'not authorized'}]})
 
     def error_message(self, errors):
         errors = [{'arg': k, 'details': v} for k, v in errors.items()]
@@ -18,7 +22,8 @@ class JSONHandler(RequestHandler):
                 json_data = json_decode(self.request.body)
                 self.json = json_data
             except ValueError:
-                self.send_error(400, message=self.invalid_json_error) # Bad Request
+                # Bad Request
+                self.send_error(400, message=self.invalid_json_error)
 
     def set_default_headers(self):
         self.set_header('Content-Type', 'application/json')

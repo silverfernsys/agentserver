@@ -1,18 +1,21 @@
 #!/usr/bin/env python
-import logging, signal, sys, time
+import logging
+import signal
+import sys
+import time
 import tornado.ioloop
 import tornado.web
 import tornado.httpserver
 from pyfiglet import figlet_format
-from datetime import datetime, timedelta
-from termcolor import colored, cprint
 from setproctitle import setproctitle
+from termcolor import cprint
 from config import ConfigError
 from config.server import config
 from db.models import models
 from db.timeseries import kafka, druid
 from http.client import (HTTPVersionHandler, HTTPTokenHandler,
-    HTTPDetailHandler, HTTPCommandHandler, HTTPListHandler)
+                         HTTPDetailHandler, HTTPCommandHandler,
+                         HTTPListHandler)
 from http.agent import HTTPAgentUpdateHandler, HTTPAgentDetailHandler
 from ws.agent import SupervisorAgentHandler
 from ws.client import SupervisorClientHandler
@@ -22,6 +25,7 @@ from utils.log import config_logging, LoggingError
 
 class Server(object):
     # Adapted from code found at https://gist.github.com/mywaiting/4643396
+
     def sig_handler(self, sig, frame):
         self.logger.warning("Caught signal: %s", sig)
         tornado.ioloop.IOLoop.instance().add_callback(self.shutdown)
@@ -39,7 +43,7 @@ class Server(object):
             print('{0} Please run server as root. Exiting.'.format(e.message))
             sys.exit(1)
         self.print_splash_page()
-    	self.connect(config.database, config.kafka, config.druid)
+        self.connect(config.database, config.kafka, config.druid)
         self.logger = logging.getLogger('Web Server')
         scc.initialize()
 
@@ -55,7 +59,8 @@ class Server(object):
             (r'/client/supervisor', SupervisorClientHandler),
         ])
 
-        self.max_wait_seconds_before_shutdown = int(config.max_wait_seconds_before_shutdown)
+        self.max_wait_seconds_before_shutdown = int(
+            config.max_wait_seconds_before_shutdown)
         port = config.port
         server = tornado.httpserver.HTTPServer(application)
         server.listen(port)
@@ -94,7 +99,8 @@ class Server(object):
 
     def print_splash_page(self):
         if sys.stdout.isatty():
-            text = figlet_format('AgentServer', width=120, font='slant').rstrip()
+            text = figlet_format('AgentServer', width=120,
+                                 font='slant').rstrip()
             cprint(text, 'red', attrs=['blink'])
             width = reduce(max, map(len, text.split('\n')))
             title = 'AgentServer v0.1a'
@@ -103,7 +109,7 @@ class Server(object):
 
 
 def main():
-    server = Server(config)
+    Server(config)
 
 
 if __name__ == "__main__":

@@ -2,6 +2,7 @@ from db.models import Agent
 from agents.supervisoragent import SupervisorAgent
 from base import JSONWebsocket
 
+
 class SupervisorAgentHandler(JSONWebsocket):
     Connections = {}
     IDs = {}
@@ -22,7 +23,7 @@ class SupervisorAgentHandler(JSONWebsocket):
             return True
         else:
             return False
-      
+
     def on_json(self, message):
         """Pass message along to SupervisorAgent if connected,
         ignores message otherwise."""
@@ -30,9 +31,9 @@ class SupervisorAgentHandler(JSONWebsocket):
             self.Connections[self].update(message)
         else:
             print('Writing to non-existent agent!')
- 
+
     def on_close(self):
-        try:   
+        try:
             supervisor_agent = self.Connections[self]
             supervisor_agent.ws = None
             self.IDs.pop(supervisor_agent.id, None)

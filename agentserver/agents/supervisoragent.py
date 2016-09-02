@@ -3,7 +3,7 @@ from db.models import AgentDetail
 from db.timeseries import kafka
 from clients.supervisorclientcoordinator import scc
 from utils.validators import (system_stats_validator,
-    states_validator, snapshot_validator)
+                              states_validator, snapshot_validator)
 from utils.ip import get_ip
 from utils.log import log_kafka
 
@@ -11,11 +11,16 @@ SNAPSHOT = 'snapshot'
 STATE = 'state'
 SYSTEM = 'system'
 
+
 class SupervisorAgent(object):
-    unknown_message_type_error = json_encode({'status': 'error', 'errors': [{'details': 'unknown message type'}]})
-    snapshot_update_success = json_encode({'status': 'success', 'details': 'snapshot updated'})
-    state_update_success = json_encode({'status': 'success', 'details': 'state updated'})
-    system_stats_update_success = json_encode({'status': 'success', 'details': 'system stats updated'})
+    unknown_message_type_error = json_encode(
+        {'status': 'error', 'errors': [{'details': 'unknown message type'}]})
+    snapshot_update_success = json_encode(
+        {'status': 'success', 'details': 'snapshot updated'})
+    state_update_success = json_encode(
+        {'status': 'success', 'details': 'state updated'})
+    system_stats_update_success = json_encode(
+        {'status': 'success', 'details': 'system stats updated'})
 
     def __init__(self, id, ws):
         self.id = id
@@ -24,12 +29,13 @@ class SupervisorAgent(object):
 
     def command(self, cmd, process):
         # message = {'cmd': 'restart web'}
-        self.ws.write_message(json_encode({'cmd': '{0} {1}'.format(cmd, process)}))
+        self.ws.write_message(json_encode(
+            {'cmd': '{0} {1}'.format(cmd, process)}))
 
     def error_message(self, errors):
         errors = [{'arg': k, 'details': v} for k, v in errors.items()]
         return json_encode({'status': 'error', 'errors': errors})
-    
+
     def snapshot_update(self, data):
         if snapshot_validator.validate(data):
             for row in data[SNAPSHOT]:
@@ -39,7 +45,8 @@ class SupervisorAgent(object):
             self.ws.write_message(self.snapshot_update_success)
         else:
             print(snapshot_validator.errors)
-            self.ws.write_message(self.error_message(snapshot_validator.errors))
+            self.ws.write_message(
+                self.error_message(snapshot_validator.errors))
 
     def state_update(self, data):
         update = data[STATE]
@@ -52,10 +59,11 @@ class SupervisorAgent(object):
     def system_stats_update(self, data):
         system_stats = data[SYSTEM]
         if system_stats_validator.validate(system_stats):
-            created = AgentDetail.update_or_create(self.id, **system_stats)
+            AgentDetail.update_or_create(self.id, **system_stats)
             self.ws.write_message(self.system_stats_update_success)
         else:
-            self.ws.write_message(self.error_message(system_stats_validator.errors))
+            self.ws.write_message(self.error_message(
+                system_stats_validator.errors))
 
     def update(self, data):
         if SNAPSHOT in data:

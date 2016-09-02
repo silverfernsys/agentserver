@@ -12,6 +12,7 @@ import sys
 
 
 class Admin(object):
+
     def __init__(self, config):
         setproctitle('agentserveradmin')
         print('Connecting to database...')
@@ -94,7 +95,8 @@ class Admin(object):
     def list_users(self):
         table = [[user.name, user.email, user.admin, user.created]
                  for user in User.all()]
-        print(tabulate(table, headers=self.bold_headers(['Name', 'Email', 'Admin', 'Created']), tablefmt='plain'))
+        print(tabulate(table, headers=self.bold_headers(
+            ['Name', 'Email', 'Admin', 'Created']), tablefmt='plain'))
 
     def create_user_auth_token(self):
         print('Create token: please authenticate...')
@@ -104,9 +106,11 @@ class Admin(object):
         if user:
             try:
                 token = UserAuthToken(user=user).save()
-                print('Token {token} created for {email}.'.format(token=token.uuid, email=email))
+                print('Token {token} created for {email}.'
+                      .format(token=token.uuid, email=email))
             except:
-                print('A token already exists for {email}. Doing nothing.'.format(email=email))
+                print('A token already exists for {email}. Doing nothing.'
+                      .format(email=email))
         else:
             print('User {email} does not exist.'.format(email=email))
 
@@ -118,15 +122,18 @@ class Admin(object):
         if user:
             try:
                 user.token.delete()
-                print('Successfully deleted token for {email}.'.format(email=email))
+                print('Successfully deleted token for {email}.'
+                      .format(email=email))
             except:
                 print('No token exists for {email}'.format(email=email))
         else:
             print('User {email} does not exist.'.format(email=email))
 
     def list_user_auth_tokens(self):
-        table = [[token.user.email, token.uuid, token.created] for token in UserAuthToken.all()]
-        print(tabulate(table, headers=self.bold_headers(['Email', 'Token', 'Created']), tablefmt='plain'))
+        table = [[token.user.email, token.uuid, token.created]
+                 for token in UserAuthToken.all()]
+        print(tabulate(table, headers=self.bold_headers(
+            ['Email', 'Token', 'Created']), tablefmt='plain'))
 
     def create_agent(self):
         print('Create agent: please authenticate...')
@@ -149,8 +156,10 @@ class Admin(object):
             print('Agent does not exist.')
 
     def list_agents(self):
-        table = [[agent.name, agent.id, agent.created] for agent in Agent.all()]
-        print(tabulate(table, headers=self.bold_headers(['Name', 'id', 'Created']), tablefmt='plain'))
+        table = [[agent.name, agent.id, agent.created]
+                 for agent in Agent.all()]
+        print(tabulate(table, headers=self.bold_headers(
+            ['Name', 'id', 'Created']), tablefmt='plain'))
 
     def create_agent_auth_token(self):
         print('Create agent token: please authenticate...')
@@ -162,11 +171,11 @@ class Admin(object):
             try:
                 token = AgentAuthToken(agent=agent).save()
                 print(str('Token {token} created for {id}. {name}'
-                    .format(token=token.uuid, id=agent.id,
-                        name=agent.name)))
+                          .format(token=token.uuid, id=agent.id,
+                                  name=agent.name)))
             except:
                 print('A token already exists for {id}. {name}. Doing nothing.'
-                    .format(id=agent.id, name=agent.name))
+                      .format(id=agent.id, name=agent.name))
         except Exception as e:
             print('Agent {id} does not exist.'.format(id=id))
             print('Details: {details}'.format(details=str(e)))
@@ -179,7 +188,8 @@ class Admin(object):
             agent = Agent.get(id=id)
             try:
                 agent.token.delete()
-                print('Successfully deleted token for {id}. {name}'.format(id=agent.id, name=agent.name))
+                print('Successfully deleted token for {id}. {name}'
+                      .format(id=agent.id, name=agent.name))
             except:
                 print('No token exists for {id}'.format(id=id))
         except Exception as e:
@@ -187,7 +197,8 @@ class Admin(object):
             print('Details: {details}'.format(details=str(e)))
 
     def list_agent_auth_tokens(self):
-        table = [[token.agent.name, token.agent.id, token.uuid, token.created] for token in AgentAuthToken.all()]
+        table = [[token.agent.name, token.agent.id, token.uuid, token.created]
+                 for token in AgentAuthToken.all()]
         headers = self.bold_headers(['Name', 'id', 'Token', 'Created'])
         print(tabulate(table, headers=headers, tablefmt='plain'))
 

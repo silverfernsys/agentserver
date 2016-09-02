@@ -1,12 +1,10 @@
-import json
 import threading
-from time import time, sleep
-from datetime import datetime, timedelta
+from time import sleep
+from datetime import datetime
 from tornado.escape import json_encode
 from db.models import Agent
 from db.timeseries import druid
-from utils.iso_8601 import (iso_8601_period_to_timedelta,
-    iso_8601_interval_to_datetimes)
+from utils.iso_8601 import iso_8601_interval_to_datetimes
 
 
 class SupervisorProcess(object):
@@ -20,7 +18,7 @@ class SupervisorProcess(object):
     UNKNOWN = 'UNKNOWN'
 
     States = set([STOPPED, STARTING, RUNNING, BACKOFF,
-        STOPPING, EXITED, FATAL, UNKNOWN])
+                  STOPPING, EXITED, FATAL, UNKNOWN])
 
     def __init__(self, id, name, started, updated, state=None):
         self.id = id
@@ -52,10 +50,11 @@ class SupervisorProcess(object):
                 client.ws.write_message(json_encode(data))
 
     def __repr__(self):
-        return "<SupervisorProcess(name={0}, " \
-            "updated={1}, started={2}, state={3})>".format(self.name,
-                self.updated.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
-                self.started, self.state)
+        updated = self.updated.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+        started = self.started.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+        return '<SupervisorProcess(name={0}, updated={1}, '
+        'started={2}, state={3})>'.format(self.name, updated,
+                                          started, self.state)
 
     def __json__(self):
         if self.started:
@@ -69,7 +68,7 @@ class SupervisorProcess(object):
             updated = self.UNKNOWN
 
         return {'id': self.id, 'name': self.name, 'updated': updated,
-            'started': started, 'state': self.state}    
+                'started': started, 'state': self.state}
 
 
 class AgentInfo(object):
@@ -96,11 +95,13 @@ class AgentInfo(object):
             "processes={self.processes})>".format(self=self)
 
     def __json__(self):
+        processes = [val.__json__() for val in self.processes.values()]
         return {'name': self.name, 'id': self.id, 'state': self.state,
-            'processes': [val.__json__() for val in self.processes.values()]}
+                'processes': processes}
 
 
 class SupervisorClientCoordinator(object):
+
     def initialize(self):
         self.agents = {}
         self.clients = {}
@@ -110,8 +111,10 @@ class SupervisorClientCoordinator(object):
             info = AgentInfo(agent)
             result = druid.processes(agent.id, 'P6W')
             for row in result:
-                info.add(SupervisorProcess(info.id, row['process'], None,
-                    datetime.utcfromtimestamp(float(row['time'])/1000.0)))
+                timestamp = float(row['time']) / 1000.0
+                updated = datetime.utcfromtimestamp(timestamp)
+                info.add(SupervisorProcess(info.id, row['process'],
+                                           None, updated))
             self.agents[info.id] = info
 
     def destroy(self):
@@ -127,12 +130,15 @@ class SupervisorClientCoordinator(object):
         started = datetime.utcfromtimestamp(start)
 
         if name not in self.agents[id].processes:
-            self.agents[id].add(SupervisorProcess(id, name, started, statename, updated))
+            self.agents[id].add(SupervisorProcess(
+                id, name, started, statename, updated))
         else:
             self.agents[id].processes[name].update(started, statename, updated)
 
-    def subscribe(self, client, id, process, granularity='P3D', intervals='P6W', **kwargs):
-        druid.__validate_granularity__(granularity, druid.timeseries_granularities)
+    def subscribe(self, client, id, process, granularity='P3D',
+                  intervals='P6W', **kwargs):
+        druid.__validate_granularity__(
+            granularity, druid.timeseries_granularities)
         druid.__validate_intervals__(intervals)
 
         (start, end) = iso_8601_interval_to_datetimes(intervals)
@@ -142,19 +148,25 @@ class SupervisorClientCoordinator(object):
         if client not in self.clients:
             self.clients[client] = [(id, process)]
             self.updates[(client, id, process)] = (granularity, (start, end))
+
             def push_stats(*args):
                 while client in self.clients:
                     for (id, process) in self.clients[client]:
-                        (granularity, (start, end)) = self.updates[(client, id, process)]
-                        result = druid.timeseries(id, process, granularity=granularity,
-                            intervals=intervals).result
+                        (granularity, (start, end)) = self.updates[
+                            (client, id, process)]
+                        result = druid.timeseries(id, process, granularity,
+                                                  intervals).result
+                        stats = map(lambda x: {'timestamp': x['timestamp'],
+                                               'cpu': x['result']['cpu'],
+                                               'mem': x['result']['mem']},
+                                    result)
                         body = {'snapshot': {'id': id, 'process': process,
-                            'stats': map(lambda x: {'timestamp': x['timestamp'],
-                            'cpu': x['result']['cpu'], 'mem': x['result']['mem']}, result)}}
+                                             'stats': stats}}
                         client.ws.write_message(json_encode(body))
                         # print('result: %s' % result)
-                        # Note: when end != None and start > end, remove key from self.updates
-                        sleep(1.0)   
+                        # Note: when end != None and start > end, remove key
+                        # from self.updates
+                        sleep(1.0)
                 print('DONE WITH THREAD!')
             thread = threading.Thread(target=push_stats)
             thread.start()
@@ -180,8 +192,11 @@ class SupervisorClientCoordinator(object):
                 self.agents[id].processes[process].unsubscribe(client)
             self.clients.pop(client)
 
+    # def push_stats(self, *args):
+
     def __repr__(self):
-        return "<SupervisorClientCoordinator(agents={self.agents})>".format(self=self)
+        return '<SupervisorClientCoordinator(agents='
+        '{self.agents})>'.format(self=self)
 
     def __json__(self):
         return [val.__json__() for val in self.agents.values()]

@@ -1,8 +1,8 @@
 from datetime import datetime
-from sqlalchemy import (Column, Integer, Numeric, String, DateTime, ForeignKey,
-                        Boolean, create_engine, desc, Enum)
+from sqlalchemy import (Column, Integer, String, DateTime, ForeignKey,
+                        Boolean, create_engine)
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
-from sqlalchemy.orm import relationship, backref, sessionmaker, validates
+from sqlalchemy.orm import relationship, backref, sessionmaker
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.event import listen
 from sqlalchemy.exc import ArgumentError, NoSuchModuleError, OperationalError
@@ -12,6 +12,7 @@ from utils.uuid import uuid
 
 # Mixins
 class AllMixin(object):
+
     @classmethod
     def all(cls, session=None):
         if not session:
@@ -20,6 +21,7 @@ class AllMixin(object):
 
 
 class CountMixin(object):
+
     @classmethod
     def count(cls, session=None):
         if not session:
@@ -28,6 +30,7 @@ class CountMixin(object):
 
 
 class DeleteMixin(object):
+
     def delete(self, session=None):
         if not session:
             session = models.session
@@ -35,11 +38,12 @@ class DeleteMixin(object):
             session.delete(self)
             session.commit()
             return True
-        except Exception as e:
+        except Exception:
             return False
 
 
 class GetMixin(object):
+
     @classmethod
     def get(cls, session=None, *args, **kwargs):
         """Find object with keyword args."""
@@ -59,10 +63,11 @@ class GetMixin(object):
 
 
 class IDMixin(object):
-    id =  Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True)
 
 
 class SaveMixin(object):
+
     def save(self, session=None):
         if not session:
             session = models.session
@@ -72,6 +77,7 @@ class SaveMixin(object):
 
 
 class SaveAllMixin(object):
+
     @classmethod
     def save_all(cls, items, session=None):
         if not session:
@@ -81,6 +87,7 @@ class SaveAllMixin(object):
 
 
 class Base(object):
+
     @declared_attr
     def __tablename__(cls):
         return cls.__name__.lower()
@@ -90,7 +97,7 @@ Base = declarative_base(cls=Base)
 
 
 class Agent(Base, IDMixin, AllMixin, CountMixin, DeleteMixin,
-    GetMixin, SaveMixin, SaveAllMixin):
+            GetMixin, SaveMixin, SaveAllMixin):
 
     name = Column(String(), nullable=False, unique=True)
     created_on = Column(DateTime(), default=datetime.now)
@@ -118,18 +125,21 @@ class Agent(Base, IDMixin, AllMixin, CountMixin, DeleteMixin,
 
 class AgentDetail(Base, IDMixin, CountMixin, DeleteMixin, SaveMixin):
 
-    agent_id = Column(Integer(), ForeignKey('agent.id'), unique=True, nullable=False)
+    agent_id = Column(Integer(), ForeignKey(
+        'agent.id'), unique=True, nullable=False)
     hostname = Column(String, nullable=False)
     processor = Column(String(), nullable=False)
     num_cores = Column(Integer(), default=1)
     memory = Column(Integer(), default=0)
     dist_name = Column(String(), nullable=False)
     dist_version = Column(String(), nullable=False)
-    updated_on = Column(DateTime(), default=datetime.now, onupdate=datetime.now)
+    updated_on = Column(DateTime(), default=datetime.now,
+                        onupdate=datetime.now)
     created_on = Column(DateTime(), default=datetime.now)
 
-    agent = relationship('Agent', backref=backref('detail', 
-        cascade='all,delete,delete-orphan', uselist=False))
+    cascade = 'all,delete,delete-orphan'
+    backref = backref('detail', cascade=cascade, uselist=False)
+    agent = relationship('Agent', backref=backref)
 
     @property
     def created(self):
@@ -149,25 +159,26 @@ class AgentDetail(Base, IDMixin, CountMixin, DeleteMixin, SaveMixin):
 
     @classmethod
     def update_or_create(cls, id, dist_name, dist_version,
-        hostname, num_cores, memory, processor, session=None):
+                         hostname, num_cores, memory, processor, session=None):
         if not session:
             session = models.session
         try:
             detail = session.query(AgentDetail) \
                 .filter(AgentDetail.agent_id == id).one()
-            detail.hostname=hostname
-            detail.processor=processor
-            detail.num_cores=num_cores
-            detail.memory=memory
-            detail.dist_name=dist_name
-            detail.dist_version=dist_version
+            detail.hostname = hostname
+            detail.processor = processor
+            detail.num_cores = num_cores
+            detail.memory = memory
+            detail.dist_name = dist_name
+            detail.dist_version = dist_version
             session.commit()
             return False
         except NoResultFound:
-            session.add(AgentDetail(agent_id = id,
-                hostname=hostname, processor=processor,
-                num_cores=num_cores, memory=memory,
-                dist_name=dist_name, dist_version=dist_version))
+            session.add(AgentDetail(agent_id=id,
+                                    hostname=hostname, processor=processor,
+                                    num_cores=num_cores, memory=memory,
+                                    dist_name=dist_name,
+                                    dist_version=dist_version))
             session.commit()
             return True
 
@@ -185,24 +196,26 @@ class AgentDetail(Base, IDMixin, CountMixin, DeleteMixin, SaveMixin):
 
     def __json__(self):
         return {'hostname': self.hostname,
-            'processor': self.processor,
-            'num_cores': self.num_cores,
-            'memory': self.memory,
-            'dist_name': self.dist_name,
-            'dist_version': self.dist_version,
-            'updated': self.updated_on.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
-            'created': self.created_on.strftime("%Y-%m-%dT%H:%M:%S.%fZ")}
+                'processor': self.processor,
+                'num_cores': self.num_cores,
+                'memory': self.memory,
+                'dist_name': self.dist_name,
+                'dist_version': self.dist_version,
+                'updated': self.updated_on.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                'created': self.created_on.strftime("%Y-%m-%dT%H:%M:%S.%fZ")}
 
 
 class AgentAuthToken(Base, AllMixin, CountMixin, DeleteMixin,
-    GetMixin, SaveMixin, SaveAllMixin):
+                     GetMixin, SaveMixin, SaveAllMixin):
 
     uuid = Column(String(), primary_key=True, default=uuid)
-    agent_id = Column(Integer(), ForeignKey('agent.id'), unique=True, nullable=False)
+    agent_id = Column(Integer(), ForeignKey(
+        'agent.id'), unique=True, nullable=False)
     created_on = Column(DateTime(), default=datetime.now)
 
-    agent = relationship('Agent', backref=backref('token',
-        cascade='all,delete,delete-orphan', uselist=False))
+    cascade = 'all,delete,delete-orphan'
+    backref = backref('token', cascade=cascade, uselist=False)
+    agent = relationship('Agent', backref=backref)
 
     @property
     def created(self):
@@ -215,6 +228,7 @@ class AgentAuthToken(Base, AllMixin, CountMixin, DeleteMixin,
 
 
 class UserAuthenticationException(Exception):
+
     def __init__(self, message, username, password):
         self.message = message
         self.username = username
@@ -222,18 +236,20 @@ class UserAuthenticationException(Exception):
 
     def __repr__(self):
         return 'Authentication failed for username: {self.username}, ' \
-            'password: {self.password}. Reason: {self.message}.'.format(self=self)
+            'password: {self.password}. Reason: {self.message}.'.format(
+                self=self)
 
 
 class User(Base, IDMixin, AllMixin, CountMixin,
-    DeleteMixin, GetMixin, SaveMixin, SaveAllMixin):
+           DeleteMixin, GetMixin, SaveMixin, SaveAllMixin):
 
     name = Column(String(), nullable=False)
     email = Column(String(), nullable=False, unique=True)
     password = Column(String(), nullable=False)
     is_admin = Column(Boolean(), default=False)
     created_on = Column(DateTime(), default=datetime.now)
-    updated_on = Column(DateTime(), default=datetime.now, onupdate=datetime.now)
+    updated_on = Column(DateTime(), default=datetime.now,
+                        onupdate=datetime.now)
 
     @classmethod
     def authorize(cls, authorization_token, session=None):
@@ -254,16 +270,19 @@ class User(Base, IDMixin, AllMixin, CountMixin,
             user = session.query(User).filter(User.email == username).one()
             if user.authenticates(password):
                 try:
-                    token = session.query(UserAuthToken).filter(UserAuthToken.user == user).one()
+                    token = session.query(UserAuthToken).filter(
+                        UserAuthToken.user == user).one()
                 except NoResultFound:
                     token = UserAuthToken(user=user)
                     session.add(token)
                     session.commit()
                 return token.uuid
             else:
-                raise UserAuthenticationException('incorrect password for', username, password)
+                raise UserAuthenticationException(
+                    'incorrect password for', username, password)
         except NoResultFound:
-            raise UserAuthenticationException('unknown username', username, password)
+            raise UserAuthenticationException(
+                'unknown username', username, password)
 
     @property
     def created(self):
@@ -279,7 +298,7 @@ class User(Base, IDMixin, AllMixin, CountMixin,
             return 'Y'
         else:
             return 'N'
-    
+
     def authenticates(self, other_password):
         try:
             return pwd_context.verify(other_password, self.password)
@@ -292,6 +311,7 @@ class User(Base, IDMixin, AllMixin, CountMixin,
             "is_admin='{self.is_admin}', " \
             "password='{self.password}')>".format(self=self)
 
+
 def hash_password(target, value, oldvalue, initiator):
     # "hashes password"
     return pwd_context.encrypt(value)
@@ -300,15 +320,16 @@ listen(User.password, 'set', hash_password, retval=True)
 
 
 class UserAuthToken(Base, AllMixin, CountMixin, DeleteMixin,
-    GetMixin, SaveMixin, SaveAllMixin):
+                    GetMixin, SaveMixin, SaveAllMixin):
 
     uuid = Column(String(), primary_key=True, default=uuid)
-    user_id = Column(Integer(), ForeignKey('user.id'), unique=True, nullable=False)
+    user_id = Column(Integer(), ForeignKey(
+        'user.id'), unique=True, nullable=False)
     created_on = Column(DateTime(), default=datetime.now)
 
-    user = relationship("User", backref=backref('token',
-        cascade='all,delete,delete-orphan', uselist=False),
-        single_parent=True)
+    cascade = 'all,delete,delete-orphan'
+    backref = backref('token', cascade=cascade, uselist=False)
+    user = relationship("User", backref=backref, single_parent=True)
 
     @classmethod
     def authorize(cls, authorization_token, session=None):
@@ -325,10 +346,11 @@ class UserAuthToken(Base, AllMixin, CountMixin, DeleteMixin,
     def __repr__(self):
         return "<UserAuthToken(uuid='{self.uuid}', " \
             "user_id='{self.user_id}', " \
-            "created_on='{self.created_on}')>".format(self=self)  
+            "created_on='{self.created_on}')>".format(self=self)
 
 
 class ModelAccessLayer:
+
     def __init__(self):
         # http://pythoncentral.io/understanding-python-sqlalchemy-session/
         self.engine = None
@@ -346,15 +368,21 @@ class ModelAccessLayer:
                 self.session = self.Session()
             except OperationalError as e:
                 message = e.orig.message.split('\n')[0].strip()
-                raise Exception('Database connection error: {0}'.format(message))
+                raise Exception(
+                    'Database connection error: {0}'.format(message))
             except NoSuchModuleError as e:
                 message = e.message.split(':')[-1]
-                raise Exception('Database connection error: unknown database type "{0}"'.format(message))
+                raise Exception(
+                    'Database connection error: unknown database type "{0}"'
+                    .format(message))
             except ArgumentError as e:
-                raise Exception('Database connection error: {0}'.format(e.message))
+                raise Exception(
+                    'Database connection error: {0}'.format(e.message))
             except Exception as e:
-                raise Exception('Database connection error: {0}'.format(e.message))
+                raise Exception(
+                    'Database connection error: {0}'.format(e.message))
         else:
-            raise Exception('Database connection error: connection cannot be none.')
+            raise Exception(
+                'Database connection error: connection cannot be none.')
 
 models = ModelAccessLayer()

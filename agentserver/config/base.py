@@ -3,12 +3,14 @@ from argparse import ArgumentParser
 
 
 class ConfigError(Exception):
+
     def __init__(self, arg):
         self.message = 'Missing configuration argument "{0}".'.format(arg)
         self.arg = arg
 
 
 class MissingSection(ConfigError):
+
     def __init__(self, arg):
         self.message = 'Missing section "{0}" in configuration.'.format(arg)
         self.arg = arg
@@ -45,7 +47,8 @@ class Config(object):
         config_parser.read(paths)
 
         try:
-            data = {p: f(getattr(args, p, None) or config_parser.get(self.config_name, p)) for (p, f) in self.possible_args}
+            data = {p: f(getattr(args, p, None) or config_parser.get(
+                self.config_name, p)) for (p, f) in self.possible_args}
         except NoOptionError as e:
             raise ConfigError(e.args[0])
         except NoSectionError as e:
@@ -57,5 +60,6 @@ class Config(object):
         self.__dict__.update(data)
 
     def __repr__(self):
-        return '<Config({0}>'.format(', '.join('%s=%r' % (k, v)
-            for (k, v) in self.__dict__.iteritems()))
+        items = self.__dict__.iteritems()
+        vals = ', '.join('%s=%r' % (k, v) for (k, v) in items)
+        return '<Config({0}>'.format(vals)

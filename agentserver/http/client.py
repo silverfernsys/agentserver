@@ -1,6 +1,6 @@
 from tornado.escape import json_encode
 from http.base import JSONHandler
-from db.models import User, AgentDetail, UserAuthenticationException 
+from db.models import User, AgentDetail, UserAuthenticationException
 from ws.agent import SupervisorAgentHandler
 from clients.supervisorclientcoordinator import scc
 from utils.validators import cmd_validator
@@ -18,6 +18,7 @@ class HTTPVersionHandler(JSONHandler):
 
 
 class UserRequestHandler(JSONHandler):
+
     def prepare(self):
         auth_token = self.request.headers.get('authorization')
         if not User.authorize(auth_token):
@@ -28,15 +29,16 @@ class UserRequestHandler(JSONHandler):
 
 
 class HTTPCommandHandler(UserRequestHandler):
+
     @classmethod
     def cmd_success(cls, cmd):
         return json_encode({'status': 'success',
-            'details': 'command {0} accepted'.format(cmd)})
+                            'details': 'command {0} accepted'.format(cmd)})
 
     @classmethod
     def cmd_error(cls, id):
         return json_encode({'status': 'error', 'errors':
-            [{'arg': id, 'details': 'agent not connected'}]})
+                            [{'arg': id, 'details': 'agent not connected'}]})
 
     def post(self):
         if cmd_validator.validate(self.json):
@@ -54,12 +56,14 @@ class HTTPCommandHandler(UserRequestHandler):
 
 
 class HTTPListHandler(UserRequestHandler):
+
     def get(self):
         self.write(json_encode(scc))
 
 
 class HTTPDetailHandler(UserRequestHandler):
-    invalid_id_error = json_encode({'status': 'error', 'errors': [{'details': 'invalid id'}]})
+    invalid_id_error = json_encode(
+        {'status': 'error', 'errors': [{'details': 'invalid id'}]})
 
     def post(self):
         detail = AgentDetail.detail_for_agent_id(self.json['id'])
@@ -74,7 +78,9 @@ class HTTPDetailHandler(UserRequestHandler):
 
 
 class HTTPTokenHandler(JSONHandler):
-    authentication_error = json_encode({'status': 'error', 'errors': [{'details': 'invalid username/password'}]})
+    authentication_error = json_encode(
+        {'status': 'error', 'errors':
+            [{'details': 'invalid username/password'}]})
 
     def get(self):
         try:
@@ -86,6 +92,7 @@ class HTTPTokenHandler(JSONHandler):
         except UserAuthenticationException as e:
             log_authentication_error(self, e.message, username)
             data = self.authentication_error
-            status = 400 # Tornado does not support status code 422: Unprocessable Entity
+            # Tornado does not support status code 422: Unprocessable Entity
+            status = 400
         self.set_status(status)
         self.write(data)

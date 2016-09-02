@@ -11,6 +11,7 @@ SNAPSHOT = 'snapshot'
 
 
 class HTTPAgentHandler(JSONHandler):
+
     def prepare(self):
         auth_token = self.request.headers.get('authorization')
         self.agent = Agent.authorize(auth_token)
@@ -22,8 +23,10 @@ class HTTPAgentHandler(JSONHandler):
 
 
 class HTTPAgentDetailHandler(HTTPAgentHandler):
-    success_response_created = json_encode({'status': 'success', 'details': 'detail created'})
-    success_response_updated = json_encode({'status': 'success', 'details': 'detail updated'})
+    success_response_created = json_encode(
+        {'status': 'success', 'details': 'detail created'})
+    success_response_updated = json_encode(
+        {'status': 'success', 'details': 'detail updated'})
 
     def post(self):
         if system_stats_validator.validate(self.json):
@@ -42,7 +45,8 @@ class HTTPAgentDetailHandler(HTTPAgentHandler):
 
 
 class HTTPAgentUpdateHandler(HTTPAgentHandler):
-    snapshot_update_success = json_encode({'status': 'success', 'details': 'snapshot updated'})
+    snapshot_update_success = json_encode(
+        {'status': 'success', 'details': 'snapshot updated'})
 
     def post(self):
         if snapshot_validator.validate(self.json):

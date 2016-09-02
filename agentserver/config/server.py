@@ -24,15 +24,18 @@ class ServerConfig(Config):
     config_name = 'agentserver'
 
     def config_parser(self, parser):
-        parser.add_argument("--config", help="configuration file to read")
-        parser.add_argument("--log_level", help="log level")
-        parser.add_argument("--log_file", help="log file path")
-        parser.add_argument("--database", help="the database connection protocol://username:password@host:port/dbname")
-        parser.add_argument("--kafka", help="the kafka queue host:port")
-        parser.add_argument("--druid", help="the druid broker host:port")
-        parser.add_argument("--max_wait_seconds_before_shutdown", help="the number of seconds to wait before shutting down server")
-        parser.add_argument("--url", help="server url")
-        parser.add_argument("--port", help="server port")
+        parser.add_argument('--config', help='configuration file to read')
+        parser.add_argument('--log_level', help='log level')
+        parser.add_argument('--log_file', help='log file path')
+        parser.add_argument('--database', help='the database connection '
+                            'protocol://username:password@host:port/dbname')
+        parser.add_argument('--kafka', help='the kafka queue host:port')
+        parser.add_argument('--druid', help='the druid broker host:port')
+        parser.add_argument('--max_wait_seconds_before_shutdown',
+                            help='the number of seconds to wait '
+                                 'before shutting down server')
+        parser.add_argument('--url', help='server url')
+        parser.add_argument('--port', help='server port')
 
 
 config = ServerConfig()

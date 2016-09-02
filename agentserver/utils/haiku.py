@@ -2,12 +2,14 @@ from __future__ import division
 import random
 
 # http://preshing.com/20121224/how-to-generate-a-sequence-of-unique-random-integers/
+
+
 def permute(x):
     """
     permute returns a number in the range 0 to 9999
     that is unique for each x
     """
-    prime = 9887 # https://primes.utm.edu/lists/small/10000.txt
+    prime = 9887  # https://primes.utm.edu/lists/small/10000.txt
     offset = 453
     maximum = 9999
     x = (x + offset) % maximum
@@ -40,7 +42,7 @@ adjs = [
     "wandering", "withered", "wild", "black", "young", "holy", "solitary",
     "fragrant", "aged", "snowy", "proud", "floral", "restless", "divine",
     "polished", "ancient", "purple", "lively", "nameless"
- ]
+]
 
 
 nouns = [

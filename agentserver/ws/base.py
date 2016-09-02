@@ -4,7 +4,8 @@ import tornado.websocket
 
 
 class JSONWebsocket(tornado.websocket.WebSocketHandler):
-    invalid_json_error = json_encode({'status': 'error', 'errors': [{'details': 'invalid json'}]})
+    invalid_json_error = json_encode(
+        {'status': 'error', 'errors': [{'details': 'invalid json'}]})
 
     def authorize(self, uuid):
         """Override this method."""
