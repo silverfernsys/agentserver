@@ -1,7 +1,11 @@
 #! /usr/bin/env python
-import unittest, sys, os, logging
+import unittest
+import sys
+import os
+import logging
 
-sys.path.insert(0, os.path.join(os.path.split(os.path.dirname(os.path.abspath(__file__)))[0], 'agentserver'))
+sys.path.insert(0, os.path.join(os.path.split(
+    os.path.dirname(os.path.abspath(__file__)))[0], 'agentserver'))
 logging.disable(logging.CRITICAL)
 
 testmodules = [
@@ -11,7 +15,7 @@ testmodules = [
     'test_validators',
     'test_ws',
     'test_utils',
-    ]
+]
 
 suite = unittest.TestSuite()
 

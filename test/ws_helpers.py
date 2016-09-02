@@ -2,17 +2,17 @@ import base64
 import collections
 import os
 
-from tornado.concurrent import Future
 from tornado import simple_httpclient, httpclient
 from tornado.concurrent import TracebackFuture
 from tornado.ioloop import IOLoop
+from tornado.iostream import StreamClosedError
 from tornado.tcpclient import TCPClient
-from tornado.testing import AsyncHTTPTestCase, gen_test
-from tornado.web import Application
+from tornado.httputil import HTTPHeaders
 from tornado.websocket import WebSocketProtocol13
 
 
-from tornado.websocket import WebSocketHandler, websocket_connect, WebSocketError
+from tornado.websocket import (WebSocketHandler,
+                               WebSocketError)
 
 from ws.agent import SupervisorAgentHandler
 from ws.client import SupervisorClientHandler
@@ -22,6 +22,7 @@ class TestWebSocketHandler(WebSocketHandler):
     """Base class for testing handlers that exposes the on_close event.
     This allows for deterministic cleanup of the associated socket.
     """
+
     def initialize(self, close_future, compression_options=None):
         self.close_future = close_future
         self.compression_options = compression_options
@@ -34,12 +35,15 @@ class TestWebSocketHandler(WebSocketHandler):
 
 
 class MockSupervisorAgentHandler(SupervisorAgentHandler, TestWebSocketHandler):
+
     def on_close(self):
         self.close_future.set_result((self.close_code, self.close_reason))
         super(MockSupervisorAgentHandler, self).on_close()
 
 
-class MockSupervisorClientHandler(SupervisorClientHandler, TestWebSocketHandler):
+class MockSupervisorClientHandler(SupervisorClientHandler,
+                                  TestWebSocketHandler):
+
     def on_close(self):
         self.close_future.set_result((self.close_code, self.close_reason))
         super(MockSupervisorClientHandler, self).on_close()
@@ -50,8 +54,9 @@ class WebSocketClientConnection(simple_httpclient._HTTPConnection):
     This class should not be instantiated directly; use the
     `websocket_connect` function instead.
     """
-    def __init__(self, io_loop, request, headers=None, on_message_callback=None,
-                 compression_options=None):
+
+    def __init__(self, io_loop, request, headers=None,
+                 on_message_callback=None, compression_options=None):
         self.compression_options = compression_options
         self.connect_future = TracebackFuture()
         self.protocol = None
@@ -71,7 +76,7 @@ class WebSocketClientConnection(simple_httpclient._HTTPConnection):
             'Sec-WebSocket-Version': '13',
         })
 
-        if headers != None:
+        if headers is not None:
             request.headers.update(headers)
 
         if self.compression_options is not None:
@@ -175,12 +180,14 @@ class WebSocketClientConnection(simple_httpclient._HTTPConnection):
         pass
 
     def get_websocket_protocol(self):
+        options = self.compression_options
         return WebSocketProtocol13(self, mask_outgoing=True,
-                                   compression_options=self.compression_options)
+                                   compression_options=options)
 
 
-def websocket_connect(url, headers=None, io_loop=None, callback=None, connect_timeout=None,
-                      on_message_callback=None, compression_options=None):
+def websocket_connect(url, headers=None, io_loop=None, callback=None,
+                      connect_timeout=None, on_message_callback=None,
+                      compression_options=None):
     """Client-side websocket support.
     Takes a url and returns a Future whose result is a
     `WebSocketClientConnection`.
@@ -210,10 +217,11 @@ def websocket_connect(url, headers=None, io_loop=None, callback=None, connect_ti
         request = url
         # Copy and convert the headers dict/object (see comments in
         # AsyncHTTPClient.fetch)
-        request.headers = httputil.HTTPHeaders(request.headers)
+        request.headers = HTTPHeaders(request.headers)
     else:
         request = httpclient.HTTPRequest(url, connect_timeout=connect_timeout)
-    request = httpclient._RequestProxy(request, httpclient.HTTPRequest._DEFAULTS)
+    request = httpclient._RequestProxy(
+        request, httpclient.HTTPRequest._DEFAULTS)
     conn = WebSocketClientConnection(io_loop, request, headers=headers,
                                      on_message_callback=on_message_callback,
                                      compression_options=compression_options)

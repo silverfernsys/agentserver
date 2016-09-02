@@ -1,12 +1,12 @@
 #! /usr/bin/env python
 import unittest
-from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 from db.models import (models, User, UserAuthToken,
-    Agent, AgentAuthToken, AgentDetail)
+                       Agent, AgentAuthToken, AgentDetail)
 
 
 class TestDb(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         models.connect('sqlite:///:memory:')
@@ -19,23 +19,23 @@ class TestDb(unittest.TestCase):
     def test_users_and_user_tokens(self):
         # Generate users and tokens
         user = User(name='User A',
-             email='user_a@example.com',
-             is_admin=True,
-             password='randompassworda')
+                    email='user_a@example.com',
+                    is_admin=True,
+                    password='randompassworda')
+        tokens = [UserAuthToken(user=user),
+                  UserAuthToken(user=User(name='User B',
+                                          email='user_b@example.com',
+                                          is_admin=False,
+                                          password='randompasswordb')),
+                  UserAuthToken(user=User(name='User C',
+                                          email='user_c@example.com',
+                                          is_admin=True,
+                                          password='randompasswordc'))]
+        UserAuthToken.save_all(tokens)
 
-        UserAuthToken.save_all([UserAuthToken(user=user),
-            UserAuthToken(user=User(name='User B',
-             email='user_b@example.com',
-             is_admin=False,
-             password='randompasswordb')),
-            UserAuthToken(user=User(name='User C',
-             email='user_c@example.com',
-             is_admin=True,
-             password='randompasswordc'))])
-
-        with self.assertRaises(IntegrityError) as e:
+        with self.assertRaises(IntegrityError):
             User(name='User D', email='user_a@example.com',
-             is_admin=False, password='randompasswordd').save()
+                 is_admin=False, password='randompasswordd').save()
 
         models.session.rollback()
 
@@ -55,7 +55,8 @@ class TestDb(unittest.TestCase):
 
         # Test delete method
         self.assertTrue(User.get(email=user.email).delete())
-        self.assertRaises(AttributeError, lambda: User.get('non-existent@example.com').delete())
+        self.assertRaises(AttributeError, lambda: User.get(
+            'non-existent@example.com').delete())
 
         self.assertEqual(User.count(), 2)
         self.assertEqual(UserAuthToken.count(), 2)
@@ -74,14 +75,15 @@ class TestDb(unittest.TestCase):
             AgentAuthToken(agent=Agent(name='Agent 2'))])
 
         AgentDetail(agent=agent, dist_name='Debian', dist_version='7.0',
-            hostname='host', num_cores=8, memory=160000, processor='x86_64').save()
+                    hostname='host', num_cores=8, memory=160000,
+                    processor='x86_64').save()
 
         self.assertEqual(Agent.count(),
-            agents_before + 3)
+                         agents_before + 3)
         self.assertEqual(AgentAuthToken.count(),
-            agent_tokens_before + 3)
+                         agent_tokens_before + 3)
         self.assertEqual(AgentDetail.count(),
-            agent_details_before + 1)
+                         agent_details_before + 1)
 
         # Test authorize method
         self.assertEqual(Agent.authorize(agent.token.uuid), agent)
@@ -89,15 +91,16 @@ class TestDb(unittest.TestCase):
 
         # Test delete method
         self.assertTrue(Agent.get(name=agent.name).delete())
-        self.assertRaises(AttributeError, lambda: Agent.get(name='non-existent agent').delete())
+        self.assertRaises(AttributeError, lambda: Agent.get(
+            name='non-existent agent').delete())
         self.assertEqual(Agent.get(), None)
 
         self.assertEqual(Agent.count(),
-            agents_before + 2)
+                         agents_before + 2)
         self.assertEqual(AgentAuthToken.count(),
-            agent_tokens_before + 2)
+                         agent_tokens_before + 2)
         self.assertEqual(AgentDetail.count(),
-            agent_details_before)
+                         agent_details_before)
 
     def test_agent_detail(self):
         agent = Agent(name='Agent')
@@ -106,16 +109,17 @@ class TestDb(unittest.TestCase):
 
         self.assertEqual(AgentDetail.count(), 0)
         args = {'dist_name': 'Ubuntu', 'dist_version': '15.10',
-            'hostname': 'client', 'num_cores': 3,
-            'memory': 1040834560, 'processor': 'x86_64'}
+                'hostname': 'client', 'num_cores': 3,
+                'memory': 1040834560, 'processor': 'x86_64'}
         created = AgentDetail.update_or_create(agent.id, **args)
         self.assertTrue(created)
         self.assertEqual(AgentDetail.count(), 1)
 
         args = {'dist_name': 'Debian', 'dist_version': '7.0',
-            'hostname': 'client2', 'num_cores': 6,
-            'memory': 8888888, 'processor': 'amd64'}
+                'hostname': 'client2', 'num_cores': 6,
+                'memory': 8888888, 'processor': 'amd64'}
         created = AgentDetail.update_or_create(agent.id, **args)
         self.assertFalse(created)
         self.assertEqual(AgentDetail.count(), 1)
-        self.assertEqual(agent.detail.id, AgentDetail.detail_for_agent_id(agent.id).id)
+        self.assertEqual(
+            agent.detail.id, AgentDetail.detail_for_agent_id(agent.id).id)
