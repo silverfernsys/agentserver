@@ -5,7 +5,8 @@ from config.admin import config
 from utils.haiku import haiku_name
 from datetime import datetime
 from setproctitle import setproctitle
-from tabulate import tabulate
+from tabulate import tabulate, tabulate_formats
+from termcolor import colored
 
 import getpass, sys
 
@@ -58,10 +59,8 @@ class Admin(object):
             else:
                 break
 
-        user = User(name=name,
-                     email=email,
-                     is_admin=is_admin,
-                     password=password_1).save()
+        user = User(name=name, email=email, 
+            is_admin=is_admin, password=password_1).save()
 
         print('Successfully created user {email}.'.format(email=user.email))
 
@@ -92,7 +91,7 @@ class Admin(object):
 
     def list_users(self):
         table = [[user.name, user.email, user.admin, user.created] for user in User.all()]
-        print(tabulate(table, headers=['Name','Email', 'Admin', 'Created'], tablefmt='plain'))
+        print(tabulate(table, headers=self.bold_headers(['Name','Email', 'Admin', 'Created']), tablefmt='plain'))
 
     def create_user_auth_token(self):
         print('Create token: please authenticate...')
@@ -124,7 +123,7 @@ class Admin(object):
 
     def list_user_auth_tokens(self):
         table = [[token.user.email, token.uuid, token.created] for token in UserAuthToken.all()]
-        print(tabulate(table, headers=['Email', 'Token', 'Created'], tablefmt='plain'))
+        print(tabulate(table, headers=self.bold_headers(['Email', 'Token', 'Created']), tablefmt='plain'))
 
     def create_agent(self):
         print('Create agent: please authenticate...')
@@ -148,7 +147,7 @@ class Admin(object):
 
     def list_agents(self):
         table = [[agent.name, agent.id, agent.created] for agent in Agent.all()]
-        print(tabulate(table, headers=['Name', 'id', 'Created'], tablefmt='plain'))
+        print(tabulate(table, headers=self.bold_headers(['Name', 'id', 'Created']), tablefmt='plain'))
 
     def create_agent_auth_token(self):
         print('Create agent token: please authenticate...')
@@ -186,7 +185,19 @@ class Admin(object):
 
     def list_agent_auth_tokens(self):
         table = [[token.agent.name, token.agent.id, token.uuid, token.created] for token in AgentAuthToken.all()]
-        print(tabulate(table, headers=['Name', 'id', 'Token', 'Created'], tablefmt='plain'))
+        headers = self.bold_headers(['Name', 'id', 'Token', 'Created'])
+        print(tabulate(table, headers=headers, tablefmt='plain'))
+
+    def bold_headers(self, headers):
+        return [colored(h, None, attrs=['bold']) for h in headers]
+
+    # def print_all_formats(self):
+    #     table = [[token.agent.name, token.agent.id, token.uuid, token.created] for token in AgentAuthToken.all()]
+    #     headers = self.bold_headers(['Name', 'id', 'Token', 'Created'])
+    #     for style in tabulate_formats:
+    #         print("STYLE: %s\n" % style.upper())
+    #         print(tabulate(table, headers=headers, tablefmt=style))
+    #         print('\n\n')
 
 
 def main():

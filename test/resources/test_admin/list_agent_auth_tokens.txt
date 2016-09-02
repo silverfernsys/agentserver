@@ -1,5 +1,5 @@
-Created                       id                            Name                          Token                                                                 
-01-01-2016 00:00:00           1                             Agent 0                       ae8d68dabc68268c0f895ff1b9fc46f3e94d3097                              
-01-02-2016 00:00:00           2                             Agent 1                       3913a8ef57139a71a7aebdb24d0c4dc25e8acb41                              
-01-03-2016 00:00:00           3                             Agent 2                       8507ab2c7fe1ab3789b996f16b1a960ccaf29755                              
-01-04-2016 00:00:00           4                             Agent 3                       25babaa14973ae688edbaa27893a005ee662dfb0                              
+[1mName[0m       [1mid[0m  [1mToken[0m                                     [1mCreated[0m
+Agent 0     1  ae8d68dabc68268c0f895ff1b9fc46f3e94d3097  01-01-2016 00:00:00
+Agent 1     2  3913a8ef57139a71a7aebdb24d0c4dc25e8acb41  01-02-2016 00:00:00
+Agent 2     3  8507ab2c7fe1ab3789b996f16b1a960ccaf29755  01-03-2016 00:00:00
+Agent 3     4  25babaa14973ae688edbaa27893a005ee662dfb0  01-04-2016 00:00:00

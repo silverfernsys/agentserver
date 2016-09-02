@@ -164,7 +164,6 @@ class TestApp(unittest.TestCase):
                      email='user_c@example.com',
                      is_admin=True,
                      password='randompasswordc'))])
-        # models.session.commit()
         expected_output = self.read_file('list_user_auth_tokens.txt')
         with capture(self.admin.list_user_auth_tokens) as output:
             self.assertEqual(output, expected_output)
