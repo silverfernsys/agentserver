@@ -3,12 +3,13 @@ from db.models import models, User, Agent, UserAuthToken, AgentAuthToken
 from config import ConfigError
 from config.admin import config
 from utils.haiku import haiku_name
-from datetime import datetime
 from setproctitle import setproctitle
-from tabulate import tabulate, tabulate_formats
+from tabulate import tabulate
 from termcolor import colored
 
-import getpass, sys
+import getpass
+import sys
+
 
 class Admin(object):
     def __init__(self, config):
@@ -59,8 +60,8 @@ class Admin(object):
             else:
                 break
 
-        user = User(name=name, email=email, 
-            is_admin=is_admin, password=password_1).save()
+        user = User(name=name, email=email, is_admin=is_admin,
+                    password=password_1).save()
 
         print('Successfully created user {email}.'.format(email=user.email))
 
@@ -71,7 +72,8 @@ class Admin(object):
             if user and user.is_admin:
                 break
             else:
-                print('{email} is not an admin email address...'.format(email=email))
+                print('{email} is not an admin email address...'
+                      .format(email=email))
         while True:
             password = getpass.getpass('Enter password: ')
             if user.authenticates(password):
@@ -90,8 +92,9 @@ class Admin(object):
             print('Could not find {email}.'.format(email=email))
 
     def list_users(self):
-        table = [[user.name, user.email, user.admin, user.created] for user in User.all()]
-        print(tabulate(table, headers=self.bold_headers(['Name','Email', 'Admin', 'Created']), tablefmt='plain'))
+        table = [[user.name, user.email, user.admin, user.created]
+                 for user in User.all()]
+        print(tabulate(table, headers=self.bold_headers(['Name', 'Email', 'Admin', 'Created']), tablefmt='plain'))
 
     def create_user_auth_token(self):
         print('Create token: please authenticate...')
@@ -189,15 +192,9 @@ class Admin(object):
         print(tabulate(table, headers=headers, tablefmt='plain'))
 
     def bold_headers(self, headers):
-        return [colored(h, None, attrs=['bold']) for h in headers]
-
-    # def print_all_formats(self):
-    #     table = [[token.agent.name, token.agent.id, token.uuid, token.created] for token in AgentAuthToken.all()]
-    #     headers = self.bold_headers(['Name', 'id', 'Token', 'Created'])
-    #     for style in tabulate_formats:
-    #         print("STYLE: %s\n" % style.upper())
-    #         print(tabulate(table, headers=headers, tablefmt=style))
-    #         print('\n\n')
+        # color=None for 'white'
+        # color='green' for 'green'
+        return [colored(h, color=None, attrs=['bold']) for h in headers]
 
 
 def main():
