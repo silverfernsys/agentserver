@@ -1,4 +1,5 @@
 *.pyc
+*.py,cover
 .DS_Store
 .cache
 .tox
