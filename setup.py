@@ -113,8 +113,10 @@ setup(
     # pip to create the appropriate form of executable for the target platform.
     entry_points={
         'console_scripts': [
-            'agentserver=agentserver.server:main',
-            'agentserveradmin=agentserver.admin:main',
+            'agentserver=server:main',
+            'agentserveradmin=admin:main',
+            # 'agentserver=agentserver.server:main',
+            # 'agentserveradmin=agentserver.admin:main',
         ],
     },
 )
