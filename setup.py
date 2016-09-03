@@ -1,25 +1,25 @@
 # Always prefer setuptools over distutils
 from setuptools import setup, find_packages
-from pkg_resources import get_distribution
+# from pkg_resources import get_distribution
 # To use a consistent encoding
 from codecs import open
 from os import path
 
-here = path.abspath(path.dirname(__file__))
+import agentserver
 
-name='agentserver'
+here = path.abspath(path.dirname(__file__))
 
 # Get the long description from the README file
 with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
-    name=name,
+    name='agentserver',
 
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version=get_distribution(name).version,
+    version=agentserver.__version__,
 
     description='A server for managing monitoring agents',
     long_description=long_description,
@@ -79,6 +79,8 @@ setup(
         'tornado',
     ],
 
+    dependency_links = ['https://github.com/silverfernsys/pydruid.git=pydruid-0.4.0beta'],
+
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
     # for example:
@@ -86,7 +88,7 @@ setup(
     extras_require={
         'postgres': ['psycopg2'],
         'mysql': ['PyMySQL'],
-        'druid': ['git+https://github.com/silverfernsys/pydruid.git', 'kafka-python'],
+        'druid': ['pydruid', 'kafka-python'],
         'test': ['coverage', 'pytest'],
     },
 
