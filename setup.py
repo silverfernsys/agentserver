@@ -7,12 +7,14 @@ from os import path
 
 here = path.abspath(path.dirname(__file__))
 
+name='agentserver'
+
 # Get the long description from the README file
 with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
-    name='agentserver',
+    name=name,
 
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
