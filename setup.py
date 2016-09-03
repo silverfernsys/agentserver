@@ -61,7 +61,7 @@ setup(
     # simple. Or you can use find_packages().
     # packages=find_packages(exclude=['contrib', 'docs', 'test']),
     packages=find_packages(),
-    package_dir={'':'agentserver'},
+    # package_dir={'':'agentserver'},
     
     include_package_data=True,
     # Alternatively, if you want to distribute just a my_module.py, uncomment
