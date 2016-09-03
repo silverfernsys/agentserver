@@ -82,7 +82,7 @@ setup(
         'tornado',
     ],
 
-    dependency_links = ['https://github.com/silverfernsys/pydruid.git=pydruid-0.4.0beta'],
+    dependency_links=['https://github.com/silverfernsys/pydruid.git=pydruid-0.4.0beta'],
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
