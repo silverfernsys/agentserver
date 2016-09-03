@@ -84,7 +84,7 @@ setup(
     extras_require={
         'postgres': ['psycopg2'],
         'mysql': ['PyMySQL'],
-        'druid': ['https://github.com/silverfernsys/pydruid.git', 'kafka-python'],
+        'druid': ['git+https://github.com/silverfernsys/pydruid.git', 'kafka-python'],
         'test': ['coverage', 'pytest'],
     },
 
