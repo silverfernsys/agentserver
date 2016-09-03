@@ -1,9 +1,14 @@
-*.pyc
-*.py,cover
+# general things to ignore
 .DS_Store
+build/
+dist/
+*.egg-info/
+*.egg
+*.py[cod]
+__pycache__/
+*.so
+*~
+
 .cache
 .tox
 .coverage
-AgentServer.egg-info/
-test/__pycache__
-
