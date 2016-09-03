@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 from tornado.escape import json_encode
 from db.models import AgentDetail
 from db.timeseries import kafka

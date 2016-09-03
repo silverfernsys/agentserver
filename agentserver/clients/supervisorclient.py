@@ -1,7 +1,8 @@
+from __future__ import absolute_import
 from tornado.escape import json_encode
 from ws.agent import SupervisorAgentHandler
-from supervisorclientcoordinator import scc
-from constants import (SUPERVISOR_COMMANDS,
+from clients.supervisorclientcoordinator import scc
+from clients.constants import (SUPERVISOR_COMMANDS,
                        SUBSCRIBE_COMMAND, UNSUBSCRIBE_COMMAND)
 from utils.validators import cmd_validator
 from utils.ip import get_ip

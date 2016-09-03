@@ -1,1 +1,2 @@
-from base import ConfigError
+from __future__ import absolute_import
+from config.base import ConfigError

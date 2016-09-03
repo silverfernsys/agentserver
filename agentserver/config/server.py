@@ -1,5 +1,6 @@
+from __future__ import absolute_import
 from os.path import dirname, join, expanduser
-from base import Config
+from config.base import Config
 
 
 class ServerConfig(Config):

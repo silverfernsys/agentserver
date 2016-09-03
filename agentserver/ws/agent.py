@@ -1,6 +1,7 @@
+from __future__ import absolute_import
 from db.models import Agent
 from agents.supervisoragent import SupervisorAgent
-from base import JSONWebsocket
+from ws.base import JSONWebsocket
 
 
 class SupervisorAgentHandler(JSONWebsocket):

@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 from ConfigParser import SafeConfigParser, NoOptionError, NoSectionError
 from argparse import ArgumentParser
 

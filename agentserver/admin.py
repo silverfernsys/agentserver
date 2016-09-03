@@ -1,7 +1,8 @@
 #! /usr/bin/env python
+from __future__ import absolute_import
 from db.models import models, User, Agent, UserAuthToken, AgentAuthToken
 from config import ConfigError
-from config.admin import config
+from config.admin import config #, ConfigError
 from utils.haiku import haiku_name
 from setproctitle import setproctitle
 from tabulate import tabulate

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import absolute_import
 from tornado.escape import json_decode, json_encode
 import tornado.websocket
 
