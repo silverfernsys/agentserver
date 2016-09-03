@@ -3,6 +3,8 @@ import subprocess
 import json
 from datetime import datetime
 from pydruid.client import PyDruid
+from pydruid.utils.aggregators import (longmax,
+                                       doublemax)
 from pydruid.utils.filters import Dimension
 from kafka import KafkaProducer
 from utils.iso_8601 import (validate_iso_8601_period,
@@ -96,12 +98,6 @@ class DruidAccessLayer(object):
         except Exception:
             raise Exception('Druid connection error: {0}'.format(uri))
 
-    def __longmax__(self, raw_metric):
-        return {"type": "longMax", "fieldName": raw_metric}
-
-    def __doublemax__(self, raw_metric):
-        return {"type": "doubleMax", "fieldName": raw_metric}
-
     def __validate_granularity__(self, granularity, supported_granularities):
         if granularity in self.timeseries_granularities:
             query_granularity = granularity
@@ -138,8 +134,8 @@ class DruidAccessLayer(object):
             granularity=query_granularity,
             descending=descending,
             intervals=intervals,
-            aggregations={'cpu': self.__doublemax__('cpu'),
-                          'mem': self.__longmax__('mem')},
+            aggregations={'cpu': doublemax('cpu'),
+                          'mem': longmax('mem')},
             context={'skipEmptyBuckets': 'true'},
             filter=(Dimension('agent_id') == agent_id) &
             (Dimension('process_name') == process_name))
