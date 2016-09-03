@@ -64,7 +64,7 @@ setup(
 
     # Alternatively, if you want to distribute just a my_module.py, uncomment
     # this:
-    py_modules=['agentserver'],
+    # py_modules=['agentserver'],
 
     # List run-time dependencies here.  These will be installed by pip when
     # your project is installed. For an analysis of "install_requires" vs pip's
@@ -113,10 +113,8 @@ setup(
     # pip to create the appropriate form of executable for the target platform.
     entry_points={
         'console_scripts': [
-            'agentserver=server:main',
-            'agentserveradmin=admin:main',
-            # 'agentserver=agentserver.server:main',
-            # 'agentserveradmin=agentserver.admin:main',
+            'agentserver=agentserver.server:main',
+            'agentserveradmin=agentserver.admin:main',
         ],
     },
 )
