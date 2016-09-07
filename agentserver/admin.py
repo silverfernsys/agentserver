@@ -16,13 +16,13 @@ class Admin(object):
 
     def __init__(self, config):
         setproctitle('agentserveradmin')
-        print('Connecting to database...')
         self.config = config
         try:
             self.config.parse()
         except ConfigError as e:
             print('{0} Exiting.\n'.format(e.message))
             sys.exit(1)
+        print('Connecting to database...')
         self.connect(config.database)
 
     def run(self):

@@ -21,8 +21,10 @@ class AdminConfig(Config):
     def config_parser(self, parser):
         choices = ['DEBUG', 'INFO', 'WARNING',
                    'ERROR', 'CRITICAL']
+
         subparsers = parser.add_subparsers(
-            help='sub-command help', dest='subparser_name')
+            title='available commands', help='command help',
+            dest='command', metavar='')
 
         subparsers.add_parser(name='create_user',
                               help='create new user')
@@ -53,7 +55,7 @@ class AdminConfig(Config):
             subparser.add_argument('--config',
                                    help='path to the configuration file.')
             subparser.add_argument('--log_level', choices=choices,
-                                   help='log level')
+                                   help='log level') #, metavar='asdf')
             subparser.add_argument('--log_file', help='log file path')
             subparser.add_argument('--database', help='url to database')
 

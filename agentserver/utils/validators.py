@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from cerberus import Validator
 from clients.constants import (SUPERVISOR_COMMANDS,
                                SUBSCRIBE_COMMAND, UNSUBSCRIBE_COMMAND)
+from datetime import datetime
 
 
 system_stats_schema = {
@@ -68,3 +69,10 @@ cmd_schema = {
 }
 
 cmd_validator = Validator(cmd_schema)
+
+def timestamp(timestamp_str):
+    try:
+        datetime.strptime(timestamp_str, '%Y-%m-%dT%H:%M:%S.%fZ')
+        return True
+    except:
+        return False

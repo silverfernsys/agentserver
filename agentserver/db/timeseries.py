@@ -7,8 +7,7 @@ from pydruid.utils.aggregators import (longmax,
                                        doublemax)
 from pydruid.utils.filters import Dimension
 from kafka import KafkaProducer
-from utils.iso_8601 import (validate_iso_8601_period,
-                            validate_iso_8601_interval)
+from iso8601utils import validators
 
 
 class KafkaAccessLayer(object):
@@ -101,7 +100,7 @@ class DruidAccessLayer(object):
     def __validate_granularity__(self, granularity, supported_granularities):
         if granularity in self.timeseries_granularities:
             query_granularity = granularity
-        elif validate_iso_8601_period(granularity):
+        elif validators.duration(granularity):
             query_granularity = {'type': 'period', 'period': granularity}
         else:
             raise ValueError(
@@ -109,7 +108,7 @@ class DruidAccessLayer(object):
         return query_granularity
 
     def __validate_intervals__(self, intervals):
-        if not validate_iso_8601_interval(intervals):
+        if not validators.interval(intervals):
             raise ValueError('Unsupported interval "{0}"'.format(intervals))
         return intervals
 

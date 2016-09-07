@@ -5,7 +5,7 @@ from datetime import datetime
 from tornado.escape import json_encode
 from db.models import Agent
 from db.timeseries import druid
-from utils.iso_8601 import iso_8601_interval_to_datetimes
+from iso8601utils import parsers
 
 
 class SupervisorProcess(object):
@@ -142,7 +142,7 @@ class SupervisorClientCoordinator(object):
             granularity, druid.timeseries_granularities)
         druid.__validate_intervals__(intervals)
 
-        (start, end) = iso_8601_interval_to_datetimes(intervals)
+        (start, end) = parsers.interval(intervals)
 
         self.agents[id].processes[process].subscribe(client)
 

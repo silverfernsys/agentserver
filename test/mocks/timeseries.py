@@ -5,8 +5,7 @@ import re
 from datetime import datetime, timedelta
 from pydruid.utils.filters import Filter
 from db.timeseries import DruidAccessLayer
-from utils.iso_8601 import (iso_8601_interval_to_datetimes,
-                            iso_8601_period_to_timedelta)
+from iso8601utils import parsers
 
 
 resources = os.path.abspath(os.path.join(
@@ -83,7 +82,7 @@ class PyDruidMock(object):
             # process_name = f['fields'][1]['value']
 
             (interval_start, interval_end) = \
-                iso_8601_interval_to_datetimes(intervals)
+                parsers.interval(intervals)
             if interval_end is None:
                 interval_end = datetime.now()
 
@@ -91,8 +90,7 @@ class PyDruidMock(object):
                 query_granularity = self.__granularity_to_timedelta__(
                     granularity)
             else:
-                query_granularity = iso_8601_period_to_timedelta(granularity[
-                                                                 'period'])
+                query_granularity = parsers.duration(granularity['period'])
 
             body = []
             curr_time = interval_start

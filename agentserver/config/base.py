@@ -34,7 +34,7 @@ class Config(object):
         raise NotImplemented('config_parser must be implemented')
 
     def parse_config(self, paths):
-        parser = ArgumentParser()
+        parser = ArgumentParser() # usage='tool [command] [options]', add_help=False
         self.config_parser(parser)
 
         args = parser.parse_args()
@@ -55,7 +55,7 @@ class Config(object):
         except NoSectionError as e:
             raise MissingSection(e.section)
 
-        if hasattr(args, 'subparser_name'):
+        if hasattr(args, 'command'):
             data['command'] = args.subparser_name
 
         self.__dict__.update(data)

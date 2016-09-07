@@ -74,6 +74,7 @@ setup(
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=[
         'Cerberus',
+        'iso8601utils',
         'passlib',
         'pyfiglet',
         'setproctitle',
@@ -93,7 +94,7 @@ setup(
         'postgres': ['psycopg2'],
         'mysql': ['PyMySQL'],
         'druid': ['pydruid', 'kafka-python'],
-        'test': ['coverage', 'pytest'],
+        'test': ['coverage', 'pytest', 'mock'],
     },
 
     # If there are data files included in your packages that need to be

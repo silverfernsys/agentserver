@@ -32,7 +32,7 @@ from ws.agent import SupervisorAgentHandler
 from ws.client import SupervisorClientHandler
 from db.models import models, User, UserAuthToken, Agent, AgentAuthToken
 from db.timeseries import kafka, druid
-from utils.iso_8601 import validate_timestamp
+from utils import validators
 from clients.supervisorclient import SupervisorClient
 from clients.supervisorclientcoordinator import scc
 from agents.supervisoragent import SupervisorAgent
@@ -413,7 +413,7 @@ class SupervisorClientHandlerTest(WebSocketBaseTestCase):
         self.assertEqual(data['process'], 'process_0')
         self.assertEqual(data['id'], self.AGENT_ID)
         for stat in data['stats']:
-            self.assertTrue(validate_timestamp(stat['timestamp']))
+            self.assertTrue(validators.timestamp(stat['timestamp']))
             self.assertTrue(type(stat['cpu']) == float)
             self.assertTrue(type(stat['mem']) == int)
 
@@ -452,7 +452,7 @@ class SupervisorClientHandlerTest(WebSocketBaseTestCase):
         self.assertEqual(data['process'], 'process_0')
         self.assertEqual(data['id'], self.AGENT_ID)
         for stat in data['stats']:
-            self.assertTrue(validate_timestamp(stat['timestamp']))
+            self.assertTrue(validators.timestamp(stat['timestamp']))
             self.assertTrue(type(stat['cpu']) == float)
             self.assertTrue(type(stat['mem']) == int)
 
@@ -473,7 +473,7 @@ class SupervisorClientHandlerTest(WebSocketBaseTestCase):
         self.assertEqual(data['process'], 'process_1')
         self.assertEqual(data['id'], self.AGENT_ID)
         for stat in data['stats']:
-            self.assertTrue(validate_timestamp(stat['timestamp']))
+            self.assertTrue(validators.timestamp(stat['timestamp']))
             self.assertTrue(type(stat['cpu']) == float)
             self.assertTrue(type(stat['mem']) == int)
 
