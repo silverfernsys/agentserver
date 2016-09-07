@@ -28,12 +28,18 @@ def capture(command, *args, **kwargs):
 
 
 class MockConfig(object):
+    class Arguments(object):
+        pass
+
+    class ConfigObject(object):
+        pass
 
     def __init__(self):
-        self.log_level = 'DEBUG'
-        self.log_file = NamedTemporaryFile().name
-        self.database = 'sqlite:///:memory:'
-        self.config = None
+        self.arguments = self.Arguments()
+        self.arguments.agentserver = self.ConfigObject()
+        self.arguments.agentserver.log_level = 'DEBUG'
+        self.arguments.agentserver.log_file = NamedTemporaryFile().name
+        self.arguments.agentserver.database = 'sqlite:///:memory:'
 
     def parse(self):
         pass

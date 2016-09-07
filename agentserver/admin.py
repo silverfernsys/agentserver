@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 from __future__ import absolute_import
 from db.models import models, User, Agent, UserAuthToken, AgentAuthToken
-from config import ConfigError
+from configutil import ConfigError
 from config.admin import config
 from utils.haiku import haiku_name
 from setproctitle import setproctitle
@@ -23,10 +23,10 @@ class Admin(object):
             print('{0} Exiting.\n'.format(e.message))
             sys.exit(1)
         print('Connecting to database...')
-        self.connect(config.database)
+        self.connect(config.arguments.agentserver.database)
 
     def run(self):
-        command = getattr(self, self.config.command)
+        command = getattr(self, self.config.arguments.command)
         command()
 
     def connect(self, uri):

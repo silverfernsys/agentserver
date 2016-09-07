@@ -10,7 +10,7 @@ import tornado.httpserver
 from pyfiglet import figlet_format
 from setproctitle import setproctitle
 from termcolor import cprint
-from config import ConfigError
+from configutil import ConfigError
 from config.server import config
 from db.models import models
 from db.timeseries import kafka, druid
@@ -44,7 +44,9 @@ class Server(object):
             print('{0} Please run server as root. Exiting.'.format(e.message))
             sys.exit(1)
         self.print_splash_page()
-        self.connect(config.database, config.kafka, config.druid)
+        self.connect(config.arguments.agentserver.database,
+            config.arguments.agentserver.kafka,
+            config.arguments.agentserver.druid)
         self.logger = logging.getLogger('Web Server')
         scc.initialize()
 
@@ -61,8 +63,8 @@ class Server(object):
         ])
 
         self.max_wait_seconds_before_shutdown = int(
-            config.max_wait_seconds_before_shutdown)
-        port = config.port
+            config.arguments.agentserver.max_wait_seconds_before_shutdown)
+        port = config.arguments.agentserver.port
         server = tornado.httpserver.HTTPServer(application)
         server.listen(port)
         self.logger.info('Running on port {0}'.format(port))

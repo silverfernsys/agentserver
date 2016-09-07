@@ -28,9 +28,9 @@ class LogFileError(LoggingError):
 
 def config_logging(config):
     try:
-        filename = config.log_file
+        filename = config.arguments.agentserver.log_file
         format = '%(asctime)s::%(levelname)s::%(name)s::%(message)s'
-        level = log_vals.get(config.log_level, logging.DEBUG)
+        level = log_vals.get(config.arguments.agentserver.log_level, logging.DEBUG)
         logging.basicConfig(filename=filename,
                             format=format,
                             level=level)
