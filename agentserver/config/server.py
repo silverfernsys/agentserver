@@ -3,7 +3,7 @@ from configutil import Config
 
 config = Config()
 config.add_paths([join(dirname(__file__), 'agentserver.conf'),
-    expanduser('~/agentserver.conf'),
+    expanduser('~/.agentserver/agentserver.conf'),
     '/etc/agentserver/agentserver.conf'
 ])
 
