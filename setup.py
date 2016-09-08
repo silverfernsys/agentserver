@@ -73,7 +73,7 @@ setup(
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=[
-        'Cerberus',
+        'Cerberus==0.9.2',
         'configutil',
         'iso8601utils',
         'passlib',
@@ -110,7 +110,7 @@ setup(
     # http://docs.python.org/3.4/distutils/setupscript.html#installing-additional-files # noqa
     # In this case, 'data_file' will be installed into '<sys.prefix>/my_data'
     # data_files=[('my_data', ['data/data_file'])],
-    data_files=[('~/.agentserver', ['data/conf/agentserver.conf'])],
+    # data_files=[(path.expanduser('~/.agentserver'), ['data/conf/agentserver.conf'])],
 
     # To provide executable scripts, use entry points in preference to the
     # "scripts" keyword. Entry points provide cross-platform support and allow
@@ -118,7 +118,7 @@ setup(
     entry_points={
         'console_scripts': [
             'agentserver=agentserver.server:main',
-            'agentserveradmin=agentserver.admin:main',
+            'agentserveradmin=agentserver.admin:main', 
         ],
     },
 )
