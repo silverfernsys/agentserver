@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 from tornado.escape import json_decode, json_encode
 from tornado.web import RequestHandler
 

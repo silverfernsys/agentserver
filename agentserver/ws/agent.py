@@ -1,6 +1,6 @@
-from __future__ import absolute_import
-from db.models import Agent
+# from __future__ import absolute_import
 from agents.supervisoragent import SupervisorAgent
+from db.models import Agent
 from ws.base import JSONWebsocket
 
 

@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 from json import JSONEncoder
 
 # http://stackoverflow.com/questions/3768895/how-to-make-a-class-json-serializable

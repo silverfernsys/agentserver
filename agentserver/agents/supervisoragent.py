@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 from tornado.escape import json_encode
 from db.models import AgentDetail
 from db.timeseries import kafka
@@ -7,6 +6,7 @@ from utils.validators import (system_stats_validator,
                               states_validator, snapshot_validator)
 from utils.ip import get_ip
 from utils.log import log_kafka
+
 
 SNAPSHOT = 'snapshot'
 STATE = 'state'

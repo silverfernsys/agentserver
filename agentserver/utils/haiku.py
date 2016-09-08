@@ -1,4 +1,3 @@
-from __future__ import absolute_import, division
 import random
 
 # http://preshing.com/20121224/how-to-generate-a-sequence-of-unique-random-integers/

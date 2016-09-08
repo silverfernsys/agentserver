@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 from datetime import datetime
 from sqlalchemy import (Column, Integer, String, DateTime, ForeignKey,
                         Boolean, create_engine)

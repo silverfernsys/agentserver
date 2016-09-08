@@ -1,8 +1,7 @@
-from __future__ import absolute_import
+from datetime import datetime
 from cerberus import Validator
 from clients.constants import (SUPERVISOR_COMMANDS,
                                SUBSCRIBE_COMMAND, UNSUBSCRIBE_COMMAND)
-from datetime import datetime
 
 
 system_stats_schema = {

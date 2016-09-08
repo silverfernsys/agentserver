@@ -1,15 +1,14 @@
 #! /usr/bin/env python
-from __future__ import absolute_import
-from db.models import models, User, Agent, UserAuthToken, AgentAuthToken
+import getpass
+import sys
+
 from configutil import ConfigError
-from config.admin import config
-from utils.haiku import haiku_name
 from setproctitle import setproctitle
 from tabulate import tabulate
 from termcolor import colored
-
-import getpass
-import sys
+from config.admin import config
+from db.models import models, User, Agent, UserAuthToken, AgentAuthToken
+from utils.haiku import haiku_name
 
 
 class Admin(object):

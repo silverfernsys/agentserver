@@ -1,11 +1,10 @@
-from __future__ import absolute_import
 import threading
 from time import sleep
 from datetime import datetime
+from iso8601utils import parsers
 from tornado.escape import json_encode
 from db.models import Agent
 from db.timeseries import druid
-from iso8601utils import parsers
 
 
 class SupervisorProcess(object):
