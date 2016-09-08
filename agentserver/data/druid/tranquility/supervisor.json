@@ -1,0 +1,68 @@
+{
+  "dataSources" : {
+    "supervisor" : {
+      "spec" : {
+        "dataSchema" : {
+          "dataSource" : "supervisor",
+          "parser" : {
+            "type" : "string",
+            "parseSpec" : {
+              "timestampSpec" : {
+                "column" : "timestamp",
+                "format" : "auto"
+              },
+              "dimensionsSpec" : {
+                "dimensions" : ["agent_id", "process_name"]
+              },
+              "format" : "json"
+            }
+          },
+          "granularitySpec" : {
+            "type" : "uniform",
+            "segmentGranularity" : "minute",
+            "queryGranularity" : "none"
+          },
+          "metricsSpec" : [
+            {
+              "name" : "count",
+              "type" : "count"
+            },
+            {
+              "name" : "cpu",
+              "type" : "doubleMax",
+              "fieldName" : "cpu"
+            },
+            {
+              "fieldName" : "mem",
+              "name" : "mem",
+              "type" : "longMax"
+            }
+          ]
+        },
+        "ioConfig" : {
+          "type" : "realtime"
+        },
+        "tuningConfig" : {
+          "type" : "realtime",
+          "maxRowsInMemory" : "100000",
+          "intermediatePersistPeriod" : "PT10M",
+          "windowPeriod" : "PT10M"
+        }
+      },
+      "properties" : {
+        "task.partitions" : "1",
+        "task.replicants" : "1",
+        "topicPattern" : "supervisor"
+      }
+    }
+  },
+  "properties" : {
+    "zookeeper.connect" : "localhost",
+    "druid.discovery.curator.path" : "/druid/discovery",
+    "druid.selectors.indexing.serviceName" : "druid/overlord",
+    "commit.periodMillis" : "15000",
+    "consumer.numThreads" : "2",
+    "kafka.zookeeper.connect" : "localhost",
+    "kafka.group.id" : "supervisor"
+  }
+}
