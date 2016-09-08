@@ -2,13 +2,13 @@
 import unittest
 import mock
 from datetime import datetime, timedelta
-from utils.haiku import permute, haiku, haiku_name, adjs, nouns
-from utils.uuid import uuid
-from utils.ip import validate_ip
+from agentserver.utils.haiku import permute, haiku, haiku_name, adjs, nouns
+from agentserver.utils.uuid import uuid
+from agentserver.utils.ip import validate_ip
 
 
 class TestUtils(unittest.TestCase):
-    @mock.patch('utils.haiku.random.choice')
+    @mock.patch('agentserver.utils.haiku.random.choice')
     def test_haiku(self, mock_choice):
         mock_choice.side_effect = [adjs[22], nouns[13], adjs[7], nouns[30]]
         (adjective, noun) = haiku()
@@ -25,7 +25,7 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(permute(0), 7469)
         self.assertEqual(permute(3), 309)
 
-    @mock.patch('utils.haiku.random.choice')
+    @mock.patch('agentserver.utils.haiku.random.choice')
     def test_haiku_name(self, mock_choice):
         mock_choice.side_effect = [adjs[4], nouns[10], adjs[17], nouns[21]]
         [adjective, noun, num] = haiku_name(5).split('-')

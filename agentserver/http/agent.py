@@ -1,10 +1,10 @@
 from tornado.escape import json_encode
-from http.base import JSONHandler
-from db.models import Agent, AgentDetail
-from db.timeseries import kafka
-from clients.supervisorclientcoordinator import scc
-from utils.validators import snapshot_validator, system_stats_validator
-from utils.log import log_auth_error, log_kafka
+from base import JSONHandler
+from agentserver.db.models import Agent, AgentDetail
+from agentserver.db.timeseries import kafka
+from agentserver.clients.supervisorclientcoordinator import scc
+from agentserver.utils.validators import snapshot_validator, system_stats_validator
+from agentserver.utils.log import log_auth_error, log_kafka
 
 
 SNAPSHOT = 'snapshot'

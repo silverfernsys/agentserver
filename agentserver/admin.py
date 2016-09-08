@@ -6,9 +6,9 @@ from configutil import ConfigError
 from setproctitle import setproctitle
 from tabulate import tabulate
 from termcolor import colored
-from config.admin import config
-from db.models import models, User, Agent, UserAuthToken, AgentAuthToken
-from utils.haiku import haiku_name
+from agentserver.config.admin import config
+from agentserver.db.models import models, User, Agent, UserAuthToken, AgentAuthToken
+from agentserver.utils.haiku import haiku_name
 
 
 class Admin(object):

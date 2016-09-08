@@ -7,7 +7,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.event import listen
 from sqlalchemy.exc import ArgumentError, NoSuchModuleError, OperationalError
 from passlib.apps import custom_app_context as pwd_context
-from utils.uuid import uuid
+from agentserver.utils.uuid import uuid
 
 
 # Mixins

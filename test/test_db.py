@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 import unittest
 from sqlalchemy.exc import IntegrityError
-from db.models import (models, User, UserAuthToken,
+from agentserver.db.models import (models, User, UserAuthToken,
                        Agent, AgentAuthToken, AgentDetail)
 
 

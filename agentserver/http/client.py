@@ -1,10 +1,10 @@
 from tornado.escape import json_encode
-from http.base import JSONHandler
-from db.models import User, AgentDetail, UserAuthenticationException
-from ws.agent import SupervisorAgentHandler
-from clients.supervisorclientcoordinator import scc
-from utils.validators import cmd_validator
-from utils.log import log_auth_error, log_authentication_error
+from base import JSONHandler
+from agentserver.db.models import User, AgentDetail, UserAuthenticationException
+from agentserver.ws.agent import SupervisorAgentHandler
+from agentserver.clients.supervisorclientcoordinator import scc
+from agentserver.utils.validators import cmd_validator
+from agentserver.utils.log import log_auth_error, log_authentication_error
 
 
 SERVER_VERSION = '0.0.1a'

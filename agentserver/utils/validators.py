@@ -1,6 +1,6 @@
 from datetime import datetime
 from cerberus import Validator
-from clients.constants import (SUPERVISOR_COMMANDS,
+from agentserver.clients.constants import (SUPERVISOR_COMMANDS,
                                SUBSCRIBE_COMMAND, UNSUBSCRIBE_COMMAND)
 
 

@@ -28,14 +28,14 @@ except ImportError:
 
 from mocks.timeseries import KafkaProducerMock, PyDruidMock, PlyQLMock
 from ws_helpers import websocket_connect
-from ws.agent import SupervisorAgentHandler
-from ws.client import SupervisorClientHandler
-from db.models import models, User, UserAuthToken, Agent, AgentAuthToken
-from db.timeseries import kafka, druid
-from utils import validators
-from clients.supervisorclient import SupervisorClient
-from clients.supervisorclientcoordinator import scc
-from agents.supervisoragent import SupervisorAgent
+from agentserver.ws.agent import SupervisorAgentHandler
+from agentserver.ws.client import SupervisorClientHandler
+from agentserver.db.models import models, User, UserAuthToken, Agent, AgentAuthToken
+from agentserver.db.timeseries import kafka, druid
+from agentserver.utils import validators
+from agentserver.clients.supervisorclient import SupervisorClient
+from agentserver.clients.supervisorclientcoordinator import scc
+from agentserver.agents.supervisoragent import SupervisorAgent
 from ws_helpers import MockSupervisorAgentHandler, MockSupervisorClientHandler
 
 

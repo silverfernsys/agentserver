@@ -1,11 +1,11 @@
 from tornado.escape import json_encode
-from db.models import AgentDetail
-from db.timeseries import kafka
-from clients.supervisorclientcoordinator import scc
-from utils.validators import (system_stats_validator,
+from agentserver.db.models import AgentDetail
+from agentserver.db.timeseries import kafka
+from agentserver.clients.supervisorclientcoordinator import scc
+from agentserver.utils.validators import (system_stats_validator,
                               states_validator, snapshot_validator)
-from utils.ip import get_ip
-from utils.log import log_kafka
+from agentserver.utils.ip import get_ip
+from agentserver.utils.log import log_kafka
 
 
 SNAPSHOT = 'snapshot'

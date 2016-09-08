@@ -14,8 +14,8 @@ from tornado.websocket import WebSocketProtocol13
 from tornado.websocket import (WebSocketHandler,
                                WebSocketError)
 
-from ws.agent import SupervisorAgentHandler
-from ws.client import SupervisorClientHandler
+from agentserver.ws.agent import SupervisorAgentHandler
+from agentserver.ws.client import SupervisorClientHandler
 
 
 class TestWebSocketHandler(WebSocketHandler):

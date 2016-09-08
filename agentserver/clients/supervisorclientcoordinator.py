@@ -3,8 +3,8 @@ from time import sleep
 from datetime import datetime
 from iso8601utils import parsers
 from tornado.escape import json_encode
-from db.models import Agent
-from db.timeseries import druid
+from agentserver.db.models import Agent
+from agentserver.db.timeseries import druid
 
 
 class SupervisorProcess(object):

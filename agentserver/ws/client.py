@@ -1,8 +1,8 @@
 # from __future__ import absolute_import
-from db.models import User
-from clients.supervisorclient import SupervisorClient
-from clients.supervisorclientcoordinator import scc
-from ws.base import JSONWebsocket
+from agentserver.db.models import User
+from agentserver.clients.supervisorclient import SupervisorClient
+from agentserver.clients.supervisorclientcoordinator import scc
+from base import JSONWebsocket
 
 
 class SupervisorClientHandler(JSONWebsocket):

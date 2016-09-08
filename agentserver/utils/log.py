@@ -1,5 +1,5 @@
 import logging
-from utils.ip import get_ip
+from ip import get_ip
 
 
 log_vals = {

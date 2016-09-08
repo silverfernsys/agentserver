@@ -2,7 +2,7 @@
 import json
 import os
 import unittest
-from utils.validators import (system_stats_validator,
+from agentserver.utils.validators import (system_stats_validator,
                               states_validator,
                               snapshot_validator)
 

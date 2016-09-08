@@ -4,7 +4,7 @@ import random
 import re
 from datetime import datetime, timedelta
 from pydruid.utils.filters import Filter
-from db.timeseries import DruidAccessLayer
+from agentserver.db.timeseries import DruidAccessLayer
 from iso8601utils import parsers
 
 

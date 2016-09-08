@@ -8,18 +8,18 @@ from tornado.testing import AsyncHTTPTestCase, gen_test
 from tornado.web import Application, url
 from tornado import gen
 
-from http.client import (HTTPVersionHandler, HTTPTokenHandler,
+from agentserver.http.client import (HTTPVersionHandler, HTTPTokenHandler,
                          HTTPDetailHandler, HTTPCommandHandler,
                          HTTPListHandler)
-from http.agent import HTTPAgentUpdateHandler, HTTPAgentDetailHandler
+from agentserver.http.agent import HTTPAgentUpdateHandler, HTTPAgentDetailHandler
 
 from mocks.timeseries import KafkaProducerMock, PyDruidMock, PlyQLMock
 from ws_helpers import websocket_connect, MockSupervisorAgentHandler
 
-from db.models import (models, User, UserAuthToken, Agent,
+from agentserver.db.models import (models, User, UserAuthToken, Agent,
                        AgentAuthToken, AgentDetail)
-from db.timeseries import kafka, druid
-from clients.supervisorclientcoordinator import scc
+from agentserver.db.timeseries import kafka, druid
+from agentserver.clients.supervisorclientcoordinator import scc
 
 
 resources = os.path.join(os.path.abspath(

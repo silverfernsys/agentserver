@@ -11,17 +11,17 @@ from pyfiglet import figlet_format
 from setproctitle import setproctitle
 from termcolor import cprint
 
-from config.server import config
-from db.models import models
-from db.timeseries import kafka, druid
-from http.client import (HTTPVersionHandler, HTTPTokenHandler,
+from agentserver.config.server import config
+from agentserver.db.models import models
+from agentserver.db.timeseries import kafka, druid
+from agentserver.http.client import (HTTPVersionHandler, HTTPTokenHandler,
                          HTTPDetailHandler, HTTPCommandHandler,
                          HTTPListHandler)
-from http.agent import HTTPAgentUpdateHandler, HTTPAgentDetailHandler
-from ws.agent import SupervisorAgentHandler
-from ws.client import SupervisorClientHandler
-from clients.supervisorclientcoordinator import scc
-from utils.log import config_logging, LoggingError
+from agentserver.http.agent import HTTPAgentUpdateHandler, HTTPAgentDetailHandler
+from agentserver.ws.agent import SupervisorAgentHandler
+from agentserver.ws.client import SupervisorClientHandler
+from agentserver.clients.supervisorclientcoordinator import scc
+from agentserver.utils.log import config_logging, LoggingError
 
 
 class Server(object):

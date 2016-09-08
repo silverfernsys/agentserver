@@ -1,5 +1,5 @@
-from admin import Admin
-from db.models import models, User, UserAuthToken, Agent, AgentAuthToken
+from agentserver.admin import Admin
+from agentserver.db.models import models, User, UserAuthToken, Agent, AgentAuthToken
 
 import mock
 import unittest
@@ -102,7 +102,7 @@ class TestApp(unittest.TestCase):
         with capture(self.admin.delete_user) as output:
             self.assertEqual(output, expected_output)
 
-    @mock.patch('db.models.User.created_on', new_callable=mock.PropertyMock)
+    @mock.patch('agentserver.db.models.User.created_on', new_callable=mock.PropertyMock)
     def test_list_users(self, mock_created_on):
         mock_created_on.side_effect = [
             datetime(2016, 1, 1), datetime(2016, 2, 1)]
@@ -118,7 +118,7 @@ class TestApp(unittest.TestCase):
         with capture(self.admin.list_users) as output:
             self.assertEqual(output, expected_output)
 
-    @mock.patch('db.models.UserAuthToken.uuid', new_callable=mock.PropertyMock)
+    @mock.patch('agentserver.db.models.UserAuthToken.uuid', new_callable=mock.PropertyMock)
     @mock.patch('getpass.getpass')
     @mock.patch('__builtin__.raw_input')
     def test_create_user_auth_token(self, mock_raw_input,
@@ -158,9 +158,9 @@ class TestApp(unittest.TestCase):
         with capture(self.admin.delete_user_auth_token) as output:
             self.assertEqual(output, expected_output)
 
-    @mock.patch('db.models.UserAuthToken.created_on',
+    @mock.patch('agentserver.db.models.UserAuthToken.created_on',
                 new_callable=mock.PropertyMock)
-    @mock.patch('db.models.UserAuthToken.uuid', new_callable=mock.PropertyMock)
+    @mock.patch('agentserver.db.models.UserAuthToken.uuid', new_callable=mock.PropertyMock)
     def test_list_user_auth_tokens(self, mock_uuid, mock_created_on):
         mock_uuid.side_effect = ['ee5378e881f7b24868ff9fd436d51ccc22bf8f12',
                                  'fb7ae8230108557d3328d9f0c6d32a992620460f',
@@ -185,7 +185,7 @@ class TestApp(unittest.TestCase):
         with capture(self.admin.list_user_auth_tokens) as output:
             self.assertEqual(output, expected_output)
 
-    @mock.patch('utils.haiku.random.choice')
+    @mock.patch('agentserver.utils.haiku.random.choice')
     @mock.patch('getpass.getpass')
     @mock.patch('__builtin__.raw_input')
     def test_create_agent(self, mock_raw_input, mock_getpass, mock_choice):
@@ -216,7 +216,7 @@ class TestApp(unittest.TestCase):
         with capture(self.admin.delete_agent) as output:
             self.assertEqual(output, expected_output)
 
-    @mock.patch('db.models.Agent.created_on', new_callable=mock.PropertyMock)
+    @mock.patch('agentserver.db.models.Agent.created_on', new_callable=mock.PropertyMock)
     def test_list_agents(self, mock_created_on):
         mock_created_on.side_effect = [datetime(2016, 1, 1),
                                        datetime(2016, 2, 1),
@@ -231,7 +231,7 @@ class TestApp(unittest.TestCase):
         with capture(self.admin.list_agents) as output:
             self.assertEqual(output, expected_output)
 
-    @mock.patch('db.models.AgentAuthToken.uuid',
+    @mock.patch('agentserver.db.models.AgentAuthToken.uuid',
                 new_callable=mock.PropertyMock)
     @mock.patch('getpass.getpass')
     @mock.patch('__builtin__.raw_input')
@@ -266,9 +266,9 @@ class TestApp(unittest.TestCase):
         with capture(self.admin.delete_agent_auth_token) as output:
             self.assertEqual(output, expected_output)
 
-    @mock.patch('db.models.AgentAuthToken.created_on',
+    @mock.patch('agentserver.db.models.AgentAuthToken.created_on',
                 new_callable=mock.PropertyMock)
-    @mock.patch('db.models.AgentAuthToken.uuid',
+    @mock.patch('agentserver.db.models.AgentAuthToken.uuid',
                 new_callable=mock.PropertyMock)
     def test_list_agent_auth_tokens(self, mock_uuid, mock_created_on):
         mock_uuid.side_effect = ['ae8d68dabc68268c0f895ff1b9fc46f3e94d3097',

@@ -1,10 +1,10 @@
 from tornado.escape import json_encode
-from ws.agent import SupervisorAgentHandler
-from clients.supervisorclientcoordinator import scc
-from clients.constants import (SUPERVISOR_COMMANDS,
+from agentserver.ws.agent import SupervisorAgentHandler
+from agentserver.utils.validators import cmd_validator
+from agentserver.utils.ip import get_ip
+from supervisorclientcoordinator import scc
+from constants import (SUPERVISOR_COMMANDS,
                        SUBSCRIBE_COMMAND, UNSUBSCRIBE_COMMAND)
-from utils.validators import cmd_validator
-from utils.ip import get_ip
 
 
 class SupervisorClient(object):
