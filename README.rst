@@ -20,4 +20,4 @@ This project is under heavy development. It currently requires `Druid <http://dr
 - Documentation.
 - A lot of the code relies heavily on integration tests for the HTTP and websocket APIs. Add unit tests.
 - Expand code coverage. 
-- User friendly way to creating an initializing databases from ``agentserveradmin``.
+- User friendly way to create and initialize databases from ``agentserveradmin``.
