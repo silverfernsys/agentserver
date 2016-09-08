@@ -22,6 +22,7 @@ from agentserver.ws.agent import SupervisorAgentHandler
 from agentserver.ws.client import SupervisorClientHandler
 from agentserver.clients.supervisorclientcoordinator import scc
 from agentserver.utils.log import config_logging, LoggingError
+from agentserver import __version__
 
 
 class Server(object):
@@ -106,7 +107,7 @@ class Server(object):
                                  font='slant').rstrip()
             cprint(text, 'red', attrs=['blink'])
             width = reduce(max, map(len, text.split('\n')))
-            title = 'AgentServer v0.1a'
+            title = 'AgentServer v{0}'.format(__version__)
             centered_title = title.center(width, ' ')
             cprint(centered_title, 'red')
 

@@ -5,13 +5,11 @@ from agentserver.ws.agent import SupervisorAgentHandler
 from agentserver.clients.supervisorclientcoordinator import scc
 from agentserver.utils.validators import cmd_validator
 from agentserver.utils.log import log_auth_error, log_authentication_error
-
-
-SERVER_VERSION = '0.0.1a'
+from agentserver import __version__
 
 
 class HTTPVersionHandler(JSONHandler):
-    response = json_encode({'version': SERVER_VERSION})
+    response = json_encode({'version': __version__})
 
     def get(self):
         self.write(self.response)

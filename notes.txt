@@ -3,3 +3,29 @@ pip install -r requirements.txt
 python -m agentserver/server
 python -m agentserver/admin
 python -m py.test
+
+Copy agentserver/scripts/conf/agentserver.conf to /etc/agentserver/agentserver.conf
+Copy agentserver/scripts/supervisor/agentserver.conf to /etc/supervisor/conf.d/agentserver.conf
+
+Create an agentserver database. Here's an example:
+> sudo su postgres
+> createuser agentserver --no-createrole --no-superuser --createdb --pwprompt;
+> createdb agentserver --owner agentserver --encoding='utf-8' --locale=en_US.utf8 --template=template0;
+
+Now update your config file:
+[agentserver]
+...
+database=postgresql://agentserver:agentserver@localhost/agentserver
+...
+
+Now we're ready to connect to our new database.
+
+Reload supervisor configuration:
+> sudo supervisorctl
+supervisor> reload
+
+Now create a new administrative user (don't forget to select 'Y' when prompted make user administrator), then add agents and agent tokens so that agents can connect to the server. Consult agentserveradmin.py --help for more information on commands.
+
+TODOs:
+Add tests to add process to SupervisorClientCoordinator that doesn't exist when scc is initialized.
+Make sure that state_update() method on agent returns pid as an integer in json.

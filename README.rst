@@ -1,28 +1,18 @@
 agentserver
 ===========
 
-Copy agentserver/scripts/conf/agentserver.conf to /etc/agentserver/agentserver.conf
-Copy agentserver/scripts/supervisor/agentserver.conf to /etc/supervisor/conf.d/agentserver.conf
+A server that allows you to control and monitor `supervisoragent<https://github.com/silverfernsys/supervisoragent>`_ instances.
 
-Create an agentserver database. Here's an example:
-> sudo su postgres
-> createuser agentserver --no-createrole --no-superuser --createdb --pwprompt;
-> createdb agentserver --owner agentserver --encoding='utf-8' --locale=en_US.utf8 --template=template0;
+**Commands**
+.. code::
+  agentserver
+  agentserveradmin
+  agentserverecho
 
-Now update your config file:
-[agentserver]
-...
-database=postgresql://agentserver:agentserver@localhost/agentserver
-...
+**Note**
+This project is under heavy development. It currently requires `Druid<http://druid.io/>`_ and `Kafka<https://kafka.apache.org/>`_to run.
 
-Now we're ready to connect to our new database.
-
-Reload supervisor configuration:
-> sudo supervisorctl
-supervisor> reload
-
-Now create a new administrative user (don't forget to select 'Y' when prompted make user administrator), then add agents and agent tokens so that agents can connect to the server. Consult agentserveradmin.py --help for more information on commands.
-
-TODOs:
-Add tests to add process to SupervisorClientCoordinator that doesn't exist when scc is initialized.
-Make sure that state_update() method on agent returns pid as an integer in json.
+**TODOs**
+- Druid and Kafka as optional dependencies.
+- Documentation.
+- User friendly way to creating an initializing databases from ``agentserveradmin``.
