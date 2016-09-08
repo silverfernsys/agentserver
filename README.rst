@@ -4,7 +4,7 @@ agentserver
 A server that allows you to control and monitor `supervisoragent <https://github.com/silverfernsys/supervisoragent>`_ instances.
 
 **Commands**
-.. code::
+.. code:: python
   agentserver
   agentserveradmin
   agentserverecho
