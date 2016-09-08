@@ -1,0 +1,5 @@
+After cloning repo:
+pip install -r requirements.txt
+python -m agentserver/server
+python -m agentserver/admin
+python -m py.test
