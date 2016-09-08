@@ -12,7 +12,7 @@ A server that allows you to control and monitor `supervisoragent <https://github
   agentserverecho
 
 **Note**
-This project is under heavy development. It currently requires `Druid <http://druid.io/>`_ and `Kafka <https://kafka.apache.org/>`_ to run.
+This project is under heavy development. It currently requires `Druid <http://druid.io/>`_, `PlyQL <https://github.com/implydata/plyql>`_, and `Kafka <https://kafka.apache.org/>`_ to run.
 
 **TODOs**
 
