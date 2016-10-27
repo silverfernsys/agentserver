@@ -13,10 +13,6 @@ from tempfile import NamedTemporaryFile
 from resources.test_admin.admin_output import *
 
 
-resources = os.path.join(os.path.abspath(
-    os.path.dirname(__file__)), 'resources')
-
-
 # http://schinckel.net/2013/04/15/capture-and-test-sys.stdout-sys.stderr-in-unittest.testcase/
 @contextmanager
 def capture(command, *args, **kwargs):
