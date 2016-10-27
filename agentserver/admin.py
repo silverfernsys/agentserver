@@ -11,6 +11,13 @@ from agentserver.db.models import models, User, Agent, UserAuthToken, AgentAuthT
 from agentserver.utils.haiku import haiku_name
 
 
+HEADER_COLOR = None # 'green', 'red', etc
+
+
+def color_text(text, color=None):
+        return colored(text, color=color, attrs=['bold'])
+
+
 class Admin(object):
 
     def __init__(self, config):
@@ -203,9 +210,8 @@ class Admin(object):
         print(tabulate(table, headers=headers, tablefmt='plain'))
 
     def bold_headers(self, headers):
-        # color=None for 'white'
-        # color='green' for 'green'
-        return [colored(h, color=None, attrs=['bold']) for h in headers]
+        return [color_text(h, color=HEADER_COLOR) for h in headers]
+        # return [colored(h, color=HEADER_COLOR, attrs=['bold']) for h in headers]
 
 
 def main():

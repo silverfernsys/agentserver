@@ -1,4 +1,0 @@
-[1mEmail[0m               [1mToken[0m                                     [1mCreated[0m
-user_a@example.com  ee5378e881f7b24868ff9fd436d51ccc22bf8f12  01-01-2016 00:00:00
-user_b@example.com  fb7ae8230108557d3328d9f0c6d32a992620460f  01-02-2016 00:00:00
-user_c@example.com  87dcd304d0587baebf8d9f6dfc9e0aac0442c326  01-03-2016 00:00:00

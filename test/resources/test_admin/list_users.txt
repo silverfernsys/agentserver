@@ -1,3 +1,0 @@
-[1mName[0m    [1mEmail[0m               [1mAdmin[0m    [1mCreated[0m
-User A  user_a@example.com  Y        01-01-2016 00:00:00
-User B  user_b@example.com  N        01-02-2016 00:00:00

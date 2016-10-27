@@ -1,14 +1,16 @@
-from agentserver.admin import Admin
+from agentserver.admin import Admin, color_text, HEADER_COLOR
 from agentserver.db.models import models, User, UserAuthToken, Agent, AgentAuthToken
 
 import mock
 import unittest
+import re
 import sys
 import os
 from cStringIO import StringIO
 from contextlib import contextmanager
 from datetime import datetime
 from tempfile import NamedTemporaryFile
+from resources.test_admin.admin_output import *
 
 
 resources = os.path.join(os.path.abspath(
@@ -25,6 +27,19 @@ def capture(command, *args, **kwargs):
         yield sys.stdout.read().strip()
     finally:
         sys.stdout = out
+
+
+def highlight_header_row(text):
+    lines = text.split('\n')
+    components = re.split(r'(\s+)', lines.pop(0))
+    highlighted = []
+    for c in components:
+        if not re.match(r'^\s+$', c):
+            highlighted.append(color_text(c, color=HEADER_COLOR))
+        else:
+            highlighted.append(c)
+    lines.insert(0, ''.join(highlighted))
+    return '\n'.join(lines)
 
 
 class MockConfig(object):
@@ -69,7 +84,7 @@ class TestApp(unittest.TestCase):
         models.session.close()
 
     def test_init_output(self):
-        self.assertEqual(self.init_output, self.read_file('init.txt'))
+        self.assertEqual(self.init_output, output_init)
 
     def read_file(self, filename):
         return open(os.path.join(resources,
@@ -82,7 +97,7 @@ class TestApp(unittest.TestCase):
             'marcw@silverfern.io', 'Marc Wilson', 'Y']
         mock_getpass.side_effect = ['asdfasdf', 'asdfasdf']
         with capture(self.admin.create_user) as output:
-            self.assertEqual(output, self.read_file('create_user.txt'))
+            self.assertEqual(output, output_create_user)
 
     @mock.patch('getpass.getpass')
     @mock.patch('__builtin__.raw_input')
@@ -98,9 +113,8 @@ class TestApp(unittest.TestCase):
                      password=password).save()
         mock_raw_input.side_effect = [colin.email, phil.email]
         mock_getpass.side_effect = [password]
-        expected_output = self.read_file('delete_user.txt')
         with capture(self.admin.delete_user) as output:
-            self.assertEqual(output, expected_output)
+            self.assertEqual(output, output_delete_user)
 
     @mock.patch('agentserver.db.models.User.created_on', new_callable=mock.PropertyMock)
     def test_list_users(self, mock_created_on):
@@ -114,9 +128,8 @@ class TestApp(unittest.TestCase):
                             email='user_b@example.com',
                             is_admin=False,
                             password='randompasswordb')])
-        expected_output = self.read_file('list_users.txt')
         with capture(self.admin.list_users) as output:
-            self.assertEqual(output, expected_output)
+            self.assertEqual(output, highlight_header_row(output_list_users))
 
     @mock.patch('agentserver.db.models.UserAuthToken.uuid', new_callable=mock.PropertyMock)
     @mock.patch('getpass.getpass')
@@ -135,9 +148,8 @@ class TestApp(unittest.TestCase):
                     password='qwerqwer').save()
         mock_raw_input.side_effect = [admin.email, user.email]
         mock_getpass.side_effect = [password]
-        expected_output = self.read_file('create_user_auth_token.txt')
         with capture(self.admin.create_user_auth_token) as output:
-            self.assertEqual(output, expected_output)
+            self.assertEqual(output, output_create_user_auth_token)
 
     @mock.patch('getpass.getpass')
     @mock.patch('__builtin__.raw_input')
@@ -154,9 +166,8 @@ class TestApp(unittest.TestCase):
         UserAuthToken(user=user).save()
         mock_raw_input.side_effect = [admin.email, user.email]
         mock_getpass.side_effect = [password]
-        expected_output = self.read_file('delete_user_auth_token.txt')
         with capture(self.admin.delete_user_auth_token) as output:
-            self.assertEqual(output, expected_output)
+            self.assertEqual(output, output_delete_user_auth_token)
 
     @mock.patch('agentserver.db.models.UserAuthToken.created_on',
                 new_callable=mock.PropertyMock)
@@ -181,9 +192,8 @@ class TestApp(unittest.TestCase):
                                     email='user_c@example.com',
                                     is_admin=True,
                                     password='randompasswordc'))])
-        expected_output = self.read_file('list_user_auth_tokens.txt')
         with capture(self.admin.list_user_auth_tokens) as output:
-            self.assertEqual(output, expected_output)
+            self.assertEqual(output, highlight_header_row(output_list_user_auth_tokens))
 
     @mock.patch('agentserver.utils.haiku.random.choice')
     @mock.patch('getpass.getpass')
@@ -197,9 +207,8 @@ class TestApp(unittest.TestCase):
                      password=password).save()
         mock_raw_input.side_effect = [admin.email, '']
         mock_getpass.side_effect = [password]
-        expected_output = self.read_file('create_agent.txt')
         with capture(self.admin.create_agent) as output:
-            self.assertEqual(output, expected_output)
+            self.assertEqual(output, output_create_agent)
 
     @mock.patch('getpass.getpass')
     @mock.patch('__builtin__.raw_input')
@@ -212,9 +221,8 @@ class TestApp(unittest.TestCase):
         agent = Agent(name='Agent 007').save()
         mock_raw_input.side_effect = [admin.email, agent.name]
         mock_getpass.side_effect = [password]
-        expected_output = self.read_file('delete_agent.txt')
         with capture(self.admin.delete_agent) as output:
-            self.assertEqual(output, expected_output)
+            self.assertEqual(output, output_delete_agent)
 
     @mock.patch('agentserver.db.models.Agent.created_on', new_callable=mock.PropertyMock)
     def test_list_agents(self, mock_created_on):
@@ -227,9 +235,8 @@ class TestApp(unittest.TestCase):
             Agent(name='Agent 1'),
             Agent(name='Agent 2'),
             Agent(name='Agent 3')])
-        expected_output = self.read_file('list_agents.txt')
         with capture(self.admin.list_agents) as output:
-            self.assertEqual(output, expected_output)
+            self.assertEqual(output, highlight_header_row(output_list_agents))
 
     @mock.patch('agentserver.db.models.AgentAuthToken.uuid',
                 new_callable=mock.PropertyMock)
@@ -246,9 +253,8 @@ class TestApp(unittest.TestCase):
         agent = Agent(name='Agent 007').save()
         mock_raw_input.side_effect = [admin.email, str(agent.id)]
         mock_getpass.side_effect = [password]
-        expected_output = self.read_file('create_agent_auth_token.txt')
         with capture(self.admin.create_agent_auth_token) as output:
-            self.assertEqual(output, expected_output)
+            self.assertEqual(output, output_create_agent_auth_token)
 
     @mock.patch('getpass.getpass')
     @mock.patch('__builtin__.raw_input')
@@ -262,9 +268,8 @@ class TestApp(unittest.TestCase):
         AgentAuthToken(agent=agent).save()
         mock_raw_input.side_effect = [admin.email, str(agent.id)]
         mock_getpass.side_effect = [password]
-        expected_output = self.read_file('delete_agent_auth_token.txt')
         with capture(self.admin.delete_agent_auth_token) as output:
-            self.assertEqual(output, expected_output)
+            self.assertEqual(output, output_delete_agent_auth_token)
 
     @mock.patch('agentserver.db.models.AgentAuthToken.created_on',
                 new_callable=mock.PropertyMock)
@@ -284,6 +289,5 @@ class TestApp(unittest.TestCase):
             AgentAuthToken(agent=Agent(name='Agent 1')),
             AgentAuthToken(agent=Agent(name='Agent 2')),
             AgentAuthToken(agent=Agent(name='Agent 3'))])
-        expected_output = self.read_file('list_agent_auth_tokens.txt')
         with capture(self.admin.list_agent_auth_tokens) as output:
-            self.assertEqual(output, expected_output)
+            self.assertEqual(output, highlight_header_row(output_list_agent_auth_tokens))
