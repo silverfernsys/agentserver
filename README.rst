@@ -1,5 +1,9 @@
 .. image:: https://img.shields.io/pypi/v/agentserver.svg
     :target: https://pypi.python.org/pypi/agentserver
+.. image:: https://travis-ci.org/silverfernsys/agentserver.svg?branch=master
+    :target: https://travis-ci.org/silverfernsys/agentserver
+.. image:: https://codecov.io/gh/silverfernsys/agentserver/branch/master/graph/badge.svg
+    :target: https://codecov.io/gh/silverfernsys/agentserver
 .. image:: https://img.shields.io/pypi/l/agentserver.svg
     :target: https://pypi.python.org/pypi/agentserver
 .. image:: https://img.shields.io/pypi/status/agentserver.svg

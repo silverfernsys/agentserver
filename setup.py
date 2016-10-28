@@ -87,7 +87,7 @@ setup(
         'postgres': ['psycopg2'],
         'mysql': ['PyMySQL'],
         'druid': ['pydruid', 'kafka-python'],
-        'test': ['coverage', 'pytest', 'mock'],
+        'test': ['coverage', 'codecov', 'pytest', 'mock'],
     },
     
     include_package_data=True,
