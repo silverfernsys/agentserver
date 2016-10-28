@@ -2,13 +2,15 @@ coverage
 codecov
 Cerberus==0.9.2
 configutil
-iso8601utils
+iso8601utils==0.0.1.dev2
 passlib
 pyfiglet
 setproctitle
-sqlalchemy
+sqlalchemy==1.0.12
 tabulate
 termcolor
 tornado
 kafka-python
+mock
+pytest==2.6.4
 git+git://github.com/silverfernsys/pydruid.git
