@@ -2,6 +2,15 @@
     :target: https://pypi.python.org/pypi/agentserver
 .. image:: https://img.shields.io/pypi/l/agentserver.svg
     :target: https://pypi.python.org/pypi/agentserver
+.. image:: https://img.shields.io/pypi/status/agentserver.svg
+    :target: https://pypi.python.org/pypi/agentserver
+.. image:: https://img.shields.io/pypi/implementation/agentserver.svg
+    :target: https://pypi.python.org/pypi/agentserver
+.. image:: https://img.shields.io/pypi/pyversions/agentserver.svg
+    :target: https://pypi.python.org/pypi/agentserver
+.. image:: https://img.shields.io/pypi/format/agentserver.svg
+    :target: https://pypi.python.org/pypi/agentserver
+.. image:: https://img.shields.io/librariesio/github/silverfernsys/agentserver.svg
 
 agentserver
 ===========
