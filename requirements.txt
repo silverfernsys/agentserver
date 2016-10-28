@@ -6,11 +6,11 @@ iso8601utils==0.0.1.dev2
 passlib
 pyfiglet
 setproctitle
-sqlalchemy==1.0.12
+sqlalchemy
 tabulate
 termcolor
 tornado
 kafka-python
 mock
-pytest==2.6.4
+pytest
 git+git://github.com/silverfernsys/pydruid.git
