@@ -211,7 +211,6 @@ class Admin(object):
 
     def bold_headers(self, headers):
         return [color_text(h, color=HEADER_COLOR) for h in headers]
-        # return [colored(h, color=HEADER_COLOR, attrs=['bold']) for h in headers]
 
 
 def main():

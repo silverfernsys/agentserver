@@ -1,3 +1,8 @@
+.. image:: https://img.shields.io/pypi/v/agentserver.svg
+    :target: https://pypi.python.org/pypi/agentserver
+.. image:: https://img.shields.io/pypi/l/agentserver.svg
+    :target: https://pypi.python.org/pypi/agentserver
+
 agentserver
 ===========
 
